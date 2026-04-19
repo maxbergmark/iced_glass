@@ -7,12 +7,13 @@ pub struct Uniforms {
 }
 
 impl Uniforms {
-    pub fn to_raw(self) -> Raw {
+    pub fn to_raw(self, direction: [f32; 2]) -> Raw {
         Raw {
             radius: self.blur_radius,
             corner_radius: self.corner_radius,
             saturation: self.saturation,
             lightness: self.lightness,
+            direction,
         }
     }
 }
@@ -24,4 +25,5 @@ pub struct Raw {
     pub corner_radius: f32,
     pub saturation: f32,
     pub lightness: f32,
+    pub direction: [f32; 2],
 }

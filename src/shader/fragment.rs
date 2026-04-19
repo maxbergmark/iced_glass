@@ -15,7 +15,7 @@ impl FragmentShader {
         // let (bind_group, uniform_bind_group) =
         //     Self::create_bind_group(device, &pipeline, uniforms, output_texture);
         let (bind_group, uniform_bind_group) =
-            Self::create_bind_group(device, &pipeline, uniforms, input_texture);
+            Self::create_bind_group_old(device, &pipeline, uniforms, input_texture);
         RenderShaderData {
             pipeline,
             bind_group,
@@ -94,7 +94,7 @@ impl FragmentShader {
         })
     }
 
-    pub fn create_bind_group(
+    pub fn create_bind_group_old(
         device: &wgpu::Device,
         pipeline: &wgpu::RenderPipeline,
         uniforms: &wgpu::Buffer,
@@ -123,6 +123,30 @@ impl FragmentShader {
             crate::shader::uniforms_bind_group(device, &uniform_bind_group_layout, uniforms);
         (bind_group, uniform_bind_group)
         // bind_group
+    }
+
+    pub fn create_bind_group(
+        device: &wgpu::Device,
+        layout: &wgpu::BindGroupLayout,
+        input_texture: &wgpu::Texture,
+    ) -> wgpu::BindGroup {
+        let sampler = create_sampler(device);
+        let input_texture_view = to_texture_view(input_texture);
+
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("primitive.bind_group"),
+            layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&input_texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+            ],
+        })
     }
 }
 

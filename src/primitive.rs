@@ -18,11 +18,8 @@ impl iced::widget::shader::Primitive for Primitive {
         viewport: &iced::widget::shader::Viewport,
     ) {
         let scale = viewport.scale_factor();
-        // let width = bounds.width.min(bounds.width - bounds.x).max(0.0);
         let width = (bounds.width * scale) as u32;
-        // let height = bounds.height.min(bounds.height - bounds.y).max(0.0);
         let height = (bounds.height * scale) as u32;
-        // let instance = pipeline.instance(self.id);
         pipeline.prepare_instance(device, queue, self.id, width, height, &self.uniforms);
         // pipeline.resize_if_needed(device, width, height, self.id);
         // pipeline.copy_uniforms_to_device(queue, &self.uniforms, self.id);
@@ -93,11 +90,12 @@ impl iced::widget::shader::Primitive for Primitive {
                 timestamp_writes: None,
                 occlusion_query_set: None,
             });
+
             horizontal_pass.set_scissor_rect(0, 0, copy_width, copy_height);
             horizontal_pass.set_viewport(0.0, 0.0, copy_width as f32, copy_height as f32, 0.0, 1.0);
             horizontal_pass.set_pipeline(&pipeline.horizontal_blur_pipeline);
             horizontal_pass.set_bind_group(0, &instance.horizontal_bg, &[]);
-            horizontal_pass.set_bind_group(1, &instance.uniform_bg, &[]);
+            horizontal_pass.set_bind_group(1, &instance.uniform_bg_h, &[]);
             horizontal_pass.draw(0..6, 0..1);
         }
 
@@ -121,9 +119,9 @@ impl iced::widget::shader::Primitive for Primitive {
             });
             vertical_pass.set_scissor_rect(0, 0, copy_width, copy_height);
             vertical_pass.set_viewport(0.0, 0.0, copy_width as f32, copy_height as f32, 0.0, 1.0);
-            vertical_pass.set_pipeline(&pipeline.vertical_blur_pipeline);
+            vertical_pass.set_pipeline(&pipeline.horizontal_blur_pipeline);
             vertical_pass.set_bind_group(0, &instance.vertical_bg, &[]);
-            vertical_pass.set_bind_group(1, &instance.uniform_bg, &[]);
+            vertical_pass.set_bind_group(1, &instance.uniform_bg_v, &[]);
             vertical_pass.draw(0..6, 0..1);
         }
 
@@ -154,7 +152,7 @@ impl iced::widget::shader::Primitive for Primitive {
 
         pass.set_pipeline(&pipeline.fragment_pipeline);
         pass.set_bind_group(0, &instance.fragment_bg, &[]);
-        pass.set_bind_group(1, &instance.uniform_bg, &[]);
+        pass.set_bind_group(1, &instance.uniform_bg_h, &[]);
         pass.draw(0..6, 0..1);
     }
 }

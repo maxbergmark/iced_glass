@@ -1,46 +1,14 @@
 use std::borrow::Cow;
 
-use crate::shader::{RenderShaderData, uniforms_bind_group_layout};
+use crate::shader::uniforms_bind_group_layout;
 
 pub struct GaussianShader;
 
 impl GaussianShader {
-    pub fn compile(
-        device: &wgpu::Device,
-        format: wgpu::TextureFormat,
-        uniforms: &wgpu::Buffer,
-        input_texture: &wgpu::Texture,
-        output_texture: &wgpu::Texture,
-    ) -> (RenderShaderData, RenderShaderData) {
-        let (horizontal_pipeline, vertical_pipeline) = Self::create_pipeline(device, format);
-        // let (bind_group, uniform_bind_group) =
-        //     Self::create_bind_group(device, &pipeline, uniforms, output_texture);
-        let (horizontal_bind_group, horizontal_uniform_bind_group) =
-            Self::create_bind_group(device, &horizontal_pipeline, uniforms, input_texture);
-        let (vertical_bind_group, vertical_uniform_bind_group) =
-            Self::create_bind_group(device, &vertical_pipeline, uniforms, output_texture);
-
-        // let horizontal_uniform_bind_group =
-        //     Self::create_uniforms_bind_group(device, &horizontal_pipeline, uniforms);
-        // let vertical_uniform_bind_group =
-        //     Self::create_uniforms_bind_group(device, &vertical_pipeline, uniforms);
-
-        let horizontal_shader = RenderShaderData {
-            pipeline: horizontal_pipeline,
-            bind_group: horizontal_bind_group,
-            uniform_bind_group: horizontal_uniform_bind_group,
-        };
-        let vertical_shader = RenderShaderData {
-            pipeline: vertical_pipeline,
-            bind_group: vertical_bind_group,
-            uniform_bind_group: vertical_uniform_bind_group,
-        };
-        (horizontal_shader, vertical_shader)
-    }
     pub fn create_pipeline(
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
-    ) -> (wgpu::RenderPipeline, wgpu::RenderPipeline) {
+    ) -> wgpu::RenderPipeline {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("gaussian.create_pipeline.layout"),
             bind_group_layouts: &[
@@ -57,7 +25,7 @@ impl GaussianShader {
             )),
         });
 
-        let horizontal_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("gaussian.create_pipeline.render_pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
@@ -81,34 +49,35 @@ impl GaussianShader {
             }),
             multiview: None,
             cache: None,
-        });
+        })
 
-        let vertical_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("gaussian.create_pipeline.render_pipeline"),
-            layout: Some(&pipeline_layout),
-            vertex: wgpu::VertexState {
-                module,
-                entry_point: Some("vs_main"),
-                buffers: &[],
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-            },
-            primitive: wgpu::PrimitiveState::default(),
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module,
-                entry_point: Some("vertical_pass"),
-                targets: &[Some(wgpu::ColorTargetState {
-                    format,
-                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-            }),
-            multiview: None,
-            cache: None,
-        });
-        (horizontal_pipeline, vertical_pipeline)
+        // let vertical_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        //     label: Some("gaussian.create_pipeline.render_pipeline"),
+        //     layout: Some(&pipeline_layout),
+        //     vertex: wgpu::VertexState {
+        //         module,
+        //         entry_point: Some("vs_main"),
+        //         buffers: &[],
+        //         compilation_options: wgpu::PipelineCompilationOptions::default(),
+        //     },
+        //     primitive: wgpu::PrimitiveState::default(),
+        //     depth_stencil: None,
+        //     multisample: wgpu::MultisampleState::default(),
+        //     fragment: Some(wgpu::FragmentState {
+        //         module,
+        //         entry_point: Some("vertical_pass"),
+        //         targets: &[Some(wgpu::ColorTargetState {
+        //             format,
+        //             blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+        //             write_mask: wgpu::ColorWrites::ALL,
+        //         })],
+        //         compilation_options: wgpu::PipelineCompilationOptions::default(),
+        //     }),
+        //     multiview: None,
+        //     cache: None,
+        // });
+        // (horizontal_pipeline, vertical_pipeline)
+        // horizontal_pipeline
     }
 
     fn create_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
@@ -135,20 +104,55 @@ impl GaussianShader {
         })
     }
 
-    pub fn create_bind_group(
+    // pub fn create_bind_group(
+    //     device: &wgpu::Device,
+    //     pipeline: &wgpu::RenderPipeline,
+    //     // uniforms: &wgpu::Buffer,
+    //     input_texture: &wgpu::Texture,
+    //     // output_texture: &wgpu::Texture,
+    // ) -> wgpu::BindGroup {
+    //     let sampler = create_sampler(device);
+    //     let input_texture_view = to_texture_view(input_texture);
+    //     // let output_texture_view = to_texture_view(output_texture);
+
+    //     let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+    //         label: Some("gaussian.bind_group"),
+    //         layout: &pipeline.get_bind_group_layout(0),
+    //         entries: &[
+    //             wgpu::BindGroupEntry {
+    //                 binding: 0,
+    //                 resource: wgpu::BindingResource::TextureView(&input_texture_view),
+    //             },
+    //             wgpu::BindGroupEntry {
+    //                 binding: 1,
+    //                 resource: wgpu::BindingResource::Sampler(&sampler),
+    //             },
+    //         ],
+    //     });
+
+    //     // let uniform_bind_group_layout = pipeline.get_bind_group_layout(1);
+    //     // let uniform_bind_group =
+    //     //     crate::shader::uniforms_bind_group(device, &uniform_bind_group_layout, uniforms);
+    //     // (bind_group, uniform_bind_group)
+    //     bind_group
+    // }
+
+    pub fn create_bind_group_from_layout(
         device: &wgpu::Device,
-        pipeline: &wgpu::RenderPipeline,
-        uniforms: &wgpu::Buffer,
+        // pipeline: &wgpu::RenderPipeline,
+        layout: &wgpu::BindGroupLayout,
+        // uniforms: &wgpu::Buffer,
         input_texture: &wgpu::Texture,
         // output_texture: &wgpu::Texture,
-    ) -> (wgpu::BindGroup, wgpu::BindGroup) {
+    ) -> wgpu::BindGroup {
         let sampler = create_sampler(device);
         let input_texture_view = to_texture_view(input_texture);
         // let output_texture_view = to_texture_view(output_texture);
 
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        // println!("layout: {:?}", layout);
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("gaussian.bind_group"),
-            layout: &pipeline.get_bind_group_layout(0),
+            layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -159,12 +163,12 @@ impl GaussianShader {
                     resource: wgpu::BindingResource::Sampler(&sampler),
                 },
             ],
-        });
+        })
 
-        let uniform_bind_group_layout = pipeline.get_bind_group_layout(1);
-        let uniform_bind_group =
-            crate::shader::uniforms_bind_group(device, &uniform_bind_group_layout, uniforms);
-        (bind_group, uniform_bind_group)
+        // let uniform_bind_group_layout = pipeline.get_bind_group_layout(1);
+        // let uniform_bind_group =
+        //     crate::shader::uniforms_bind_group(device, &uniform_bind_group_layout, uniforms);
+        // (bind_group, uniform_bind_group)
         // bind_group
     }
 }

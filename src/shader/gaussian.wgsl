@@ -3,7 +3,12 @@ struct Uniforms {
     corner_radius: f32,
     saturation: f32,
     lightness: f32,
+    direction: vec2<f32>,
 };
+
+struct BlurDirection {
+    direction: vec2<f32>,
+}
 
 
 @group(1)
@@ -49,41 +54,41 @@ struct FragInput {
 const PI: f32 = 3.14159265358979323846;
 const RADIUS: f32 = 0.10;
 
-
 @fragment
 fn horizontal_pass(input: FragInput) -> @location(0) vec4<f32> {
     let uv = input.uv;
+    let direction = uniforms.direction;
     let texel_size = vec2<f32>(1.0) / vec2<f32>(textureDimensions(image));
-    let radius = i32(uniforms.blur_radius);
-    var step = 1 + abs(radius) / 100;
+    let radius = uniforms.blur_radius;
+    var step = 1.0 + 0.05 * abs(radius);
     var color = vec4<f32>(0.0);
     var total_weight = 0.0;
     for (var x = -radius; x <= radius; x += step) {
-        let offset = vec2<f32>(f32(x), 0.0) * texel_size;
-        let dist = f32(x * x);
-        let weight = exp(-dist / (2.0 * f32(radius)));
+        let offset = direction * x * texel_size;
+        let dist = x * x;
+        let weight = exp(-dist / (2.0 * radius));
         color += textureSample(image, image_sampler, uv + offset) * weight;
         total_weight += weight;
-        step = 1 + abs(x) / 100;
+        step = 1.0 + 0.05 * abs(x);
     }
     return color / total_weight;
 }
 
-@fragment
-fn vertical_pass(input: FragInput) -> @location(0) vec4<f32> {
-    let uv = input.uv;
-    let texel_size = vec2<f32>(1.0) / vec2<f32>(textureDimensions(image));
-    let radius = i32(uniforms.blur_radius);
-    var step = 1 + abs(radius) / 100;
-    var color = vec4<f32>(0.0);
-    var total_weight = 0.0;
-    for (var y = -radius; y <= radius; y += step) {
-        let offset = vec2<f32>(0.0, f32(y)) * texel_size;
-        let dist = f32(y * y);
-        let weight = exp(-dist / (2.0 * f32(radius)));
-        color += textureSample(image, image_sampler, uv + offset) * weight;
-        total_weight += weight;
-        step = 1 + abs(y) / 100;
-    }
-    return color / total_weight;
-}
+// @fragment
+// fn vertical_pass(input: FragInput) -> @location(0) vec4<f32> {
+//     let uv = input.uv;
+//     let texel_size = vec2<f32>(1.0) / vec2<f32>(textureDimensions(image));
+//     let radius = i32(uniforms.blur_radius);
+//     var step = 1 + abs(radius) / 100;
+//     var color = vec4<f32>(0.0);
+//     var total_weight = 0.0;
+//     for (var y = -radius; y <= radius; y += step) {
+//         let offset = vec2<f32>(0.0, f32(y)) * texel_size;
+//         let dist = f32(y * y);
+//         let weight = exp(-dist / (2.0 * f32(radius)));
+//         color += textureSample(image, image_sampler, uv + offset) * weight;
+//         total_weight += weight;
+//         step = 1 + abs(y) / 100;
+//     }
+//     return color / total_weight;
+// }
