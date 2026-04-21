@@ -496,6 +496,7 @@ where
                         height: self.edge_height,
                         refractive_index: self.refractive_index,
                         rim_width: 1.0,
+                        opacity: 1.0,
                     },
                 },
             );

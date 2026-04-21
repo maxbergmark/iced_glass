@@ -38,6 +38,7 @@ where
     edge_height: f32,
     refractive_index: f32,
     rim_width: f32,
+    opacity: f32,
 }
 
 pub fn glass_container<'a, Message, Theme>(
@@ -79,6 +80,7 @@ where
             edge_height: 0.0,
             refractive_index: 1.5,
             rim_width: 1.0,
+            opacity: 1.0,
         }
     }
 
@@ -231,6 +233,11 @@ where
         self.rim_width = rim_width;
         self
     }
+
+    pub fn opacity(mut self, opacity: f32) -> Self {
+        self.opacity = opacity;
+        self
+    }
 }
 
 struct State {
@@ -381,6 +388,7 @@ where
                     height: self.edge_height,
                     refractive_index: self.refractive_index,
                     rim_width: self.rim_width,
+                    opacity: self.opacity,
                 },
             },
         );

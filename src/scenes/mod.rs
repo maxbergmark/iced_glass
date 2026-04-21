@@ -1,4 +1,4 @@
-use iced::{Length, Task, window};
+use iced::{Length, Task};
 
 pub mod basic;
 pub mod large_slider;
@@ -10,9 +10,9 @@ pub enum Message {
     Basic(basic::Message),
     ScrollView(scroll_view::Message),
     LargeSlider(large_slider::Message),
-    WindowResized(iced::Size),
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone)]
 pub enum Scene {
     Basic(basic::Ui),
@@ -31,7 +31,6 @@ impl Default for Scene {
 #[derive(Default)]
 pub struct Ui {
     scene: Scene,
-    window_size: iced::Size,
 }
 
 impl Ui {
@@ -66,28 +65,25 @@ impl Ui {
                     Task::none()
                 }
             }
-            Message::WindowResized(size) => {
-                self.window_size = size;
-                Task::none()
-            }
         }
     }
 
     pub fn subscription(&self) -> iced::Subscription<Message> {
-        window::resize_events().map(|(_id, size)| Message::WindowResized(size))
+        self.scene_subscription()
     }
 
-    // pub fn subscription(&self) -> iced::Subscription<Message> {
-    //     match &self.scene {
-    //         Scene::Basic(ui) => ui.subscription().map(Message::Basic),
-    //         Scene::ScrollView(_) => iced::Subscription::none(),
-    //         Scene::LargeSlider(_) => iced::Subscription::none(),
-    //     }
-    // }
+    fn scene_subscription(&self) -> iced::Subscription<Message> {
+        match &self.scene {
+            // Scene::Basic(ui) => ui.subscription().map(Message::Basic),
+            Scene::ScrollView(ui) => ui.subscription().map(Message::ScrollView),
+            // Scene::LargeSlider(ui) => ui.subscription().map(Message::LargeSlider),
+            _ => iced::Subscription::none(),
+        }
+    }
 
     pub fn view(&self) -> iced::Element<'_, Message> {
         let scene = match &self.scene {
-            Scene::Basic(ui) => ui.view(self.window_size).map(Message::Basic),
+            Scene::Basic(ui) => ui.view().map(Message::Basic),
             Scene::ScrollView(ui) => ui.view().map(Message::ScrollView),
             Scene::LargeSlider(ui) => ui.view().map(Message::LargeSlider),
         };

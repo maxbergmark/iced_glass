@@ -8,6 +8,7 @@ pub struct Uniforms {
     pub height: f32,
     pub refractive_index: f32,
     pub rim_width: f32,
+    pub opacity: f32,
 }
 
 impl Uniforms {
@@ -22,6 +23,8 @@ impl Uniforms {
             height: self.height,
             refractive_index: self.refractive_index,
             rim_width: self.rim_width,
+            opacity: self.opacity,
+            _pad: 0.0,
         }
     }
 }
@@ -38,4 +41,6 @@ pub struct Raw {
     pub height: f32,
     pub refractive_index: f32,
     pub rim_width: f32,
+    pub opacity: f32,
+    pub _pad: f32,
 }

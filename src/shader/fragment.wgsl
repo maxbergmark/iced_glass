@@ -8,6 +8,8 @@ struct Uniforms {
     height: f32,
     refractive_index: f32,
     rim_width: f32,
+    opacity: f32,
+    _pad: f32,
 };
 
 @group(1)
@@ -54,7 +56,7 @@ const TRANSPARENT: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 0.0);
 
 @fragment
 fn fs_main(input: FragInput) -> @location(0) vec4<f32> {
-    return physical_sampling(input);
+    return mix(TRANSPARENT, physical_sampling(input), uniforms.opacity);
 }
 
 fn physical_sampling(input: FragInput) -> vec4<f32> {
@@ -97,7 +99,8 @@ fn sd_rounded_box(p: vec2<f32>, b: vec2<f32>, r: f32) -> f32 {
 }
 
 fn clamp_radius(radius: f32, dimensions: vec2<f32>) -> f32 {
-    return min(radius, min(dimensions.x, dimensions.y) / 2.0);
+    // TODO: why 2.0?
+    return min(2.0 * radius, min(dimensions.x, dimensions.y) / 2.0) * 1.0;
 }
 
 fn compute_offset(x: f32, y: f32, dimensions: vec2<f32>) -> vec2<f32> {

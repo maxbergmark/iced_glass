@@ -1,4 +1,6 @@
-use iced::{Alignment, Background, Border, Color, Font, Length, Task, font::Weight};
+use std::time::Instant;
+
+use iced::{Alignment, Animation, Background, Border, Color, Font, Length, Task, font::Weight};
 use itertools::Itertools;
 use serde::Deserialize;
 
@@ -6,15 +8,25 @@ use serde::Deserialize;
 pub struct Ui {
     album_cards: Vec<AlbumCard>,
     current_album: Option<AlbumCard>,
+    hover_info: HoverInfo,
     search_value: String,
     playback_time: f32,
     playing: bool,
+    opacity: Animation<bool>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct HoverInfo {
+    index: usize,
+    is_hovered: bool,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     SearchValueChange(String),
     SetCurrentAlbum(AlbumCard),
+    SetHoverAlbum(usize),
+    ClearHoverAlbum,
     SetPlaybackTime(f32),
     TogglePlayback,
     Noop,
@@ -37,8 +49,13 @@ impl Default for Ui {
             album_cards,
             search_value: String::new(),
             current_album: None,
+            hover_info: HoverInfo {
+                index: 0,
+                is_hovered: false,
+            },
             playback_time: 0.3,
             playing: false,
+            opacity: Animation::new(false).quick(),
         }
     }
 }
@@ -52,6 +69,8 @@ impl Ui {
         match message {
             Message::SearchValueChange(search_value) => {
                 self.search_value = search_value;
+                self.opacity.go_mut(false, Instant::now());
+                self.hover_info.is_hovered = false;
                 Task::none()
             }
             Message::SetCurrentAlbum(album_card) => {
@@ -66,7 +85,37 @@ impl Ui {
                 self.playing = !self.playing;
                 Task::none()
             }
+            Message::SetHoverAlbum(index) => {
+                let old_index = self.hover_info.index;
+                self.hover_info = HoverInfo {
+                    index,
+                    is_hovered: true,
+                    // event_time: Instant::now(),
+                };
+                let now = Instant::now();
+                if self.opacity.is_animating(now) && old_index != index {
+                    self.opacity = Animation::new(false).quick();
+                }
+                self.opacity.go_mut(true, now);
+                Task::none()
+            }
+            Message::ClearHoverAlbum => {
+                self.hover_info.is_hovered = false;
+                self.opacity.go_mut(false, Instant::now());
+                // self.hover_info.event_time = Instant::now();
+                Task::none()
+            }
             Message::Noop => Task::none(),
+        }
+    }
+
+    pub fn subscription(&self) -> iced::Subscription<Message> {
+        // Only request frames while the animation is running
+        let now = Instant::now();
+        if self.opacity.is_animating(now) {
+            iced::time::every(std::time::Duration::from_millis(16)).map(|_| Message::Noop)
+        } else {
+            iced::Subscription::none()
         }
     }
 
@@ -89,7 +138,8 @@ impl Ui {
                 iced::widget::Column::with_children(
                     self.album_cards
                         .iter()
-                        .filter(|album_card| {
+                        .enumerate()
+                        .filter(|(_, album_card)| {
                             album_card
                                 .title
                                 .to_lowercase()
@@ -100,7 +150,11 @@ impl Ui {
                         .into_iter()
                         .map(|chunk| {
                             iced::widget::Row::from_vec(
-                                chunk.map(|album_card| album_card.view()).collect_vec(),
+                                chunk
+                                    .map(|(idx, album_card)| {
+                                        album_card.view(idx, self.hover_info, &self.opacity)
+                                    })
+                                    .collect_vec(),
                             )
                             .spacing(20.0)
                             .into()
@@ -269,18 +323,55 @@ const BOLD: Font = Font {
 };
 
 impl AlbumCard {
-    fn view(&self) -> iced::Element<'_, Message> {
+    fn view(
+        &self,
+        idx: usize,
+        hover_info: HoverInfo,
+        opacity: &Animation<bool>,
+    ) -> iced::Element<'_, Message> {
         let title = if self.title.len() > 40 {
             self.title[..40].to_string() + "..."
         } else {
             self.title.clone()
         };
 
+        let is_hovered = hover_info.index == idx;
+        let overlay: iced::Element<'_, Message> = if is_hovered {
+            let opacity = opacity.interpolate(0.0, 1.0, Instant::now());
+
+            iced::widget::container(
+                iced_glass::widget::container(
+                    iced::widget::svg("assets/play.svg")
+                        .width(Length::from(15.0))
+                        .height(Length::from(15.0))
+                        .style(|theme, _status| self.icon_style(theme))
+                        .opacity(opacity),
+                )
+                .center(Length::from(40.0))
+                .blur_radius(100.0)
+                .edge_radius(10.0)
+                .edge_height(30.0)
+                .refractive_index(1.5)
+                .lightness(-1.5)
+                .opacity(opacity)
+                .style(move |theme| self.style(theme, opacity)),
+            )
+            .align_right(Length::from(200.0))
+            .align_bottom(Length::from(200.0))
+            .padding(10.0)
+            .into()
+        } else {
+            iced::widget::space().into()
+        };
+
         iced::widget::container(
-            iced::widget::button(iced::widget::column![
-                iced::widget::image(format!("assets/album_covers/{}", self.file.clone()))
-                    .width(200.0)
-                    .height(200.0),
+            iced::widget::mouse_area(iced::widget::column![
+                iced::widget::stack![
+                    iced::widget::image(format!("assets/album_covers/{}", self.file.clone()))
+                        .width(200.0)
+                        .height(200.0),
+                    overlay,
+                ],
                 iced::widget::container(iced::widget::column![
                     iced::widget::text(title)
                         .size(15.0)
@@ -302,14 +393,15 @@ impl AlbumCard {
                 .height(Length::from(40.0)),
             ])
             .on_press(Message::SetCurrentAlbum(self.clone()))
-            .style(|theme, _status| button_style(theme)),
+            .on_enter(Message::SetHoverAlbum(idx))
+            .on_exit(Message::ClearHoverAlbum),
         )
         .width(Length::from(200.0))
         .center_y(Length::from(250.0))
         // .blur_radius(50.0)
         // .saturation(1.0)
         // .lightness(-0.5)
-        .style(|theme| self.style(theme))
+        .style(|theme| self.style(theme, 1.0))
         .into()
     }
 
@@ -351,10 +443,10 @@ impl AlbumCard {
         .into()
     }
 
-    fn style(&self, _theme: &iced::Theme) -> iced::widget::container::Style {
+    fn style(&self, _theme: &iced::Theme, opacity: f32) -> iced::widget::container::Style {
         iced::widget::container::Style {
             shadow: iced::Shadow {
-                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25 * opacity),
                 offset: iced::Vector::new(0.0, 12.0),
                 blur_radius: 40.0,
             },
@@ -405,6 +497,12 @@ impl AlbumCard {
                 border_width: 1.0,
                 border_color: iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0),
             },
+        }
+    }
+
+    fn icon_style(&self, _theme: &iced::Theme) -> iced::widget::svg::Style {
+        iced::widget::svg::Style {
+            color: Some(Color::WHITE),
         }
     }
 }

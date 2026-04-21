@@ -7,6 +7,8 @@ struct Uniforms {
     edge_radius: f32,
     height: f32,
     refractive_index: f32,
+    rim_width: f32,
+    opacity: f32,
     _pad: f32,
 };
 

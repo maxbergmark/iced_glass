@@ -10,6 +10,7 @@ iced = { git = "https://github.com/maxbergmark/iced", features = [
     "image",
     "advanced",
     "svg",
+    "tokio",
 ], branch = "latest" }
 iced_wgpu = { git = "https://github.com/maxbergmark/iced", branch = "latest" }
 

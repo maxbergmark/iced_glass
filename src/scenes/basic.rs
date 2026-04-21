@@ -106,12 +106,10 @@ impl Ui {
         }
     }
 
-    pub fn view(&self, window_size: iced::Size) -> iced::Element<'_, Message> {
-        iced::widget::column![iced::widget::stack![
-            self.image(),
-            self.mouse_area(),
-            self.glass(window_size),
-        ]]
+    pub fn view(&self) -> iced::Element<'_, Message> {
+        iced::widget::responsive(move |size| {
+            iced::widget::stack![self.image(), self.mouse_area(), self.glass(size),].into()
+        })
         .into()
     }
 
@@ -176,6 +174,7 @@ impl Ui {
                 .edge_height(self.edge_height)
                 .refractive_index(self.refractive_index)
                 .rim_width(self.rim_width)
+                .opacity(1.0)
                 .style(|theme| self.style(theme)),
         )
         .align_left(Length::Fill)
@@ -186,7 +185,7 @@ impl Ui {
                 .map(|point| {
                     (point.y - self.height / 2.0)
                         .max(0.0)
-                        .min(window_size.height - self.height - 60.0)
+                        .min(window_size.height - self.height)
                 })
                 .unwrap_or(0.0),
             left: self
