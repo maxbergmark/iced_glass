@@ -1,4 +1,6 @@
-# iced_glass
+# Iced Glass
+
+![iced_glass example](examples/iced_glass_example.png)
 
 A Rust library and demo app that implements Apple-style **liquid / frosted glass** UI effects using [Iced](https://github.com/iced-rs/iced) and custom WGPU shader pipelines.
 
