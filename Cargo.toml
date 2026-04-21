@@ -15,7 +15,6 @@ iced = { git = "https://github.com/maxbergmark/iced", features = [
 iced_wgpu = { git = "https://github.com/maxbergmark/iced", branch = "latest" }
 
 wgpu = { version = "27.0.1", features = [] }
-tokio = { version = "1.48.0", features = ["full"] }
 bytemuck = "1.25.0"
 num-traits = "0.2.19"
 serde = { version = "1.0.228", features = ["derive"] }

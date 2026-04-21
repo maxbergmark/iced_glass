@@ -45,10 +45,11 @@ The binary crate includes three demo scenes, selectable at runtime:
 | `iced_wgpu` | Low-level WGPU integration for custom shader primitives |
 | `wgpu` | GPU abstraction layer |
 | `bytemuck` | Safe transmutes for uniform buffers |
-| `tokio` | Async runtime |
-| `serde` / `serde_json` | Album metadata deserialization |
 | `num-traits` | Numeric trait bounds for the slider |
+| `serde` / `serde_json` | Album metadata deserialization |
 | `itertools` | Chunked iteration for album grid layout |
+
+Note: `serde` and `itertools` are only used for the demo, not in the library code.
 
 ## Building and running
 
