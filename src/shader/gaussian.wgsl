@@ -3,13 +3,12 @@ struct Uniforms {
     corner_radius: f32,
     saturation: f32,
     lightness: f32,
-    direction: vec2<f32>,
+    blur_direction: vec2<f32>,
+    edge_radius: f32,
+    height: f32,
+    refractive_index: f32,
+    _pad: f32,
 };
-
-struct BlurDirection {
-    direction: vec2<f32>,
-}
-
 
 @group(1)
 @binding(0)
@@ -51,44 +50,37 @@ struct FragInput {
     @location(0) uv: vec2<f32>,
 };
 
-const PI: f32 = 3.14159265358979323846;
-const RADIUS: f32 = 0.10;
-
 @fragment
-fn horizontal_pass(input: FragInput) -> @location(0) vec4<f32> {
+fn gaussian_blur(input: FragInput) -> @location(0) vec4<f32> {
     let uv = input.uv;
-    let direction = uniforms.direction;
+    let direction = uniforms.blur_direction;
     let texel_size = vec2<f32>(1.0) / vec2<f32>(textureDimensions(image));
     let radius = uniforms.blur_radius;
-    var step = 1.0 + 0.05 * abs(radius);
+    var step = 1.0 + 0.01 * abs(radius);
     var color = vec4<f32>(0.0);
     var total_weight = 0.0;
-    for (var x = -radius; x <= radius; x += step) {
+    for (var x = -radius; x <= radius; x += round(step)) {
         let offset = direction * x * texel_size;
         let dist = x * x;
         let weight = exp(-dist / (2.0 * radius));
-        color += textureSample(image, image_sampler, uv + offset) * weight;
+        color += srgb_to_linear(textureSample(image, image_sampler, uv + offset)) * weight;
         total_weight += weight;
         step = 1.0 + 0.05 * abs(x);
     }
-    return color / total_weight;
+    return linear_to_srgb(color / total_weight);
 }
 
-// @fragment
-// fn vertical_pass(input: FragInput) -> @location(0) vec4<f32> {
-//     let uv = input.uv;
-//     let texel_size = vec2<f32>(1.0) / vec2<f32>(textureDimensions(image));
-//     let radius = i32(uniforms.blur_radius);
-//     var step = 1 + abs(radius) / 100;
-//     var color = vec4<f32>(0.0);
-//     var total_weight = 0.0;
-//     for (var y = -radius; y <= radius; y += step) {
-//         let offset = vec2<f32>(0.0, f32(y)) * texel_size;
-//         let dist = f32(y * y);
-//         let weight = exp(-dist / (2.0 * f32(radius)));
-//         color += textureSample(image, image_sampler, uv + offset) * weight;
-//         total_weight += weight;
-//         step = 1 + abs(y) / 100;
-//     }
-//     return color / total_weight;
-// }
+// ---------- sRGB <-> linear ----------
+fn srgb_to_linear(c: vec4<f32>) -> vec4<f32> {
+    let cutoff = vec4<f32>(0.04045);
+    let low    = c / 12.92;
+    let high   = pow((c + vec4<f32>(0.055)) / 1.055, vec4<f32>(2.4));
+    return select(high, low, c <= cutoff);
+}
+
+fn linear_to_srgb(c: vec4<f32>) -> vec4<f32> {
+    let cutoff = vec4<f32>(0.0031308);
+    let low    = 12.92 * c;
+    let high   = 1.055 * pow(c, vec4<f32>(1.0 / 2.4)) - vec4<f32>(0.055);
+    return select(high, low, c <= cutoff);
+}

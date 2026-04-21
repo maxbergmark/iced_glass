@@ -4,6 +4,10 @@ pub struct Uniforms {
     pub corner_radius: f32,
     pub saturation: f32,
     pub lightness: f32,
+    pub edge_radius: f32,
+    pub height: f32,
+    pub refractive_index: f32,
+    pub rim_width: f32,
 }
 
 impl Uniforms {
@@ -14,6 +18,10 @@ impl Uniforms {
             saturation: self.saturation,
             lightness: self.lightness,
             direction,
+            edge_radius: self.edge_radius,
+            height: self.height,
+            refractive_index: self.refractive_index,
+            rim_width: self.rim_width,
         }
     }
 }
@@ -26,4 +34,8 @@ pub struct Raw {
     pub saturation: f32,
     pub lightness: f32,
     pub direction: [f32; 2],
+    pub edge_radius: f32,
+    pub height: f32,
+    pub refractive_index: f32,
+    pub rim_width: f32,
 }

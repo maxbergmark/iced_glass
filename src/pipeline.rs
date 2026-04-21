@@ -1,5 +1,10 @@
+use std::collections::{HashMap, HashSet};
+
 use crate::{
-    shader::{fragment, gaussian, uniforms_bind_group, uniforms_bind_group_layout},
+    shader::{
+        create_sampler, fragment::FragmentShader, gaussian::GaussianShader, uniforms_bind_group,
+        uniforms_bind_group_layout,
+    },
     uniforms::Uniforms,
 };
 
@@ -9,8 +14,7 @@ pub struct Pipeline {
     pub sampler: wgpu::Sampler,
     pub bgl_textures: wgpu::BindGroupLayout, // group 0 layout
     pub bgl_uniforms: wgpu::BindGroupLayout, // group 1 layout
-    pub horizontal_blur_pipeline: wgpu::RenderPipeline,
-    // pub vertical_blur_pipeline: wgpu::RenderPipeline,
+    pub blur_pipeline: wgpu::RenderPipeline,
     pub fragment_pipeline: wgpu::RenderPipeline,
 
     // One entry per GlassContainer:
@@ -35,20 +39,18 @@ impl iced::widget::shader::Pipeline for Pipeline {
     where
         Self: Sized,
     {
-        let horizontal_blur_pipeline = gaussian::GaussianShader::create_pipeline(device, format);
-
-        let fragment_pipeline = fragment::FragmentShader::create_pipeline(device, format);
+        let blur_pipeline = GaussianShader::create_pipeline(device, format);
+        let fragment_pipeline = FragmentShader::create_pipeline(device, format);
 
         Self {
             device_format: format,
             sampler: create_sampler(device),
             bgl_textures: create_bgl_texture_layout(device),
             bgl_uniforms: uniforms_bind_group_layout(device),
-            horizontal_blur_pipeline,
-            // vertical_blur_pipeline,
+            blur_pipeline,
             fragment_pipeline,
-            instances: std::collections::HashMap::new(),
-            live_this_frame: std::collections::HashSet::new(),
+            instances: HashMap::new(),
+            live_this_frame: HashSet::new(),
         }
     }
 }
@@ -163,35 +165,16 @@ impl Instance {
         let (copy_texture, gaussian_texture) =
             create_textures(device, pipeline.device_format, width, height);
 
-        let uniforms_h = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("uniforms_h"),
-            size: std::mem::size_of::<crate::uniforms::Raw>() as u64,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let uniforms_v = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("uniforms_v"),
-            size: std::mem::size_of::<crate::uniforms::Raw>() as u64,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+        let uniforms_h = create_uniforms_buffer(device);
+        let uniforms_v = create_uniforms_buffer(device);
 
-        let horizontal_blur_bg = gaussian::GaussianShader::create_bind_group_from_layout(
-            device,
-            bgl_textures,
-            &copy_texture,
-        );
-        let vertical_blur_bg = gaussian::GaussianShader::create_bind_group_from_layout(
-            device,
-            bgl_textures,
-            &gaussian_texture,
-        );
+        let horizontal_blur_bg =
+            GaussianShader::create_bind_group(device, bgl_textures, &copy_texture);
+        let vertical_blur_bg =
+            GaussianShader::create_bind_group(device, bgl_textures, &gaussian_texture);
 
-        let fragment_bg = fragment::FragmentShader::create_bind_group(
-            device,
-            &pipeline.bgl_textures,
-            &copy_texture,
-        );
+        let fragment_bg =
+            FragmentShader::create_bind_group(device, &pipeline.bgl_textures, &copy_texture);
         let uniform_bg_h = uniforms_bind_group(device, &pipeline.bgl_uniforms, &uniforms_h);
         let uniform_bg_v = uniforms_bind_group(device, &pipeline.bgl_uniforms, &uniforms_v);
 
@@ -227,15 +210,11 @@ impl Instance {
     }
 }
 
-pub fn create_sampler(device: &wgpu::Device) -> wgpu::Sampler {
-    device.create_sampler(&wgpu::SamplerDescriptor {
-        label: Some("my_sampler"),
-        address_mode_u: wgpu::AddressMode::ClampToEdge,
-        address_mode_v: wgpu::AddressMode::ClampToEdge,
-        address_mode_w: wgpu::AddressMode::ClampToEdge,
-        mag_filter: wgpu::FilterMode::Nearest,
-        min_filter: wgpu::FilterMode::Nearest,
-        mipmap_filter: wgpu::FilterMode::Nearest,
-        ..Default::default()
+fn create_uniforms_buffer(device: &wgpu::Device) -> wgpu::Buffer {
+    device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("uniforms"),
+        size: std::mem::size_of::<crate::uniforms::Raw>() as u64,
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
     })
 }

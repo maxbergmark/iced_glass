@@ -30,9 +30,14 @@ where
     content: Element<'a, Message, Theme>,
     class: Theme::Class<'a>,
 
+    // GlassContainer specific properties
     blur_radius: f32,
     saturation: f32,
     lightness: f32,
+    edge_radius: f32,
+    edge_height: f32,
+    refractive_index: f32,
+    rim_width: f32,
 }
 
 pub fn glass_container<'a, Message, Theme>(
@@ -70,6 +75,10 @@ where
             blur_radius: 0.0,
             saturation: 1.0,
             lightness: 0.0,
+            edge_radius: 0.0,
+            edge_height: 0.0,
+            refractive_index: 1.5,
+            rim_width: 1.0,
         }
     }
 
@@ -202,6 +211,26 @@ where
         self.lightness = lightness;
         self
     }
+
+    pub fn edge_radius(mut self, edge_radius: f32) -> Self {
+        self.edge_radius = edge_radius;
+        self
+    }
+
+    pub fn edge_height(mut self, edge_height: f32) -> Self {
+        self.edge_height = edge_height;
+        self
+    }
+
+    pub fn refractive_index(mut self, refractive_index: f32) -> Self {
+        self.refractive_index = refractive_index;
+        self
+    }
+
+    pub fn rim_width(mut self, rim_width: f32) -> Self {
+        self.rim_width = rim_width;
+        self
+    }
 }
 
 struct State {
@@ -227,13 +256,13 @@ where
     }
 
     fn children(&self) -> Vec<Tree> {
-        self.content.as_widget().children()
-        // vec![Tree::new(&self.content)]
+        // self.content.as_widget().children()
+        vec![Tree::new(&self.content)]
     }
 
     fn diff(&self, tree: &mut Tree) {
-        self.content.as_widget().diff(tree);
-        // tree.diff_children(std::slice::from_ref(&self.content));
+        // self.content.as_widget().diff(tree);
+        tree.diff_children(std::slice::from_ref(&self.content));
     }
 
     fn size(&self) -> Size<Length> {
@@ -258,7 +287,11 @@ where
             self.padding,
             self.horizontal_alignment,
             self.vertical_alignment,
-            |limits| self.content.as_widget_mut().layout(tree, renderer, limits),
+            |limits| {
+                self.content
+                    .as_widget_mut()
+                    .layout(&mut tree.children[0], renderer, limits)
+            },
         )
     }
 
@@ -272,7 +305,7 @@ where
         operation.container(self.id.as_ref(), layout.bounds());
         operation.traverse(&mut |operation| {
             self.content.as_widget_mut().operate(
-                tree,
+                &mut tree.children[0],
                 layout.children().next().unwrap(),
                 renderer,
                 operation,
@@ -292,7 +325,7 @@ where
         viewport: &Rectangle,
     ) {
         self.content.as_widget_mut().update(
-            tree,
+            &mut tree.children[0],
             event,
             layout.children().next().unwrap(),
             cursor,
@@ -312,7 +345,7 @@ where
         renderer: &Renderer,
     ) -> mouse::Interaction {
         self.content.as_widget().mouse_interaction(
-            tree,
+            &tree.children[0],
             layout.children().next().unwrap(),
             cursor,
             viewport,
@@ -344,6 +377,10 @@ where
                     corner_radius: style.border.radius.bottom_left,
                     saturation: self.saturation,
                     lightness: self.lightness,
+                    edge_radius: self.edge_radius,
+                    height: self.edge_height,
+                    refractive_index: self.refractive_index,
+                    rim_width: self.rim_width,
                 },
             },
         );
@@ -352,7 +389,7 @@ where
             draw_background(renderer, &style, bounds);
             renderer.with_layer(bounds, |renderer| {
                 self.content.as_widget().draw(
-                    tree,
+                    &tree.children[0],
                     renderer,
                     theme,
                     &renderer::Style {
@@ -379,7 +416,7 @@ where
         translation: Vector,
     ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
         self.content.as_widget_mut().overlay(
-            tree,
+            &mut tree.children[0],
             layout.children().next().unwrap(),
             renderer,
             viewport,
