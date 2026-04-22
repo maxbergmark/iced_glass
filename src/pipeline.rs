@@ -2,7 +2,8 @@ use std::collections::{HashMap, HashSet};
 
 use crate::{
     shader::{
-        create_sampler, fragment::FragmentShader, gaussian::GaussianShader, uniforms_bind_group,
+        create_sampler, downsample::DownsampleShader, fragment::FragmentShader,
+        gaussian::GaussianShader, texture_bind_groups, uniforms_bind_group,
         uniforms_bind_group_layout,
     },
     uniforms::Uniforms,
@@ -14,6 +15,9 @@ pub struct Pipeline {
     pub sampler: wgpu::Sampler,
     pub bgl_textures: wgpu::BindGroupLayout, // group 0 layout
     pub bgl_uniforms: wgpu::BindGroupLayout, // group 1 layout
+
+    pub downsample_pipeline: wgpu::RenderPipeline,
+    // pub upsample_pipeline: wgpu::RenderPipeline,
     pub blur_pipeline: wgpu::RenderPipeline,
     pub fragment_pipeline: wgpu::RenderPipeline,
 
@@ -22,15 +26,14 @@ pub struct Pipeline {
     live_this_frame: std::collections::HashSet<u64>,
 }
 pub struct Instance {
-    pub copy_texture: wgpu::Texture,
-    pub gaussian_texture: wgpu::Texture,
+    pub tex_a: wgpu::Texture,
+    pub tex_b: wgpu::Texture,
     pub uniforms_h: wgpu::Buffer,
     pub uniforms_v: wgpu::Buffer,
-    pub horizontal_bg: wgpu::BindGroup, // sampling copy_texture
-    pub vertical_bg: wgpu::BindGroup,   // sampling gaussian_texture
-    pub fragment_bg: wgpu::BindGroup,   // sampling copy_texture
     pub uniform_bg_h: wgpu::BindGroup,
     pub uniform_bg_v: wgpu::BindGroup,
+    pub tex_a_bg: Vec<wgpu::BindGroup>,
+    pub tex_b_bg: Vec<wgpu::BindGroup>,
     pub size: wgpu::Extent3d,
 }
 
@@ -39,6 +42,7 @@ impl iced::widget::shader::Pipeline for Pipeline {
     where
         Self: Sized,
     {
+        let downsample_pipeline = DownsampleShader::create_pipeline(device, format);
         let blur_pipeline = GaussianShader::create_pipeline(device, format);
         let fragment_pipeline = FragmentShader::create_pipeline(device, format);
 
@@ -47,6 +51,7 @@ impl iced::widget::shader::Pipeline for Pipeline {
             sampler: create_sampler(device),
             bgl_textures: create_bgl_texture_layout(device),
             bgl_uniforms: uniforms_bind_group_layout(device),
+            downsample_pipeline,
             blur_pipeline,
             fragment_pipeline,
             instances: HashMap::new(),
@@ -63,7 +68,7 @@ pub fn create_bgl_texture_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout
                 binding: 0,
                 visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
                 ty: wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
                     view_dimension: wgpu::TextureViewDimension::D2,
                     multisampled: false,
                 },
@@ -72,7 +77,7 @@ pub fn create_bgl_texture_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout
             wgpu::BindGroupLayoutEntry {
                 binding: 1,
                 visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::NonFiltering),
+                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                 count: None,
             },
         ],
@@ -92,7 +97,7 @@ pub fn create_textures(
             height: height.max(1),
             depth_or_array_layers: 1,
         },
-        mip_level_count: 1,
+        mip_level_count: 4,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format,
@@ -109,7 +114,7 @@ pub fn create_textures(
             height: height.max(1),
             depth_or_array_layers: 1,
         },
-        mip_level_count: 1,
+        mip_level_count: 4,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format,
@@ -170,26 +175,21 @@ impl Instance {
         let uniforms_h = create_uniforms_buffer(device);
         let uniforms_v = create_uniforms_buffer(device);
 
-        let horizontal_blur_bg =
-            GaussianShader::create_bind_group(device, bgl_textures, &copy_texture);
-        let vertical_blur_bg =
-            GaussianShader::create_bind_group(device, bgl_textures, &gaussian_texture);
+        let copy_texture_bg = texture_bind_groups(device, bgl_textures, &copy_texture);
+        let gaussian_texture_bg = texture_bind_groups(device, bgl_textures, &gaussian_texture);
 
-        let fragment_bg =
-            FragmentShader::create_bind_group(device, &pipeline.bgl_textures, &copy_texture);
         let uniform_bg_h = uniforms_bind_group(device, &pipeline.bgl_uniforms, &uniforms_h);
         let uniform_bg_v = uniforms_bind_group(device, &pipeline.bgl_uniforms, &uniforms_v);
 
         Self {
-            copy_texture,
-            gaussian_texture,
+            tex_a: copy_texture,
+            tex_b: gaussian_texture,
             uniforms_h,
             uniforms_v,
-            horizontal_bg: horizontal_blur_bg,
-            vertical_bg: vertical_blur_bg,
-            fragment_bg,
             uniform_bg_h,
             uniform_bg_v,
+            tex_a_bg: copy_texture_bg,
+            tex_b_bg: gaussian_texture_bg,
             size: wgpu::Extent3d {
                 width: width.max(1),
                 height: height.max(1),

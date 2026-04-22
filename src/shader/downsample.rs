@@ -1,32 +1,27 @@
 use std::borrow::Cow;
 
-use crate::shader::uniforms_bind_group_layout;
+pub struct DownsampleShader;
 
-pub struct GaussianShader;
-
-impl GaussianShader {
+impl DownsampleShader {
     pub fn create_pipeline(
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
     ) -> wgpu::RenderPipeline {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("gaussian.create_pipeline.layout"),
-            bind_group_layouts: &[
-                &Self::create_bind_group_layout(device),
-                &uniforms_bind_group_layout(device),
-            ],
+            label: Some("downsample.create_pipeline.layout"),
+            bind_group_layouts: &[&Self::create_bind_group_layout(device)],
             push_constant_ranges: &[],
         });
 
         let module = &device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("gaussian.wgsl"),
-            source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(
-                concat!(include_str!("gaussian.wgsl"),),
-            )),
+            label: Some("downsample.wgsl"),
+            source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(concat!(include_str!(
+                "downsample.wgsl"
+            ),))),
         });
 
         device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("gaussian.create_pipeline.render_pipeline"),
+            label: Some("downsample.create_pipeline.render_pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module,
@@ -39,7 +34,7 @@ impl GaussianShader {
             multisample: wgpu::MultisampleState::default(),
             fragment: Some(wgpu::FragmentState {
                 module,
-                entry_point: Some("gaussian_blur"),
+                entry_point: Some("fs"),
                 targets: &[Some(wgpu::ColorTargetState {
                     format,
                     blend: Some(wgpu::BlendState::ALPHA_BLENDING),
@@ -54,7 +49,7 @@ impl GaussianShader {
 
     fn create_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("gaussian.bind_group_layout"),
+            label: Some("downsample.bind_group_layout"),
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,

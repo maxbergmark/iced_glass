@@ -40,9 +40,12 @@ impl iced::widget::shader::Primitive for Primitive {
             None => return,
         };
 
+        let mip_level = self.uniforms.mip_level();
         copy_background(encoder, instance, texture, bounds, &copy_size);
-        horizontal_blur(encoder, pipeline, instance, &copy_size);
-        vertical_blur(encoder, pipeline, instance, &copy_size);
+        downsample(encoder, pipeline, instance, &instance.tex_a, mip_level);
+        horizontal_blur(encoder, pipeline, instance, mip_level);
+        vertical_blur(encoder, pipeline, instance, mip_level);
+        upsample(encoder, pipeline, instance, &instance.tex_a, mip_level);
         fragment_pass(encoder, pipeline, instance, target, bounds);
     }
 }
@@ -53,7 +56,7 @@ fn calculate_copy_size(
     bounds: &iced::Rectangle<u32>,
 ) -> Option<wgpu::Extent3d> {
     let src_size = texture.size();
-    let dst_size = instance.copy_texture.size();
+    let dst_size = instance.tex_a.size();
     let copy_width = bounds
         .width
         .min(dst_size.width)
@@ -92,23 +95,100 @@ fn copy_background(
             },
             aspect: wgpu::TextureAspect::All,
         },
-        instance.copy_texture.as_image_copy(),
+        instance.tex_a.as_image_copy(),
         *copy_size,
     );
+}
+
+fn downsample(
+    encoder: &mut wgpu::CommandEncoder,
+    pipeline: &Pipeline,
+    instance: &Instance,
+    texture: &wgpu::Texture,
+    mip_level: u32,
+) {
+    #[allow(clippy::reversed_empty_ranges)]
+    for level in 1..=mip_level {
+        let dst_view = texture.create_view(&wgpu::TextureViewDescriptor {
+            base_mip_level: level,
+            mip_level_count: Some(1),
+            ..Default::default()
+        });
+
+        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("downsample.pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &dst_view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                    store: wgpu::StoreOp::Store,
+                },
+                depth_slice: None,
+            })],
+            ..Default::default()
+        });
+        pass.set_pipeline(&pipeline.downsample_pipeline);
+        pass.set_bind_group(0, &instance.tex_a_bg[(level - 1) as usize], &[]);
+        pass.draw(0..6, 0..1);
+    }
+}
+
+fn upsample(
+    encoder: &mut wgpu::CommandEncoder,
+    pipeline: &Pipeline,
+    instance: &Instance,
+    texture: &wgpu::Texture,
+    mip_level: u32,
+) {
+    #[allow(clippy::reversed_empty_ranges)]
+    for level in (1..=mip_level).rev() {
+        let dst_view = texture.create_view(&wgpu::TextureViewDescriptor {
+            base_mip_level: level - 1,
+            mip_level_count: Some(1),
+            ..Default::default()
+        });
+
+        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("upsample.pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &dst_view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                    store: wgpu::StoreOp::Store,
+                },
+                depth_slice: None,
+            })],
+            ..Default::default()
+        });
+        pass.set_pipeline(&pipeline.downsample_pipeline);
+        pass.set_bind_group(0, &instance.tex_a_bg[level as usize], &[]);
+        pass.draw(0..6, 0..1);
+    }
 }
 
 fn horizontal_blur(
     encoder: &mut wgpu::CommandEncoder,
     pipeline: &Pipeline,
     instance: &Instance,
-    copy_size: &wgpu::Extent3d,
+    mip_level: u32,
 ) {
     let mut horizontal_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some("primitive.horizontal_pass"),
         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-            view: &instance
-                .gaussian_texture
-                .create_view(&wgpu::TextureViewDescriptor::default()),
+            view: &instance.tex_b.create_view(&wgpu::TextureViewDescriptor {
+                base_mip_level: mip_level,
+                mip_level_count: Some(1),
+                ..Default::default() // label: todo!(),
+                                     // format: todo!(),
+                                     // dimension: todo!(),
+                                     // usage: todo!(),
+                                     // aspect: todo!(),
+                                     // mip_level_count: todo!(),
+                                     // base_array_layer: todo!(),
+                                     // array_layer_count: todo!(),
+            }),
             resolve_target: None,
             ops: wgpu::Operations {
                 load: wgpu::LoadOp::Load,
@@ -121,17 +201,8 @@ fn horizontal_blur(
         occlusion_query_set: None,
     });
 
-    horizontal_pass.set_scissor_rect(0, 0, copy_size.width, copy_size.height);
-    horizontal_pass.set_viewport(
-        0.0,
-        0.0,
-        copy_size.width as f32,
-        copy_size.height as f32,
-        0.0,
-        1.0,
-    );
     horizontal_pass.set_pipeline(&pipeline.blur_pipeline);
-    horizontal_pass.set_bind_group(0, &instance.horizontal_bg, &[]);
+    horizontal_pass.set_bind_group(0, &instance.tex_a_bg[mip_level as usize], &[]);
     horizontal_pass.set_bind_group(1, &instance.uniform_bg_h, &[]);
     horizontal_pass.draw(0..6, 0..1);
 }
@@ -140,14 +211,21 @@ fn vertical_blur(
     encoder: &mut wgpu::CommandEncoder,
     pipeline: &Pipeline,
     instance: &Instance,
-    copy_size: &wgpu::Extent3d,
+    mip_level: u32,
 ) {
     let mut vertical_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some("primitive.vertical_pass"),
         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-            view: &instance
-                .copy_texture
-                .create_view(&wgpu::TextureViewDescriptor::default()),
+            view: &instance.tex_a.create_view(&wgpu::TextureViewDescriptor {
+                base_mip_level: mip_level,
+                mip_level_count: Some(1),
+                ..Default::default() // label: todo!(),
+                                     // format: todo!(),
+                                     // dimension: todo!(),
+                                     // usage: todo!(),
+                                     // aspect: todo!(),
+                                     // mip_level_count: todo!(),
+            }),
             resolve_target: None,
             ops: wgpu::Operations {
                 load: wgpu::LoadOp::Load,
@@ -159,17 +237,9 @@ fn vertical_blur(
         timestamp_writes: None,
         occlusion_query_set: None,
     });
-    vertical_pass.set_scissor_rect(0, 0, copy_size.width, copy_size.height);
-    vertical_pass.set_viewport(
-        0.0,
-        0.0,
-        copy_size.width as f32,
-        copy_size.height as f32,
-        0.0,
-        1.0,
-    );
+
     vertical_pass.set_pipeline(&pipeline.blur_pipeline);
-    vertical_pass.set_bind_group(0, &instance.vertical_bg, &[]);
+    vertical_pass.set_bind_group(0, &instance.tex_b_bg[mip_level as usize], &[]);
     vertical_pass.set_bind_group(1, &instance.uniform_bg_v, &[]);
     vertical_pass.draw(0..6, 0..1);
 }
@@ -207,7 +277,7 @@ fn fragment_pass(
     );
 
     pass.set_pipeline(&pipeline.fragment_pipeline);
-    pass.set_bind_group(0, &instance.fragment_bg, &[]);
+    pass.set_bind_group(0, &instance.tex_a_bg[0], &[]);
     pass.set_bind_group(1, &instance.uniform_bg_h, &[]);
     pass.draw(0..6, 0..1);
 }

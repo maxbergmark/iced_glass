@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::shader::{create_sampler, to_texture_view, uniforms_bind_group_layout};
+use crate::shader::uniforms_bind_group_layout;
 
 pub struct FragmentShader;
 
@@ -60,7 +60,7 @@ impl FragmentShader {
                     binding: 0,
                     visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
                     ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
                         view_dimension: wgpu::TextureViewDimension::D2,
                         multisampled: false,
                     },
@@ -69,32 +69,8 @@ impl FragmentShader {
                 wgpu::BindGroupLayoutEntry {
                     binding: 1,
                     visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::NonFiltering),
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                     count: None,
-                },
-            ],
-        })
-    }
-
-    pub fn create_bind_group(
-        device: &wgpu::Device,
-        layout: &wgpu::BindGroupLayout,
-        input_texture: &wgpu::Texture,
-    ) -> wgpu::BindGroup {
-        let sampler = create_sampler(device);
-        let input_texture_view = to_texture_view(input_texture);
-
-        device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fragment.bind_group"),
-            layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&input_texture_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&sampler),
                 },
             ],
         })
