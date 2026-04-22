@@ -1,6 +1,6 @@
 use std::ops::RangeInclusive;
 
-use iced::{Alignment, Length, Task};
+use iced::{Alignment, Color, Length, Task};
 
 #[derive(Debug, Clone)]
 pub struct Ui {
@@ -16,6 +16,8 @@ pub struct Ui {
     edge_height: f32,
     refractive_index: f32,
     rim_width: f32,
+    opacity: f32,
+    tint: Color,
 }
 
 #[allow(unused)]
@@ -32,12 +34,21 @@ pub enum Message {
     SetRimWidth(f32),
     MouseMove(iced::Point),
     MouseState(bool),
+    SetTint(ColorChannel, f32),
+    SetOpacity(f32),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ColorChannel {
+    Red,
+    Green,
+    Blue,
 }
 
 impl Default for Ui {
     fn default() -> Self {
         Self {
-            width: 1000.0,
+            width: 1250.0,
             height: 500.0,
             blur_radius: 100.0,
             corner_radius: 100.0,
@@ -49,6 +60,8 @@ impl Default for Ui {
             edge_height: 300.0,
             refractive_index: 2.5,
             rim_width: 2.0,
+            opacity: 1.0,
+            tint: Color::WHITE,
         }
     }
 }
@@ -101,6 +114,18 @@ impl Ui {
             }
             Message::MouseState(moving) => {
                 self.moving = moving;
+                Task::none()
+            }
+            Message::SetOpacity(opacity) => {
+                self.opacity = opacity;
+                Task::none()
+            }
+            Message::SetTint(channel, value) => {
+                match channel {
+                    ColorChannel::Red => self.tint.r = value,
+                    ColorChannel::Green => self.tint.g = value,
+                    ColorChannel::Blue => self.tint.b = value,
+                }
                 Task::none()
             }
         }
@@ -174,7 +199,7 @@ impl Ui {
                 .edge_height(self.edge_height)
                 .refractive_index(self.refractive_index)
                 .rim_width(self.rim_width)
-                .opacity(1.0)
+                .opacity(self.opacity)
                 .style(|theme| self.style(theme)),
         )
         .align_left(Length::Fill)
@@ -231,6 +256,7 @@ impl Ui {
                         0.0..=2.0,
                         Message::SetSaturation
                     ),
+                    self.color_picker("Tint: ", self.tint),
                 ]
                 .spacing(20.0)
                 .padding(20.0),
@@ -259,6 +285,7 @@ impl Ui {
                         1.0..=10.0,
                         Message::SetRefractiveIndex
                     ),
+                    self.styled_text("Opacity: ", self.opacity, 0.0..=1.0, Message::SetOpacity),
                 ]
                 .spacing(20.0)
                 .padding(20.0)
@@ -325,6 +352,75 @@ impl Ui {
         .into()
     }
 
+    fn color_picker(&self, text: &'static str, value: Color) -> iced::Element<'_, Message> {
+        // iced::widget::container(
+        iced_glass::widget::container(
+            iced::widget::column![
+                iced::widget::row![
+                    iced::widget::text(text).size(15.0).center(),
+                    iced::widget::container(iced::widget::space())
+                        .center(Length::from(15.0))
+                        .style(move |_theme| iced::widget::container::Style {
+                            background: Some(iced::Background::Color(value)),
+                            ..Default::default()
+                        }),
+                ]
+                .align_y(Alignment::Center),
+                iced::widget::row![
+                    iced_glass::widget::slider(0.0..=1.0, value.r, |value| Message::SetTint(
+                        ColorChannel::Red,
+                        value
+                    ))
+                    .step(0.01)
+                    .style(|theme, status| self.slider_style(theme, status)),
+                    iced_glass::widget::slider(0.0..=1.0, value.g, |value| Message::SetTint(
+                        ColorChannel::Green,
+                        value
+                    ))
+                    .step(0.01)
+                    .style(|theme, status| self.slider_style(theme, status)),
+                    iced_glass::widget::slider(0.0..=1.0, value.b, |value| Message::SetTint(
+                        ColorChannel::Blue,
+                        value
+                    ))
+                    .step(0.01)
+                    .style(|theme, status| self.slider_style(theme, status)),
+                ]
+                .spacing(5.0),
+            ]
+            .align_x(Alignment::Center)
+            .spacing(5.0)
+            .padding(iced::Padding {
+                top: 0.0,
+                right: 15.0,
+                bottom: 0.0,
+                left: 15.0,
+            }),
+        )
+        // .style(|theme| self.style(theme))
+        .center_x(Length::from(200.0))
+        .center_y(Length::from(100.0))
+        .padding(10.0)
+        .blur_radius(50.0)
+        .saturation(self.saturation)
+        .lightness(0.0)
+        // .edge_radius(self.edge_radius)
+        // .edge_height(self.edge_height)
+        .style(|_theme| iced::widget::container::Style {
+            shadow: iced::Shadow {
+                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+                offset: iced::Vector::new(0.0, 12.0),
+                blur_radius: 40.0,
+            },
+            border: iced::Border {
+                radius: 20.0.into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .into()
+    }
+
     fn style(&self, _theme: &iced::Theme) -> iced::widget::container::Style {
         iced::widget::container::Style {
             shadow: iced::Shadow {
@@ -336,6 +432,7 @@ impl Ui {
                 radius: self.corner_radius.into(),
                 ..Default::default()
             },
+            background: Some(iced::Background::Color(self.tint)),
             ..Default::default()
         }
     }

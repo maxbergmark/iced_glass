@@ -373,6 +373,13 @@ where
         let state = tree.state.downcast_ref::<State>();
         let bounds = layout.bounds();
         let style = theme.style(&self.class);
+        let tint = style
+            .background
+            .map(|background| match background {
+                Background::Color(color) => color,
+                _ => Color::WHITE,
+            })
+            .unwrap_or(Color::WHITE);
 
         renderer.draw_primitive(
             bounds,
@@ -389,12 +396,13 @@ where
                     refractive_index: self.refractive_index,
                     rim_width: self.rim_width,
                     opacity: self.opacity,
+                    tint,
                 },
             },
         );
 
         if let Some(clipped_viewport) = bounds.intersection(viewport) {
-            draw_background(renderer, &style, bounds);
+            // draw_background(renderer, &style, bounds);
             renderer.with_layer(bounds, |renderer| {
                 self.content.as_widget().draw(
                     &tree.children[0],

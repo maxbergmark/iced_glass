@@ -1,7 +1,7 @@
 use std::ops::RangeInclusive;
 
 use iced::{
-    Border, Element, Event, Length, Pixels, Point, Rectangle, Renderer, Size,
+    Background, Border, Color, Element, Event, Length, Pixels, Point, Rectangle, Renderer, Size,
     advanced::{
         Clipboard, Layout, Shell, Widget, layout, mouse, renderer,
         widget::{
@@ -475,6 +475,11 @@ where
             style.rail.backgrounds.1,
         );
 
+        let tint = match style.handle.background {
+            Background::Color(color) => color,
+            _ => Color::WHITE,
+        };
+
         let state = tree.state.downcast_ref::<State>();
         if state.is_dragging {
             renderer.draw_primitive(
@@ -497,6 +502,7 @@ where
                         refractive_index: self.refractive_index,
                         rim_width: 1.0,
                         opacity: 1.0,
+                        tint,
                     },
                 },
             );
