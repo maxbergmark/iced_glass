@@ -6,6 +6,40 @@ A Rust library and demo app that implements Apple-style **liquid / frosted glass
 
 ![Rust](https://img.shields.io/badge/Rust-2024_edition-orange)
 
+## Usage
+
+This crate is meant to be a drop-in replacement for existing iced widgets, 
+
+```rust
+impl Ui {
+
+    // view using regular container
+    fn view(&self) -> Element<'_, Message> {
+        iced::widget::container(
+            self.content()
+        )
+        .into()
+    }
+
+    // same view using iced_glass, with styling options
+    fn glass_view(&self) -> Element<'_, Message> {
+        iced_glass::widget::container(
+            self.content()
+        )
+        .blur_radius(10.0) // gaussian blur
+        .saturation(0.8) // add or remove saturation from background texture
+        .lightness(-2.0) // tint glass lighter or darker in exposure steps
+        .edge_radius(20.0) // bevel radius of container
+        .edge_height(100.0) // accentuate refraction by adding depth
+        .refractive_index(1.5) // amount of refraction
+        .rim_width(2.0) // rim highlight
+        .opacity(1.0) // select opacity, useful for fade-in effects
+        .into()
+    }
+}
+
+```
+
 ## What it does
 
 `iced_glass` captures the framebuffer region behind a widget, applies a separable Gaussian blur, then composites a final fragment pass that adds:
