@@ -1,11 +1,14 @@
 struct Uniforms {
+    tint: vec4<f32>,
+    blur_direction: vec2<f32>,
     blur_radius: f32,
     corner_radius: f32,
+
     saturation: f32,
     lightness: f32,
-    blur_direction: vec2<f32>,
     edge_radius: f32,
     height: f32,
+
     refractive_index: f32,
     rim_width: f32,
     opacity: f32,
@@ -76,6 +79,7 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
 
     var color = textureSample(image, image_sampler, sample_uv);
     color = saturate(color);
+    color *= uniforms.tint;
     color = edge_highlight(color, xy, dimensions, angle);
 
     return mix(color, TRANSPARENT, outside_factor);
@@ -99,8 +103,8 @@ fn sd_rounded_box(p: vec2<f32>, b: vec2<f32>, r: f32) -> f32 {
 }
 
 fn clamp_radius(radius: f32, dimensions: vec2<f32>) -> f32 {
-    // TODO: why 2.0?
-    return min(2.0 * radius, min(dimensions.x, dimensions.y) / 2.0) * 1.0;
+    // TODO: why 2.0? This seems related to the window scaling
+    return min(1.0 * radius, min(dimensions.x, dimensions.y) / 2.0) * 1.0;
 }
 
 fn compute_offset(x: f32, y: f32, dimensions: vec2<f32>) -> vec2<f32> {
