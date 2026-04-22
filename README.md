@@ -63,6 +63,13 @@ The library exposes two custom Iced widgets:
 
 More widgets are planned to be added.
 
+### Roadmap
+
+- [ ] Add support for tinted glass
+    - This might move the opacity selector into the style of the widget
+- [ ] Add `Button` widget with default styling
+- [ ] Add `Toggle` widget with default styling
+
 ## Demo scenes
 
 The binary crate includes three demo scenes, selectable at runtime:
