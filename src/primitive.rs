@@ -31,9 +31,9 @@ impl iced::widget::shader::Primitive for Primitive {
         pipeline: &Self::Pipeline,
         encoder: &mut wgpu::CommandEncoder,
         target: &wgpu::TextureView,
-        texture: &wgpu::Texture,
         bounds: &iced::Rectangle<u32>,
     ) {
+        let texture = target.texture();
         let instance = pipeline.instance(self.id);
         let copy_size = match calculate_copy_size(texture, instance, bounds) {
             Some(size) => size,
