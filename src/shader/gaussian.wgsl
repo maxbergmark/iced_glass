@@ -66,11 +66,13 @@ fn gaussian_blur(input: FragInput) -> @location(0) vec4<f32> {
     var total_weight = 0.0;
     for (var x = -radius; x <= radius; x += round(step)) {
         let offset = direction * x * texel_size;
+        let sample_uv = uv + offset;
         let dist = x * x;
         let weight = exp(-dist / (2.0 * radius));
-        color += srgb_to_linear(textureSample(image, image_sampler, uv + offset)) * weight;
         total_weight += weight;
         step = 1.0 + 0.05 * abs(x);
+        color += srgb_to_linear(textureSample(image, image_sampler, sample_uv)) * weight;
+        // step = 1.0;
     }
     return linear_to_srgb(color / total_weight);
 }

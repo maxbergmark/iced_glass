@@ -1,3 +1,5 @@
+use crate::shader::MIP_LEVEL_COUNT;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Uniforms {
     pub blur_radius: f32,
@@ -15,7 +17,7 @@ pub struct Uniforms {
 impl Uniforms {
     pub fn to_raw(self, direction: [f32; 2], scale: f32) -> Raw {
         Raw {
-            radius: self.blur_radius * scale,
+            blur_radius: self.blur_radius * scale / self.mip_factor(),
             corner_radius: self.corner_radius * scale,
             saturation: self.saturation,
             lightness: self.lightness,
@@ -29,6 +31,19 @@ impl Uniforms {
             _pad: 0.0,
         }
     }
+
+    pub fn mip_level(self) -> u32 {
+        match self.blur_radius {
+            r if r < 50.0 => 0,
+            r if r < 100.0 => 1,
+            r if r < 200.0 => 2,
+            _ => MIP_LEVEL_COUNT - 1, // 4 is the highest mip level for now
+        }
+    }
+
+    fn mip_factor(self) -> f32 {
+        4.0_f32.powi(self.mip_level() as i32)
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -36,7 +51,7 @@ impl Uniforms {
 pub struct Raw {
     pub tint: [f32; 4],
     pub direction: [f32; 2],
-    pub radius: f32,
+    pub blur_radius: f32,
     pub corner_radius: f32,
 
     pub saturation: f32,
