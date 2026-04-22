@@ -120,6 +120,7 @@ pub fn create_textures(
 }
 
 impl Pipeline {
+    #[allow(clippy::too_many_arguments)]
     pub fn prepare_instance(
         &mut self,
         device: &wgpu::Device,
@@ -127,6 +128,7 @@ impl Pipeline {
         id: u64,
         width: u32,
         height: u32,
+        scale: f32,
         uniforms: &Uniforms,
     ) {
         let needs_new = match self.instances.get(&id) {
@@ -140,7 +142,7 @@ impl Pipeline {
             );
         }
         let inst = self.instances.get_mut(&id).unwrap();
-        inst.copy_uniforms_to_device(queue, uniforms);
+        inst.copy_uniforms_to_device(queue, uniforms, scale);
         self.live_this_frame.insert(id);
     }
     pub fn instance(&self, id: u64) -> &Instance {
@@ -196,16 +198,16 @@ impl Instance {
         }
     }
 
-    pub fn copy_uniforms_to_device(&self, queue: &wgpu::Queue, uniforms: &Uniforms) {
+    pub fn copy_uniforms_to_device(&self, queue: &wgpu::Queue, uniforms: &Uniforms, scale: f32) {
         queue.write_buffer(
             &self.uniforms_h,
             0,
-            bytemuck::bytes_of(&uniforms.to_raw([1.0, 0.0])),
+            bytemuck::bytes_of(&uniforms.to_raw([1.0, 0.0], scale)),
         );
         queue.write_buffer(
             &self.uniforms_v,
             0,
-            bytemuck::bytes_of(&uniforms.to_raw([0.0, 1.0])),
+            bytemuck::bytes_of(&uniforms.to_raw([0.0, 1.0], scale)),
         );
     }
 }

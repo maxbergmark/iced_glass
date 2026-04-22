@@ -23,7 +23,7 @@ impl iced::widget::shader::Primitive for Primitive {
         let scale = viewport.scale_factor();
         let width = (bounds.width * scale) as u32;
         let height = (bounds.height * scale) as u32;
-        pipeline.prepare_instance(device, queue, self.id, width, height, &self.uniforms);
+        pipeline.prepare_instance(device, queue, self.id, width, height, scale, &self.uniforms);
     }
 
     fn render(

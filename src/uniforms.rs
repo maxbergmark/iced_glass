@@ -13,17 +13,17 @@ pub struct Uniforms {
 }
 
 impl Uniforms {
-    pub fn to_raw(self, direction: [f32; 2]) -> Raw {
+    pub fn to_raw(self, direction: [f32; 2], scale: f32) -> Raw {
         Raw {
-            radius: self.blur_radius,
-            corner_radius: self.corner_radius,
+            radius: self.blur_radius * scale,
+            corner_radius: self.corner_radius * scale,
             saturation: self.saturation,
             lightness: self.lightness,
             direction,
-            edge_radius: self.edge_radius,
-            height: self.height,
+            edge_radius: self.edge_radius * scale,
+            height: self.height * scale,
             refractive_index: self.refractive_index,
-            rim_width: self.rim_width,
+            rim_width: self.rim_width * scale,
             opacity: self.opacity,
             tint: [self.tint.r, self.tint.g, self.tint.b, self.tint.a],
             _pad: 0.0,

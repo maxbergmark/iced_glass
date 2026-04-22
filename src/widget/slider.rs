@@ -1,7 +1,7 @@
 use std::ops::RangeInclusive;
 
 use iced::{
-    Background, Border, Color, Element, Event, Length, Pixels, Point, Rectangle, Renderer, Size,
+    Border, Color, Element, Event, Length, Pixels, Point, Rectangle, Renderer, Size,
     advanced::{
         Clipboard, Layout, Shell, Widget, layout, mouse, renderer,
         widget::{
@@ -475,10 +475,12 @@ where
             style.rail.backgrounds.1,
         );
 
-        let tint = match style.handle.background {
-            Background::Color(color) => color,
-            _ => Color::WHITE,
-        };
+        // Tinting is currently disabled, since it conflicts with the handle color
+        // let tint = match style.handle.background {
+        //     Background::Color(color) => color,
+        //     _ => Color::WHITE,
+        // };
+        let tint = Color::WHITE;
 
         let state = tree.state.downcast_ref::<State>();
         if state.is_dragging {
