@@ -73,6 +73,8 @@ More widgets are planned to be added.
 - [x] Add downsampling and upsampling to improve blur performance
 - [ ] Add `Button` widget with default styling
 - [ ] Add `Toggle` widget with default styling
+- [ ] Add configurable chromatic aberration
+- [ ] Add timing metrics for GPU shader stages
 
 ## Demo scenes
 
@@ -104,4 +106,4 @@ cargo run
 
 Requires a GPU that supports WGPU. The app opens at 2560x1440 by default.
 
-> **Note:** This project depends on a [custom iced fork](https://github.com/maxbergmark/iced) (`latest` branch) for the shader primitive API. Currently, it is not possible to read from the background texture during rendering, which is needed for an effect like this. If there is a way to read the background texture without modifying the `Primitive` trait in iced I'd be happy to update my code. Otherwise, I'll aim to get the API changes merged into iced in the future.
+> **Note:** This project depends on a [custom iced fork](https://github.com/maxbergmark/iced) (`latest` branch) for the shader primitive API. Currently, it is not possible to read from the background texture during rendering, which is needed for an effect like this. I'm aiming to get the changes merged into iced in the future.
