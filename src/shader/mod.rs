@@ -2,7 +2,7 @@ pub mod downsample;
 pub mod fragment;
 pub mod gaussian;
 
-pub const MIP_LEVEL_COUNT: u32 = 4;
+pub const MIP_LEVEL_COUNT: u32 = 5;
 
 pub struct RenderShaderData {
     pub pipeline: wgpu::RenderPipeline,

@@ -241,7 +241,7 @@ impl Ui {
                     self.styled_text(
                         "Blur Radius: ",
                         self.blur_radius,
-                        0.0..=1000.0,
+                        0.0..=10000.0,
                         Message::SetBlurRadius
                     ),
                     self.styled_text(

@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::{
     shader::{
-        create_sampler, downsample::DownsampleShader, fragment::FragmentShader,
+        MIP_LEVEL_COUNT, create_sampler, downsample::DownsampleShader, fragment::FragmentShader,
         gaussian::GaussianShader, texture_bind_groups, uniforms_bind_group,
         uniforms_bind_group_layout,
     },
@@ -97,7 +97,7 @@ pub fn create_textures(
             height: height.max(1),
             depth_or_array_layers: 1,
         },
-        mip_level_count: 4,
+        mip_level_count: MIP_LEVEL_COUNT,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format,
@@ -114,7 +114,7 @@ pub fn create_textures(
             height: height.max(1),
             depth_or_array_layers: 1,
         },
-        mip_level_count: 4,
+        mip_level_count: MIP_LEVEL_COUNT,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format,
