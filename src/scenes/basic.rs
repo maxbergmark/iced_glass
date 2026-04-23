@@ -50,7 +50,7 @@ impl Default for Ui {
         Self {
             width: 1250.0,
             height: 500.0,
-            blur_radius: 100.0,
+            blur_radius: 500.0,
             corner_radius: 100.0,
             saturation: 1.1,
             lightness: -1.5,
@@ -373,19 +373,31 @@ impl Ui {
                         value
                     ))
                     .step(0.01)
-                    .style(|theme, status| self.slider_style(theme, status)),
+                    .style(|theme, status| self.colored_slider_style(
+                        theme,
+                        status,
+                        Color::from_rgb(1.0, 0.0, 0.0)
+                    )),
                     iced_glass::widget::slider(0.0..=1.0, value.g, |value| Message::SetTint(
                         ColorChannel::Green,
                         value
                     ))
                     .step(0.01)
-                    .style(|theme, status| self.slider_style(theme, status)),
+                    .style(|theme, status| self.colored_slider_style(
+                        theme,
+                        status,
+                        Color::from_rgb(0.0, 1.0, 0.0)
+                    )),
                     iced_glass::widget::slider(0.0..=1.0, value.b, |value| Message::SetTint(
                         ColorChannel::Blue,
                         value
                     ))
                     .step(0.01)
-                    .style(|theme, status| self.slider_style(theme, status)),
+                    .style(|theme, status| self.colored_slider_style(
+                        theme,
+                        status,
+                        Color::from_rgb(0.0, 0.0, 1.0)
+                    )),
                 ]
                 .spacing(5.0),
             ]
@@ -461,6 +473,36 @@ impl Ui {
                     border_radius: 10.0.into(),
                 },
                 background: iced::Background::Color(iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0)),
+                border_width: 1.0,
+                border_color: iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0),
+            },
+        }
+    }
+
+    fn colored_slider_style(
+        &self,
+        _theme: &iced::Theme,
+        _status: iced::widget::slider::Status,
+        color: Color,
+    ) -> iced::widget::slider::Style {
+        iced::widget::slider::Style {
+            rail: iced::widget::slider::Rail {
+                backgrounds: (
+                    iced::Background::Color(color),
+                    iced::Background::Color(iced::Color::WHITE),
+                ),
+                width: 5.0,
+                border: iced::Border {
+                    radius: self.corner_radius.into(),
+                    ..Default::default()
+                },
+            },
+            handle: iced::widget::slider::Handle {
+                shape: iced::widget::slider::HandleShape::Rectangle {
+                    width: 30,
+                    border_radius: 10.0.into(),
+                },
+                background: iced::Background::Color(color),
                 border_width: 1.0,
                 border_color: iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0),
             },
