@@ -73,7 +73,8 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
 
     let r = clamp_radius(uniforms.corner_radius, dimensions);
     let sdf = sd_rounded_box(xy, dimensions / 2.0, r);
-    let outside_factor = smoothstep(0.0, 1.0, sdf);
+    let aa = fwidth(sdf);
+    let outside_factor = smoothstep(-aa, 0.0, sdf);
     let offset = compute_offset(xy.x, xy.y, dimensions);
     let sample_uv = (xy + offset) * sign / dimensions + vec2<f32>(0.5);
 
@@ -87,13 +88,14 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
 
 fn edge_highlight(color: vec4<f32>, xy: vec2<f32>, dimensions: vec2<f32>, angle: f32) -> vec4<f32> {
     let r = clamp_radius(uniforms.corner_radius, dimensions);
-    
     let sdf = sd_rounded_box(xy, dimensions / 2.0, r);
+    let aa = fwidth(sdf);
+
     let highlight_color = apply_glass_exposure(color, vec4<f32>(1.0), 3.0);
     let highlight_width = uniforms.rim_width;
     let highlight_angle = 2.0 * angle - 1.0;
     let f = 0.5 + 0.5 * cos(highlight_angle);
-    let t = smoothstep(-highlight_width - 1.0, -highlight_width, sdf);
+    let t = smoothstep(-highlight_width - aa, -highlight_width, sdf);
     return mix(color, highlight_color, f * t);
 }
 

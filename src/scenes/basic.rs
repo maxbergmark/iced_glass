@@ -335,6 +335,7 @@ impl Ui {
         .blur_radius(50.0)
         .saturation(self.saturation)
         .lightness(0.0)
+        .rim_width(1.0)
         // .edge_radius(self.edge_radius)
         // .edge_height(self.edge_height)
         .style(|_theme| iced::widget::container::Style {

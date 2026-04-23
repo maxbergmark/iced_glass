@@ -55,7 +55,7 @@ impl Ui {
 - **Rim highlights** — angle-dependent edge glow along the rounded-rect SDF
 - **Rounded corners** and **opacity** controls
 
-All rendering happens on the GPU via WGSL shaders (`fragment.wgsl` for the composite pass, `gaussian.wgsl` for the separable blur).
+All rendering happens on the GPU via WGSL shaders (`fragment.wgsl` for the composite pass, `gaussian.wgsl` for the separable blur, `downsample.wgsl` for downsampling before blurring, and upsampling after blurring).
 
 ## Widgets
 
@@ -73,6 +73,7 @@ More widgets are planned to be added.
 - [x] Add support for tinted glass
     - <s>This might move the opacity selector into the style of the widget. </s> For now, opacity remains as a standalone option, since it works a bit differently than tinting.
     - For now, only flat colors are available when tinting, and they are configured by adding a background to the element
+- [x] Add downsampling and upsampling to improve blur performance
 - [ ] Add `Button` widget with default styling
 - [ ] Add `Toggle` widget with default styling
 
