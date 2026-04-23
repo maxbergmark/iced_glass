@@ -105,8 +105,7 @@ fn sd_rounded_box(p: vec2<f32>, b: vec2<f32>, r: f32) -> f32 {
 }
 
 fn clamp_radius(radius: f32, dimensions: vec2<f32>) -> f32 {
-    // TODO: why 2.0? This seems related to the window scaling
-    return min(1.0 * radius, min(dimensions.x, dimensions.y) / 2.0) * 1.0;
+    return min(radius, min(dimensions.x, dimensions.y) / 2.0);
 }
 
 fn compute_offset(x: f32, y: f32, dimensions: vec2<f32>) -> vec2<f32> {
