@@ -88,6 +88,7 @@ impl Ui {
             // Scene::Basic(ui) => ui.subscription().map(Message::Basic),
             Scene::ScrollView(ui) => ui.subscription().map(Message::ScrollView),
             // Scene::LargeSlider(ui) => ui.subscription().map(Message::LargeSlider),
+            Scene::StressTest(ui) => ui.subscription().map(Message::StressTest),
             _ => iced::Subscription::none(),
         }
     }
