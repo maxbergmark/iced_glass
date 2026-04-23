@@ -1,11 +1,16 @@
+<div align="center">
+
 # Iced Glass
 ![Rust](https://img.shields.io/badge/Rust-2024_edition-orange)
+
+</div>
+
+A Rust library and demo app that implements Apple-style **liquid / frosted glass** UI effects using [Iced](https://github.com/iced-rs/iced) and custom WGPU shader pipelines.
 
 ![iced_glass example](examples/iced_glass_example.png)
 
 https://github.com/user-attachments/assets/eb63dcc4-f406-4a2a-9990-b35bba1ec828
 
-A Rust library and demo app that implements Apple-style **liquid / frosted glass** UI effects using [Iced](https://github.com/iced-rs/iced) and custom WGPU shader pipelines.
 
 
 ## Usage
