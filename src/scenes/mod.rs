@@ -3,6 +3,7 @@ use iced::{Length, Task};
 pub mod basic;
 pub mod large_slider;
 pub mod scroll_view;
+pub mod stress_test;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -10,6 +11,7 @@ pub enum Message {
     Basic(basic::Message),
     ScrollView(scroll_view::Message),
     LargeSlider(large_slider::Message),
+    StressTest(stress_test::Message),
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -18,6 +20,7 @@ pub enum Scene {
     Basic(basic::Ui),
     ScrollView(scroll_view::Ui),
     LargeSlider(large_slider::Ui),
+    StressTest(stress_test::Ui),
 }
 
 impl Default for Scene {
@@ -25,6 +28,7 @@ impl Default for Scene {
         Self::Basic(basic::Ui::default())
         // Self::ScrollView(scroll_view::Ui::default())
         // Self::LargeSlider(large_slider::Ui::default())
+        // Self::StressTest(stress_test::Ui::default())
     }
 }
 
@@ -65,6 +69,13 @@ impl Ui {
                     Task::none()
                 }
             }
+            Message::StressTest(message) => {
+                if let Scene::StressTest(ui) = &mut self.scene {
+                    ui.update(message).map(Message::StressTest)
+                } else {
+                    Task::none()
+                }
+            }
         }
     }
 
@@ -86,6 +97,7 @@ impl Ui {
             Scene::Basic(ui) => ui.view().map(Message::Basic),
             Scene::ScrollView(ui) => ui.view().map(Message::ScrollView),
             Scene::LargeSlider(ui) => ui.view().map(Message::LargeSlider),
+            Scene::StressTest(ui) => ui.view().map(Message::StressTest),
         };
         iced::widget::column![self.scene_selector(), scene].into()
     }
@@ -99,6 +111,9 @@ impl Ui {
             ))),
             iced::widget::button("LargeSlider").on_press(Message::SetScene(Scene::LargeSlider(
                 large_slider::Ui::default()
+            ))),
+            iced::widget::button("StressTest").on_press(Message::SetScene(Scene::StressTest(
+                stress_test::Ui::default()
             ))),
         ]
         .spacing(10.0)

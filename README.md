@@ -74,7 +74,28 @@ More widgets are planned to be added.
 - [ ] Add `Button` widget with default styling
 - [ ] Add `Toggle` widget with default styling
 - [ ] Add configurable chromatic aberration
-- [ ] Add timing metrics for GPU shader stages
+- [x] Add timing metrics for GPU shader stages
+    - This has been tested locally, but it requires enabling feature flags on device creation in iced. 
+
+## Performance
+
+The most expensive rendering step is the blur pass. Initially, this was done as a single 2D sampling render pass. Currently, blurring is handled through downsampling + separated gaussian blur + upsampling, which greatly improves performance while blurring. The actual liquid glass sampling stage is quite cheap, since it only samples a single pixel after doing some math. Even with chromatic aberration, it will remain relatively cheap.
+
+The main bottleneck in terms of performance for these widgets is the amount of render passes issued. Since each component keeps track of its own background textures, and gaussian blurring is done through the use of mipmaps, there are up to 11 render passes per widget. And each widget is rendered separately, which issues a lot of render passes if multiple liquid glass element are in the same view. There are no current plans to improve performance. As long as there are fewer than 20 liquid glass elements on the screen at a given time, performance should be excellent.
+
+### Benchmark
+
+Here is a benchmark from the scene defined in `scenes/basic.rs`, running on an M1 Macbook Pro:
+
+```
+downsample: 485.19µs
+h_blur: 480.44µs
+v_blur: 483.40µs
+upsample: 402.96µs
+fragment: 333.28µs
+total: 2185.27µs
+fps: 457.61
+```
 
 ## Demo scenes
 

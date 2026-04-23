@@ -39,7 +39,6 @@ impl Uniforms {
             r if r < 200.0 => 2,
             r if r < 400.0 => 3,
             r if r < 800.0 => 4,
-            // r if r < 1600.0 => 5,
             _ => MIP_LEVEL_COUNT - 1, // 4 is the highest mip level for now
         }
     }
