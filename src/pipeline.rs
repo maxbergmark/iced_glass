@@ -35,6 +35,17 @@ pub struct Instance {
     pub tex_a_bg: Vec<wgpu::BindGroup>,
     pub tex_b_bg: Vec<wgpu::BindGroup>,
     pub size: wgpu::Extent3d,
+    // pub query_set: wgpu::QuerySet,
+    // pub resolve_buffer: wgpu::Buffer,
+    // pub readback_buffer: wgpu::Buffer,
+
+    // pub downsample_ns: f64,
+    // pub h_blur_ns: f64,
+    // pub v_blur_ns: f64,
+    // pub upsample_ns: f64,
+    // pub fragment_ns: f64,
+    // pub total_ns: f64,
+    // pub sample_count: f64,
 }
 
 impl iced::widget::shader::Pipeline for Pipeline {
@@ -150,9 +161,15 @@ impl Pipeline {
         inst.copy_uniforms_to_device(queue, uniforms, scale);
         self.live_this_frame.insert(id);
     }
+
     pub fn instance(&self, id: u64) -> &Instance {
         &self.instances[&id]
     }
+
+    pub fn instance_mut(&mut self, id: u64) -> &mut Instance {
+        self.instances.get_mut(&id).unwrap()
+    }
+
     /// Call at the end of rendering each frame.
     pub fn gc(&mut self) {
         self.instances
@@ -181,6 +198,26 @@ impl Instance {
         let uniform_bg_h = uniforms_bind_group(device, &pipeline.bgl_uniforms, &uniforms_h);
         let uniform_bg_v = uniforms_bind_group(device, &pipeline.bgl_uniforms, &uniforms_v);
 
+        // let num_passes = 5; // downsample, h_blur, v_blur, upsample, fragment
+        // let num_timestamps = num_passes * 2; // start + end per pass
+        // let query_set = device.create_query_set(&wgpu::QuerySetDescriptor {
+        //     label: Some("timestamp_queries"),
+        //     ty: wgpu::QueryType::Timestamp,
+        //     count: num_timestamps as u32,
+        // });
+        // let resolve_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        //     label: Some("timestamp_resolve"),
+        //     size: (num_timestamps * std::mem::size_of::<u64>()) as u64,
+        //     usage: wgpu::BufferUsages::QUERY_RESOLVE | wgpu::BufferUsages::COPY_SRC,
+        //     mapped_at_creation: false,
+        // });
+        // let readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        //     label: Some("timestamp_readback"),
+        //     size: (num_timestamps * std::mem::size_of::<u64>()) as u64,
+        //     usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        //     mapped_at_creation: false,
+        // });
+
         Self {
             tex_a: copy_texture,
             tex_b: gaussian_texture,
@@ -195,6 +232,17 @@ impl Instance {
                 height: height.max(1),
                 depth_or_array_layers: 1,
             },
+            // query_set,
+            // resolve_buffer,
+            // readback_buffer,
+
+            // downsample_ns: 0.0,
+            // h_blur_ns: 0.0,
+            // v_blur_ns: 0.0,
+            // upsample_ns: 0.0,
+            // fragment_ns: 0.0,
+            // total_ns: 0.0,
+            // sample_count: 0.0,
         }
     }
 
