@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/icon.svg" width="140px" />
+
 # Iced Glass
 ![Rust](https://img.shields.io/badge/Rust-2024_edition-orange)
 
