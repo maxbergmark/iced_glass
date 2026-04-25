@@ -1,6 +1,7 @@
 pub mod downsample;
 pub mod fragment;
 pub mod gaussian;
+pub mod text;
 
 pub const MIP_LEVEL_COUNT: u32 = 5;
 

@@ -12,6 +12,7 @@ pub struct Uniforms {
     pub rim_width: f32,
     pub opacity: f32,
     pub tint: iced::Color,
+    pub glyph: char,
 }
 
 impl Uniforms {
