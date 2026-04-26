@@ -46,6 +46,7 @@ pub struct Instance {
 
 pub struct TextInstance {
     pub texture_atlas: wgpu::Texture,
+    pub vertex_buffer: wgpu::Buffer,
     pub tex_a: wgpu::Texture,
     pub tex_b: wgpu::Texture,
     pub uniforms_h: wgpu::Buffer,
@@ -337,8 +338,16 @@ impl TextInstance {
             ],
         });
 
+        let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("text.vertex_buffer"),
+            size: std::mem::size_of::<f32>() as u64 * 6 * 400, // TODO: increase this limit
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         Self {
             texture_atlas,
+            vertex_buffer,
             tex_a: copy_texture,
             tex_b: gaussian_texture,
             uniforms_h,

@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use crate::shader::uniforms_bind_group_layout;
 
-pub const TEXT_ATLAS_SIZE: u32 = 64;
+pub const TEXT_ATLAS_SIZE: u32 = 1024;
 pub struct TextShader;
 
 impl TextShader {
@@ -30,7 +30,15 @@ impl TextShader {
             vertex: wgpu::VertexState {
                 module,
                 entry_point: Some("vs_main"),
-                buffers: &[],
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: (4 * std::mem::size_of::<f32>()) as u64,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[wgpu::VertexAttribute {
+                        format: wgpu::VertexFormat::Float32x4,
+                        offset: 0,
+                        shader_location: 0,
+                    }],
+                }],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             primitive: wgpu::PrimitiveState::default(),

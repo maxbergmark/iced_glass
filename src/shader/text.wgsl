@@ -33,43 +33,43 @@ var image_sampler: sampler;
 
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
-    @location(0) uv: vec2<f32>,
+    @location(0) atlas_uv: vec2<f32>,
+    @location(1) screen_uv: vec2<f32>,
 };
 
 @vertex
-fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
-    var positions = array<vec2<f32>, 6>(
-        vec2<f32>(-1.0, -1.0),
-        vec2<f32>(1.0, -1.0),
-        vec2<f32>(-1.0, 1.0),
-        vec2<f32>(-1.0, 1.0),
-        vec2<f32>(1.0, -1.0),
-        vec2<f32>(1.0, 1.0)
-    );
+fn vs_main(@location(0) position: vec4<f32>) -> VertexOutput {
 
-    let pos = positions[vertex_index];
     var out: VertexOutput;
+    let pos = position.xy;
+    let uv = position.zw;
     out.position = vec4<f32>(pos, 0.0, 1.0);
-    out.uv = pos * 0.5 + vec2<f32>(0.5, 0.5);
-    out.uv.y = 1.0 - out.uv.y;
+    out.atlas_uv = uv;
+    out.screen_uv = vec2<f32>(pos.x * 0.5 + 0.5, 1.0 - (pos.y * 0.5 + 0.5));    
+    // out.uv = uv * 0.5 + vec2<f32>(0.5, 0.5);
+    // out.uv.y = 1.0 - out.uv.y;
     return out;
 }
 
 struct FragInput {
-    @location(0) uv: vec2<f32>,
+    @location(0) atlas_uv: vec2<f32>,
+    @location(1) screen_uv: vec2<f32>,
 };
 
 const TRANSPARENT: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 0.0);
 
 @fragment
 fn fs_main(input: FragInput) -> @location(0) vec4<f32> {
+    // return vec4<f32>(input.atlas_uv, 1.0, 1.0);
+    // let alpha = msdf_alpha(input.atlas_uv);
+    // return vec4<f32>(input.atlas_uv, 1.0, alpha);
     // let alpha = msdf_alpha(input.uv);
     // return vec4<f32>(1.0, 1.0, 1.0, alpha);
     return mix(TRANSPARENT, physical_sampling(input), uniforms.opacity);
     // let bg = textureSample(image, image_sampler, input.uv);
-    let sdf = msdf(input.uv);
+    let sdf = msdf(input.atlas_uv);
     // return mix(vec4<f32>(0.0), bg, sdf);
-    let gradient = sdf_gradient(input.uv);
+    let gradient = sdf_gradient(input.atlas_uv);
     // return vec4<f32>(msdf_alpha(input.uv));
     // let sdg = sdf_gradient(input.uv);
     let green = clamp(sdf / uniforms.edge_radius + 1.0, 0.0, 1.0);
@@ -88,7 +88,7 @@ fn msdf(uv: vec2<f32>) -> f32 {
     let s = textureSample(texture_atlas, image_sampler, uv).rgb;
     let d = median(s.r, s.g, s.b);
     // let w = fwidth(d);
-    return (0.5 - d) * 8.0 * dimensions.x;
+    return (0.5 - d) * 1.0 * dimensions.x;
 }
 
 fn median(r: f32, g: f32, b: f32) -> f32 {
@@ -107,7 +107,7 @@ fn sdf_gradient(uv: vec2<f32>) -> vec2<f32> {
     let ch = median_channel(c);
     let gx = (r[ch] - l[ch]) * 0.5;
     let gy = (u[ch] - dn[ch]) * 0.5;
-    return vec2<f32>(gx, gy);
+    return normalize(vec2<f32>(gx, gy));
 }
 
 fn median_channel(c: vec3<f32>) -> u32 {
@@ -126,16 +126,18 @@ fn median_channel(c: vec3<f32>) -> u32 {
 // }
 
 fn physical_sampling(input: FragInput) -> vec4<f32> {
-    let ixy = input.uv - vec2<f32>(0.5);
+    let ixy = input.atlas_uv - vec2<f32>(0.5);
     let dimensions = vec2<f32>(textureDimensions(image));
     let p = ixy * dimensions;
+
+    let p_screen = (input.screen_uv - vec2<f32>(0.5)) * dimensions;
 
     // let angle = atan2(p.y, p.x);
 
     let r = clamp_radius(uniforms.corner_radius, dimensions);
     // let sdf_gradient = sdg_rounded_box(p, dimensions / 2.0, r);
-    let gradient = sdf_gradient(input.uv);
-    let sdf = msdf(input.uv);
+    let gradient = sdf_gradient(input.atlas_uv);
+    let sdf = msdf(input.atlas_uv);
 
     let h = uniforms.height;
     let n = uniforms.refractive_index;
@@ -143,7 +145,7 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
     let dx = select(0.0, refract(sdf, r_edge, n, h), sdf > -r_edge);
     let offset = gradient * dx;
 
-    let sample_uv = (p + offset) / dimensions + vec2<f32>(0.5);
+    let sample_uv = (p_screen + offset) / dimensions + vec2<f32>(0.5);
 
     var color = textureSample(image, image_sampler, sample_uv);
     color = saturate(color);

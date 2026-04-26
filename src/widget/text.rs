@@ -1,9 +1,9 @@
+// use iced::advanced::Renderer as _;
 use iced::{
-    Alignment, Background, Color, Element, Event, Length, Padding, Pixels, Rectangle, Renderer,
-    Size, Vector,
+    Alignment, Background, Color, Element, Length, Padding, Pixels, Rectangle, Renderer, Size,
     advanced::{
-        Clipboard, Layout, Renderer as _, Shell, layout, mouse, overlay, renderer,
-        widget::{Operation, Tree, tree},
+        Layout, layout, mouse, renderer,
+        widget::{Tree, tree},
     },
     alignment,
     widget::{
@@ -30,6 +30,10 @@ where
     content: String,
     class: Theme::Class<'a>,
 
+    font_size: f32,
+    line_height: f32,
+    font_data: FontData,
+
     // GlassText specific properties
     blur_radius: f32,
     saturation: f32,
@@ -47,6 +51,47 @@ where
     // Renderer: ::Renderer,
 {
     GlassText::new(content)
+}
+
+use cosmic_text::{Buffer, FontSystem, Metrics};
+use std::cell::RefCell;
+
+use crate::font;
+struct FontData {
+    font_system: RefCell<FontSystem>,
+    metrics: Metrics,
+    buffer: RefCell<Buffer>,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct GlyphData {
+    pub glyph_id: u16,
+    pub glyph: char,
+    pub x: f32,
+    pub y: f32,
+    pub run_line_y: f32,
+    pub w: f32,
+    pub y_offset: f32,
+}
+
+impl FontData {
+    fn new(font_size: f32, line_height: f32) -> Self {
+        let mut font_system = FontSystem::new();
+        // let f = include_bytes!("/System/Library/Fonts/Supplemental/Arial Unicode.ttf");
+
+        // let font = Face::parse(f, 0).unwrap();
+        font_system.db_mut().load_font_data(font::FONT.to_vec());
+        // Metrics: font_size, line_height
+        let metrics = Metrics::new(font_size, line_height);
+        let buffer = Buffer::new(&mut font_system, metrics);
+        // Set available width/height
+
+        Self {
+            font_system: RefCell::new(font_system),
+            metrics,
+            buffer: RefCell::new(buffer),
+        }
+    }
 }
 
 impl<'a, Theme> GlassText<'a, Theme>
@@ -71,6 +116,10 @@ where
             class: Theme::default(),
             content,
 
+            font_size: 48.0,
+            line_height: 56.0,
+            font_data: FontData::new(48.0, 56.0),
+
             blur_radius: 0.0,
             saturation: 1.0,
             lightness: 0.0,
@@ -80,6 +129,48 @@ where
             rim_width: 1.0,
             opacity: 1.0,
         }
+    }
+
+    fn parse_text(&self, s: &str, bounds: &Rectangle) -> Vec<GlyphData> {
+        use cosmic_text::{Attrs, Shaping};
+        // Create font system (loads system fonts)
+        let start = std::time::Instant::now();
+        let mut font_system = self.font_data.font_system.borrow_mut();
+        let mut buffer = self.font_data.buffer.borrow_mut();
+
+        let mut buffer = buffer.borrow_with(&mut font_system);
+
+        buffer.set_size(Some(bounds.width), Some(bounds.height));
+        // Set the text to shape
+        // let attrs = Attrs::new().family(cosmic_text::Family::SansSerif);
+        // let attrs = Attrs::new().family(cosmic_text::Family::Name("Arial Unicode MS"));
+        let attrs = Attrs::new().family(font::FAMILY);
+        buffer.set_text(s, &attrs, Shaping::Advanced, None);
+        let elapsed = start.elapsed();
+        println!("Time taken: {:?}, text length: {}", elapsed, s.len());
+        // Iterate layout runs → glyphs
+        for run in buffer.layout_runs() {
+            for glyph in run.glyphs.iter() {
+                println!(
+                    "glyph_id: {}:\n\tx: {:.1}, y: {:.1}\n\tw: {:.1}, y_offset: {:.1}",
+                    glyph.glyph_id, glyph.x, glyph.y, glyph.w, glyph.y_offset,
+                );
+            }
+        }
+        buffer
+            .layout_runs()
+            .flat_map(|run| run.glyphs.iter().map(move |glyph| (run.line_y, glyph)))
+            .zip(s.chars())
+            .map(|((line_y, glyph), c)| GlyphData {
+                glyph_id: glyph.glyph_id,
+                glyph: c,
+                x: glyph.x,
+                y: glyph.y,
+                run_line_y: line_y,
+                w: glyph.w,
+                y_offset: glyph.y_offset,
+            })
+            .collect()
     }
 
     /// Sets the [`widget::Id`] of the [`Container`].
@@ -236,6 +327,26 @@ where
         self.opacity = opacity;
         self
     }
+
+    pub fn font_size(mut self, font_size: f32) -> Self {
+        self.font_size = font_size;
+        self.font_data.metrics.font_size = font_size;
+        self.font_data
+            .buffer
+            .borrow_mut()
+            .set_metrics(self.font_data.metrics);
+        self
+    }
+
+    pub fn line_height(mut self, line_height: f32) -> Self {
+        self.line_height = line_height;
+        self.font_data.metrics.line_height = line_height;
+        self.font_data
+            .buffer
+            .borrow_mut()
+            .set_metrics(self.font_data.metrics);
+        self
+    }
 }
 
 struct State {
@@ -264,7 +375,7 @@ where
         // vec![Tree::new(&self.content)]
     }
 
-    fn diff(&self, tree: &mut Tree) {
+    fn diff(&self, _tree: &mut Tree) {
         // self.content.as_widget().diff(tree);
         // tree.diff_children(std::slice::from_ref(&self.content));
     }
@@ -278,8 +389,8 @@ where
 
     fn layout(
         &mut self,
-        tree: &mut Tree,
-        renderer: &Renderer,
+        _tree: &mut Tree,
+        _renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
         layout(
@@ -358,10 +469,10 @@ where
         tree: &Tree,
         renderer: &mut Renderer,
         theme: &Theme,
-        renderer_style: &renderer::Style,
+        _renderer_style: &renderer::Style,
         layout: Layout<'_>,
-        cursor: mouse::Cursor,
-        viewport: &Rectangle,
+        _cursor: mouse::Cursor,
+        _viewport: &Rectangle,
     ) {
         let state = tree.state.downcast_ref::<State>();
         let bounds = layout.bounds();
@@ -374,10 +485,15 @@ where
             })
             .unwrap_or(Color::WHITE);
 
+        let glyphs = self.parse_text(&self.content, &bounds);
+
         renderer.draw_primitive(
             bounds,
             crate::primitive::TextPrimitive {
                 id: state.id,
+                text: self.content.clone(),
+                glyphs,
+                font_size: self.font_size,
                 uniforms: crate::uniforms::Uniforms {
                     blur_radius: self.blur_radius,
                     // TODO: don't just use the bottom left corner radius

@@ -1,10 +1,11 @@
-use iced::{Alignment, Length, Task, color};
+use iced::{Length, Task, color};
 
 #[derive(Debug, Clone)]
 pub struct Ui {
     size: f32,
     edge_radius: f32,
     edge_height: f32,
+    font_size: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -12,14 +13,16 @@ pub enum Message {
     Size(f32),
     EdgeRadius(f32),
     EdgeHeight(f32),
+    FontSize(f32),
 }
 
 impl Default for Ui {
     fn default() -> Self {
         Self {
-            size: 100.0,
-            edge_radius: 5.0,
-            edge_height: 50.0,
+            size: 700.0,
+            edge_radius: 50.0,
+            edge_height: 200.0,
+            font_size: 200.0,
         }
     }
 }
@@ -39,29 +42,39 @@ impl Ui {
                 self.edge_height = edge_height;
                 Task::none()
             }
+            Message::FontSize(font_size) => {
+                self.font_size = font_size;
+                Task::none()
+            }
         }
     }
 
     pub fn view(&self) -> iced::Element<'_, Message> {
         iced::widget::stack![
-            iced::widget::image("assets/waterfall.jpg")
+            iced::widget::image("assets/tulips.jpg")
                 .width(Length::Fill)
                 .height(Length::Fill),
             iced::widget::column![
                 iced::widget::slider(0.0..=1000.0, self.size, Message::Size),
                 iced::widget::slider(0.0..=100.0, self.edge_radius, Message::EdgeRadius),
                 iced::widget::slider(0.0..=1000.0, self.edge_height, Message::EdgeHeight),
+                iced::widget::slider(0.0..=400.0, self.font_size, Message::FontSize),
                 iced::widget::space().height(200.0),
-                iced::widget::container(
-                    iced::widget::row![self.styled_text('你'), self.styled_text('好'),] // iced::widget::row![
-                                                                                        //     iced::widget::row![self.styled_text('1'), self.styled_text('2'),]
-                                                                                        //         .spacing(-self.size / 3.0),
-                                                                                        //     self.styled_text(':'),
-                                                                                        //     iced::widget::row![self.styled_text('3'), self.styled_text('4'),]
-                                                                                        //         .spacing(-self.size / 3.0),
-                                                                                        // ]
-                                                                                        // .spacing(-self.size / 2.0)
-                )
+                iced::widget::container(iced::widget::row![
+                    // self.styled_text("Hiello"),
+                    // self.styled_text("你好齉蘭"),
+                    self.styled_text("Hello"),
+                    // self.styled_text("วั"),
+                    // self.styled_text('好'),
+                    // iced::widget::row![
+                    //     iced::widget::row![self.styled_text("1"), self.styled_text("2"),]
+                    //         .spacing(-self.size / 3.0),
+                    //     self.styled_text(":"),
+                    //     iced::widget::row![self.styled_text("3"), self.styled_text("4"),]
+                    //         .spacing(-self.size / 3.0),
+                    // ]
+                    // .spacing(-self.size / 2.0)
+                ])
                 // .width(self.size)
                 // .height(self.size)
                 .center_x(Length::Fill)
@@ -78,9 +91,9 @@ impl Ui {
         .into()
     }
 
-    fn styled_text(&self, glyph: char) -> iced::Element<'_, Message> {
+    fn styled_text(&self, s: &str) -> iced::Element<'_, Message> {
         iced::widget::container(
-            iced_glass::widget::text(glyph)
+            iced_glass::widget::text(s)
                 .width(Length::Fill)
                 .height(Length::Fill)
                 .blur_radius(100.0)
@@ -89,7 +102,9 @@ impl Ui {
                 .refractive_index(1.5)
                 .rim_width(3.0)
                 .opacity(1.0)
-                .lightness(1.0),
+                .lightness(2.0)
+                .font_size(self.font_size)
+                .line_height(self.font_size * 1.2),
         )
         .width(self.size)
         .height(self.size)
@@ -107,15 +122,15 @@ impl Ui {
 
 #[cfg(test)]
 mod tests {
+    use iced_glass::font;
 
     #[test]
     fn test_text() {
         use msdfgen::{Bitmap, FillRule, FontExt, Gray, MID_VALUE, MsdfGeneratorConfig, Range};
-        use notosans::REGULAR_TTF as FONT;
         use std::fs::File;
         use ttf_parser::Face;
 
-        let font = Face::parse(FONT, 0).unwrap();
+        let font = Face::parse(font::FONT, 0).unwrap();
 
         let glyph = font.glyph_index('D').unwrap();
 
