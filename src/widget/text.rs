@@ -55,6 +55,7 @@ where
 
 use cosmic_text::{Buffer, FontSystem, Metrics};
 use std::cell::RefCell;
+use ttf_parser::GlyphId;
 
 use crate::font;
 struct FontData {
@@ -65,8 +66,8 @@ struct FontData {
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct GlyphData {
-    pub glyph_id: u16,
-    pub glyph: char,
+    pub glyph_id: GlyphId,
+    // pub glyph: char,
     pub x: f32,
     pub y: f32,
     pub run_line_y: f32,
@@ -160,10 +161,10 @@ where
         buffer
             .layout_runs()
             .flat_map(|run| run.glyphs.iter().map(move |glyph| (run.line_y, glyph)))
-            .zip(s.chars())
-            .map(|((line_y, glyph), c)| GlyphData {
-                glyph_id: glyph.glyph_id,
-                glyph: c,
+            // .zip(s.chars())
+            .map(|(line_y, glyph)| GlyphData {
+                glyph_id: GlyphId(glyph.glyph_id),
+                // glyph: c,
                 x: glyph.x,
                 y: glyph.y,
                 run_line_y: line_y,
@@ -489,7 +490,7 @@ where
 
         renderer.draw_primitive(
             bounds,
-            crate::primitive::TextPrimitive {
+            crate::primitive::text::TextPrimitive {
                 id: state.id,
                 text: self.content.clone(),
                 glyphs,

@@ -6,6 +6,7 @@ pub struct Ui {
     edge_radius: f32,
     edge_height: f32,
     font_size: f32,
+    blur_radius: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -14,15 +15,17 @@ pub enum Message {
     EdgeRadius(f32),
     EdgeHeight(f32),
     FontSize(f32),
+    BlurRadius(f32),
 }
 
 impl Default for Ui {
     fn default() -> Self {
         Self {
-            size: 700.0,
-            edge_radius: 50.0,
-            edge_height: 200.0,
-            font_size: 200.0,
+            size: 1000.0,
+            edge_radius: 5.0,
+            edge_height: 400.0,
+            font_size: 400.0,
+            blur_radius: 100.0,
         }
     }
 }
@@ -46,6 +49,10 @@ impl Ui {
                 self.font_size = font_size;
                 Task::none()
             }
+            Message::BlurRadius(blur_radius) => {
+                self.blur_radius = blur_radius;
+                Task::none()
+            }
         }
     }
 
@@ -56,14 +63,22 @@ impl Ui {
                 .height(Length::Fill),
             iced::widget::column![
                 iced::widget::slider(0.0..=1000.0, self.size, Message::Size),
-                iced::widget::slider(0.0..=100.0, self.edge_radius, Message::EdgeRadius),
+                iced::widget::slider(0.0..=20.0, self.edge_radius, Message::EdgeRadius).step(0.01),
                 iced::widget::slider(0.0..=1000.0, self.edge_height, Message::EdgeHeight),
                 iced::widget::slider(0.0..=400.0, self.font_size, Message::FontSize),
-                iced::widget::space().height(200.0),
+                iced::widget::slider(0.0..=1000.0, self.blur_radius, Message::BlurRadius),
+                iced::widget::space().height(100.0),
                 iced::widget::container(iced::widget::row![
                     // self.styled_text("Hiello"),
                     // self.styled_text("你好齉蘭"),
-                    self.styled_text("Hello"),
+                    self.styled_text("Hello\nHallå\n你好\nสวัสดี"),
+                    // self.styled_text("สวัสดี_"),
+                    // self.styled_text("Héllö"),
+                    // biang
+                    // self.styled_text("𰻞"),
+                    // self.styled_text("abcdefghijklmnopqrstuvwxyzåäö"),
+                    // self.styled_text("wxy"),
+                    // self.styled_text("However, I have to use a custom fork of iced due to not being able to copy the underlying background texture into my own texture for blurring and sampling. The diff in iced, is literally one line of code (https://github.com/iced-rs/iced/compare/latest...maxbergmark:iced:latest), which enables support for these types of effects. Both the master branch and the latest branch could be updated in the same way.\n\nIs this the best way to enable these types of effects? Is there anything I'm not considering that makes this a bad approach? I'm definitely not an expert when it comes to iced or wgpu, so I'm interested in hearing your input."),
                     // self.styled_text("วั"),
                     // self.styled_text('好'),
                     // iced::widget::row![
@@ -96,11 +111,11 @@ impl Ui {
             iced_glass::widget::text(s)
                 .width(Length::Fill)
                 .height(Length::Fill)
-                .blur_radius(100.0)
+                .blur_radius(self.blur_radius)
                 .edge_radius(self.edge_radius)
                 .edge_height(self.edge_height)
                 .refractive_index(1.5)
-                .rim_width(3.0)
+                .rim_width(0.5)
                 .opacity(1.0)
                 .lightness(2.0)
                 .font_size(self.font_size)
@@ -131,9 +146,7 @@ mod tests {
         use ttf_parser::Face;
 
         let font = Face::parse(font::FONT, 0).unwrap();
-
         let glyph = font.glyph_index('D').unwrap();
-
         let mut shape = font.glyph_shape(glyph).unwrap();
         // let mut shape = font.(glyph).unwrap();
 

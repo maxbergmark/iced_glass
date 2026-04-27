@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use ttf_parser::GlyphId;
+
 use crate::{
     shader::{
         MIP_LEVEL_COUNT, create_sampler,
@@ -45,8 +47,6 @@ pub struct Instance {
 }
 
 pub struct TextInstance {
-    pub texture_atlas: wgpu::Texture,
-    pub vertex_buffer: wgpu::Buffer,
     pub tex_a: wgpu::Texture,
     pub tex_b: wgpu::Texture,
     pub uniforms_h: wgpu::Buffer,
@@ -55,9 +55,26 @@ pub struct TextInstance {
     pub uniform_bg_v: wgpu::BindGroup,
     pub tex_a_bg: Vec<wgpu::BindGroup>,
     pub tex_b_bg: Vec<wgpu::BindGroup>,
-    pub texture_atlas_bg: wgpu::BindGroup,
     pub size: wgpu::Extent3d,
+
+    pub texture_atlas: wgpu::Texture,
+    pub vertex_buffer: wgpu::Buffer,
+    pub texture_atlas_bg: wgpu::BindGroup,
+    pub atlas_position: HashMap<GlyphId, AtlasPosition>,
+    pub num_glyphs: u32,
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct AtlasPosition {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+    pub bbox: ttf_parser::Rect,
+    pub units_per_em: f32,
+    pub framing: msdfgen::Framing<f64>,
+}
+
 impl iced::widget::shader::Pipeline for Pipeline {
     fn new(device: &wgpu::Device, _queue: &wgpu::Queue, format: wgpu::TextureFormat) -> Self
     where
@@ -200,7 +217,7 @@ impl Pipeline {
         }
         let inst = self.text_instances.get_mut(&id).unwrap();
         inst.copy_uniforms_to_device(queue, uniforms, scale);
-        self.live_this_frame.insert(id);
+        self.live_text_this_frame.insert(id);
     }
 
     pub fn instance(&self, id: u64) -> &Instance {
@@ -211,11 +228,18 @@ impl Pipeline {
         &self.text_instances[&id]
     }
 
+    pub fn text_instance_mut(&mut self, id: u64) -> &mut TextInstance {
+        self.text_instances.get_mut(&id).unwrap()
+    }
+
     /// Call at the end of rendering each frame.
     pub fn gc(&mut self) {
         self.instances
             .retain(|id, _| self.live_this_frame.contains(id));
+        self.text_instances
+            .retain(|id, _| self.live_text_this_frame.contains(id));
         self.live_this_frame.clear();
+        self.live_text_this_frame.clear();
     }
 }
 
@@ -340,14 +364,12 @@ impl TextInstance {
 
         let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("text.vertex_buffer"),
-            size: std::mem::size_of::<f32>() as u64 * 6 * 400, // TODO: increase this limit
+            size: std::mem::size_of::<f32>() as u64 * 6 * 4000, // TODO: increase this limit
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
         Self {
-            texture_atlas,
-            vertex_buffer,
             tex_a: copy_texture,
             tex_b: gaussian_texture,
             uniforms_h,
@@ -356,12 +378,17 @@ impl TextInstance {
             uniform_bg_v,
             tex_a_bg: copy_texture_bg,
             tex_b_bg: gaussian_texture_bg,
-            texture_atlas_bg,
             size: wgpu::Extent3d {
                 width: width.max(1),
                 height: height.max(1),
                 depth_or_array_layers: 1,
             },
+
+            texture_atlas,
+            vertex_buffer,
+            texture_atlas_bg,
+            atlas_position: HashMap::new(),
+            num_glyphs: 0,
         }
     }
 
