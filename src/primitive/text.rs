@@ -37,188 +37,9 @@ impl iced::widget::shader::Primitive for TextPrimitive {
         pipeline.prepare_text_instance(device, queue, self.id, w, h, scale, &self.uniforms);
 
         let instance = pipeline.text_instance_mut(self.id);
-        let mut vertices = Vec::new();
-        let mut offset_x = 0;
-        let mut offset_y = 0;
+        instance.num_glyphs = 0;
 
-        for glyph in self.glyphs.iter() {
-            if glyph.glyph_id == GlyphId(32) || glyph.glyph_id == GlyphId(3) {
-                continue;
-            }
-            println!("Glyph: {:?} (ID: {:?})", glyph.glyph_id, glyph.glyph_id);
-            // println!("Data length: {}", data.len());
-            // let instance = pipeline.text_instance(self.id);
-            let ap = if let Some(ap) = instance.atlas_position.get(&glyph.glyph_id) {
-                println!(
-                    "Glyph already in atlas: {:?} (ID: {:?})",
-                    glyph.glyph_id, glyph.glyph_id
-                );
-                *ap
-            } else {
-                let (data, width, height, framing) = get_sdf_data(glyph.glyph_id);
-
-                let font = Face::parse(font::FONT, 0).unwrap();
-                println!(
-                    "Getting glyph bounding box for glyph: (ID: {:?})",
-                    glyph.glyph_id
-                );
-                let bbox = font.glyph_bounding_box(glyph.glyph_id).unwrap();
-                let units_per_em = font.units_per_em() as f32;
-
-                let ap = AtlasPosition {
-                    x: offset_x,
-                    y: offset_y,
-                    width,
-                    height,
-                    bbox,
-                    units_per_em,
-                    framing,
-                };
-                instance.atlas_position.insert(glyph.glyph_id, ap);
-                queue.write_texture(
-                    wgpu::TexelCopyTextureInfo {
-                        texture: &instance.texture_atlas,
-                        mip_level: 0,
-                        origin: wgpu::Origin3d {
-                            x: offset_x,
-                            y: offset_y,
-                            z: 0,
-                        },
-                        aspect: wgpu::TextureAspect::All,
-                    },
-                    &data,
-                    wgpu::TexelCopyBufferLayout {
-                        offset: 0,
-                        bytes_per_row: Some(width * 4),
-                        rows_per_image: Some(height),
-                    },
-                    wgpu::Extent3d {
-                        width,
-                        height,
-                        depth_or_array_layers: 1,
-                    },
-                );
-                offset_x += width + 2;
-                if offset_x > TEXT_ATLAS_SIZE {
-                    offset_x = 0;
-                    offset_y += 100;
-                }
-
-                ap
-            };
-
-            // write quad vertices to vertices vector
-            // let f = include_bytes!("/System/Library/Fonts/Supplemental/Arial Unicode.ttf");
-            // let f = font::FONT;
-            let bbox = ap.bbox;
-            let scale = self.font_size / ap.units_per_em;
-            let glyph_width = (bbox.x_max - bbox.x_min) as f32 * scale;
-            let glyph_height = (bbox.y_max - bbox.y_min) as f32 * scale;
-            let bearing_x = bbox.x_min as f32 * scale;
-            let bearing_y = bbox.y_max as f32 * scale; // top of glyph relative to baseline
-
-            println!(
-                "glyph.y_offset ({:?}): {:.1}",
-                glyph.glyph_id, glyph.y_offset
-            );
-            let screen_scale = self.font_size / MSDF_FONT_SIZE;
-            let top = glyph.run_line_y + glyph.y_offset - bearing_y;
-            let bottom = glyph.run_line_y - bbox.y_min as f32 * scale;
-            let pad = 8.0 * screen_scale; // uniform padding in screen pixels
-            let old_quad_x = glyph.x + bearing_x - pad;
-            let old_quad_y = top - pad;
-            let old_quad_w = glyph_width + 2.0 * pad;
-            let old_quad_h = (bottom - top) + 2.0 * pad;
-
-            // bitmap-to-screen scale: how many screen pixels per bitmap pixel
-            let origin_bmp_x =
-                (ap.framing.projection.translate.x * ap.framing.projection.scale.x) as f32;
-            let origin_bmp_y =
-                (ap.framing.projection.translate.y * ap.framing.projection.scale.y) as f32;
-            let bmp_to_screen =
-                (self.font_size / ap.units_per_em) / ap.framing.projection.scale.x as f32;
-
-            // Full quad = full bitmap mapped to screen
-            let quad_w = ap.width as f32 * bmp_to_screen;
-            let quad_h = ap.height as f32 * bmp_to_screen;
-
-            // Origin in bitmap (after flip_y)
-            let origin_bmp_y_flipped = ap.height as f32 - origin_bmp_y;
-
-            // Anchor the quad so the font origin maps to (glyph.x, run_line_y)
-            let quad_x = glyph.x - origin_bmp_x * bmp_to_screen;
-            let quad_y = glyph.run_line_y - origin_bmp_y_flipped * bmp_to_screen;
-
-            println!(
-                "quad_x: {:.1}, quad_y: {:.1}, quad_w: {:.1}, quad_h: {:.1}",
-                quad_x, quad_y, quad_w, quad_h
-            );
-            println!(
-                "old_quad_x: {:.1}, old_quad_y: {:.1}, old_quad_w: {:.1}, old_quad_h: {:.1}",
-                old_quad_x, old_quad_y, old_quad_w, old_quad_h
-            );
-
-            let uv_left = ap.x as f32 / TEXT_ATLAS_SIZE as f32;
-            let uv_bottom = ap.y as f32 / TEXT_ATLAS_SIZE as f32; // glyph.y / TEXT_ATLAS_SIZE as f32;
-            let uv_right = (ap.x as f32 + ap.width as f32) / TEXT_ATLAS_SIZE as f32;
-            let uv_top = (ap.y as f32 + ap.height as f32) / TEXT_ATLAS_SIZE as f32;
-
-            let clip_x = (quad_x / bounds.width) * 2.0 - 1.0;
-            let clip_y = 1.0 - (quad_y / bounds.height) * 2.0;
-            let clip_w = (quad_w / bounds.width) * 2.0;
-            let clip_h = -(quad_h / bounds.height) * 2.0; // negative because Y is flipped
-            println!("Clip: {} {} {} {}", clip_x, clip_y, clip_w, clip_h);
-            println!(
-                "bbox: x_min={}, y_min={}, x_max={}, y_max={}",
-                bbox.x_min, bbox.y_min, bbox.x_max, bbox.y_max
-            );
-            println!("glyph pixel size: {:.1}x{:.1}", glyph_width, glyph_height);
-            println!("bounds: {:.1}x{:.1}", bounds.width, bounds.height);
-            let sdf_scale = 16.0 * bmp_to_screen; // range_px * bmp_to_screen
-            vertices.extend_from_slice(&[
-                clip_x, clip_y, uv_left, uv_top, // TL
-                sdf_scale,
-            ]);
-            vertices.extend_from_slice(&[
-                clip_x + clip_w,
-                clip_y,
-                uv_right,
-                uv_top, // TR
-                sdf_scale,
-            ]);
-            vertices.extend_from_slice(&[
-                clip_x,
-                clip_y + clip_h,
-                uv_left,
-                uv_bottom, // BL
-                sdf_scale,
-            ]);
-            vertices.extend_from_slice(&[
-                clip_x,
-                clip_y + clip_h,
-                uv_left,
-                uv_bottom, // BL
-                sdf_scale,
-            ]);
-            vertices.extend_from_slice(&[
-                clip_x + clip_w,
-                clip_y,
-                uv_right,
-                uv_top, // TR
-                sdf_scale,
-            ]);
-            vertices.extend_from_slice(&[
-                clip_x + clip_w,
-                clip_y + clip_h,
-                uv_right,
-                uv_bottom, // BR
-                sdf_scale,
-            ]);
-            instance.num_glyphs += 1;
-            println!();
-        }
-        println!();
-        println!("vertices: {:?}", vertices.len());
+        let vertices = create_vertex_buffer(instance, &self.glyphs, queue, bounds, self.font_size);
         queue.write_buffer(&instance.vertex_buffer, 0, bytemuck::cast_slice(&vertices));
     }
 
@@ -381,6 +202,194 @@ fn text_pass(
     pass.draw(0..(num_glyphs * 6), 0..1);
 }
 
+fn create_vertex_buffer(
+    instance: &mut TextInstance,
+    glyphs: &[GlyphData],
+    queue: &wgpu::Queue,
+    bounds: &iced::Rectangle<f32>,
+    font_size: f32,
+) -> Vec<f32> {
+    let mut vertices = Vec::new();
+    for glyph in glyphs.iter() {
+        if glyph.glyph_id == GlyphId(32) || glyph.glyph_id == GlyphId(3) {
+            continue;
+        }
+        // println!("Glyph: {:?} (ID: {:?})", glyph.glyph_id, glyph.glyph_id);
+        // println!("Data length: {}", data.len());
+        // let instance = pipeline.text_instance(self.id);
+        let ap = if let Some(ap) = instance.atlas_position.get(&glyph.glyph_id) {
+            // println!(
+            //     "Glyph already in atlas: {:?} (ID: {:?})",
+            //     glyph.glyph_id, glyph.glyph_id
+            // );
+            *ap
+        } else {
+            let (data, width, height, framing) = get_sdf_data(glyph.glyph_id);
+            let allocation = instance
+                .allocator
+                .allocate(size2(width as i32, height as i32))
+                .unwrap();
+
+            let (offset_x, offset_y) = allocation.rectangle.min.to_tuple();
+            let offset_x = offset_x as u32;
+            let offset_y = offset_y as u32;
+
+            let font = Face::parse(font::FONT, 0).unwrap();
+            // println!(
+            //     "Adding glyph to atlas: {:?} at offset: ({}, {})",
+            //     glyph.glyph_id, offset_x, offset_y
+            // );
+            // println!(
+            //     "Getting glyph bounding box for glyph: (ID: {:?})",
+            //     glyph.glyph_id
+            // );
+            let bbox = font.glyph_bounding_box(glyph.glyph_id).unwrap();
+            let units_per_em = font.units_per_em() as f32;
+
+            let ap = AtlasPosition {
+                x: offset_x,
+                y: offset_y,
+                width,
+                height,
+                bbox,
+                units_per_em,
+                framing,
+            };
+            instance.atlas_position.insert(glyph.glyph_id, ap);
+            queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &instance.texture_atlas,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d {
+                        x: offset_x,
+                        y: offset_y,
+                        z: 0,
+                    },
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &data,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(width * 4),
+                    rows_per_image: Some(height),
+                },
+                wgpu::Extent3d {
+                    width,
+                    height,
+                    depth_or_array_layers: 1,
+                },
+            );
+            // offset_x += width + 2;
+            // if offset_x > TEXT_ATLAS_SIZE {
+            //     offset_x = 0;
+            //     offset_y += 100;
+            // }
+
+            ap
+        };
+
+        // let bbox = ap.bbox;
+        // let scale = self.font_size / ap.units_per_em;
+        // let glyph_width = (bbox.x_max - bbox.x_min) as f32 * scale;
+        // let glyph_height = (bbox.y_max - bbox.y_min) as f32 * scale;
+        // let bearing_x = bbox.x_min as f32 * scale;
+        // let bearing_y = bbox.y_max as f32 * scale; // top of glyph relative to baseline
+
+        // println!(
+        //     "glyph.y_offset ({:?}): {:.1}",
+        //     glyph.glyph_id, glyph.y_offset
+        // );
+        // let screen_scale = self.font_size / MSDF_FONT_SIZE;
+        // let top = glyph.run_line_y + glyph.y_offset - bearing_y;
+        // let bottom = glyph.run_line_y - bbox.y_min as f32 * scale;
+        // let pad = 8.0 * screen_scale; // uniform padding in screen pixels
+
+        // bitmap-to-screen scale: how many screen pixels per bitmap pixel
+        let origin_bmp_x =
+            (ap.framing.projection.translate.x * ap.framing.projection.scale.x) as f32;
+        let origin_bmp_y =
+            (ap.framing.projection.translate.y * ap.framing.projection.scale.y) as f32;
+        let bmp_to_screen = (font_size / ap.units_per_em) / ap.framing.projection.scale.x as f32;
+
+        // Full quad = full bitmap mapped to screen
+        let quad_w = ap.width as f32 * bmp_to_screen;
+        let quad_h = ap.height as f32 * bmp_to_screen;
+
+        // Origin in bitmap (after flip_y)
+        let origin_bmp_y_flipped = ap.height as f32 - origin_bmp_y;
+
+        // Anchor the quad so the font origin maps to (glyph.x, run_line_y)
+        let quad_x = glyph.x - origin_bmp_x * bmp_to_screen;
+        let quad_y = glyph.run_line_y - origin_bmp_y_flipped * bmp_to_screen;
+
+        // println!(
+        //     "quad_x: {:.1}, quad_y: {:.1}, quad_w: {:.1}, quad_h: {:.1}",
+        //     quad_x, quad_y, quad_w, quad_h
+        // );
+
+        let uv_left = ap.x as f32 / TEXT_ATLAS_SIZE as f32;
+        let uv_bottom = ap.y as f32 / TEXT_ATLAS_SIZE as f32; // glyph.y / TEXT_ATLAS_SIZE as f32;
+        let uv_right = (ap.x as f32 + ap.width as f32) / TEXT_ATLAS_SIZE as f32;
+        let uv_top = (ap.y as f32 + ap.height as f32) / TEXT_ATLAS_SIZE as f32;
+
+        let clip_x = (quad_x / bounds.width) * 2.0 - 1.0;
+        let clip_y = 1.0 - (quad_y / bounds.height) * 2.0;
+        let clip_w = (quad_w / bounds.width) * 2.0;
+        let clip_h = -(quad_h / bounds.height) * 2.0; // negative because Y is flipped
+        // println!("Clip: {} {} {} {}", clip_x, clip_y, clip_w, clip_h);
+        // println!(
+        //     "bbox: x_min={}, y_min={}, x_max={}, y_max={}",
+        //     bbox.x_min, bbox.y_min, bbox.x_max, bbox.y_max
+        // );
+        // println!("glyph pixel size: {:.1}x{:.1}", glyph_width, glyph_height);
+        // println!("bounds: {:.1}x{:.1}", bounds.width, bounds.height);
+        let sdf_scale = 16.0 * bmp_to_screen; // range_px * bmp_to_screen
+        vertices.extend_from_slice(&[
+            clip_x, clip_y, uv_left, uv_top, // TL
+            sdf_scale,
+        ]);
+        vertices.extend_from_slice(&[
+            clip_x + clip_w,
+            clip_y,
+            uv_right,
+            uv_top, // TR
+            sdf_scale,
+        ]);
+        vertices.extend_from_slice(&[
+            clip_x,
+            clip_y + clip_h,
+            uv_left,
+            uv_bottom, // BL
+            sdf_scale,
+        ]);
+        vertices.extend_from_slice(&[
+            clip_x,
+            clip_y + clip_h,
+            uv_left,
+            uv_bottom, // BL
+            sdf_scale,
+        ]);
+        vertices.extend_from_slice(&[
+            clip_x + clip_w,
+            clip_y,
+            uv_right,
+            uv_top, // TR
+            sdf_scale,
+        ]);
+        vertices.extend_from_slice(&[
+            clip_x + clip_w,
+            clip_y + clip_h,
+            uv_right,
+            uv_bottom, // BR
+            sdf_scale,
+        ]);
+        instance.num_glyphs += 1;
+        // println!();
+    }
+    vertices
+}
+
+use etagere::size2;
 use msdfgen::{Bitmap, FillRule, FontExt, Framing, MsdfGeneratorConfig, Range, Rgb};
 use ttf_parser::{Face, GlyphId};
 fn get_sdf_data(glyph: GlyphId) -> (Vec<u8>, u32, u32, Framing<f64>) {
@@ -392,7 +401,7 @@ fn get_sdf_data(glyph: GlyphId) -> (Vec<u8>, u32, u32, Framing<f64>) {
     let mut shape = font.glyph_shape(glyph).unwrap();
 
     let (width, height) = get_font_size(&font, glyph);
-    println!("Font size MSDF: {}x{} (ID: {:?})", width, height, glyph);
+    // println!("Font size MSDF: {}x{} (ID: {:?})", width, height, glyph);
 
     let bound = shape.get_bound();
     let framing = bound
@@ -400,7 +409,7 @@ fn get_sdf_data(glyph: GlyphId) -> (Vec<u8>, u32, u32, Framing<f64>) {
         .unwrap();
 
     // framing.scale = msdfgen::Vector2 { x: 0.04, y: 0.04 };
-    println!("framing: {:?}", framing);
+    // println!("framing: {:?}", framing);
 
     // This helps with glyph positioning, but could affect SDF accuracy
     // framing.translate.x = 100.0;

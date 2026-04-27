@@ -24,4 +24,5 @@ fontdue = "0.9.3"
 msdfgen = { version = "0.2.1", features = ["ttf-parser"] }
 notosans = "0.1.0"
 ttf-parser = "0.18"
+etagere = "0.3.0"
 # freetype-rs = "0.32.0"

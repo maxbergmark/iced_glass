@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use etagere::{AtlasAllocator, size2};
 use ttf_parser::GlyphId;
 
 use crate::{
@@ -46,6 +47,7 @@ pub struct Instance {
     pub size: wgpu::Extent3d,
 }
 
+// #[derive(Debug)]
 pub struct TextInstance {
     pub tex_a: wgpu::Texture,
     pub tex_b: wgpu::Texture,
@@ -61,6 +63,7 @@ pub struct TextInstance {
     pub vertex_buffer: wgpu::Buffer,
     pub texture_atlas_bg: wgpu::BindGroup,
     pub atlas_position: HashMap<GlyphId, AtlasPosition>,
+    pub allocator: AtlasAllocator,
     pub num_glyphs: u32,
 }
 
@@ -205,8 +208,23 @@ impl Pipeline {
         scale: f32,
         uniforms: &Uniforms,
     ) {
-        let needs_new = match self.instances.get(&id) {
-            Some(inst) => inst.size.width != width || inst.size.height != height,
+        // println!(
+        //     "Preparing text instance for id: {}, width: {}, height: {}",
+        //     id, width, height
+        // );
+        // println!(
+        //     "Existing instance size: {:?}",
+        //     self.text_instances.get(&id).map(|inst| inst.size)
+        // );
+        let needs_new = match self.text_instances.get(&id) {
+            Some(inst) => {
+                // println!(
+                //     "Inst size: Width: {}, Height: {}",
+                //     inst.size.width, inst.size.height
+                // );
+                // println!("Width: {}, Height: {}", width, height);
+                inst.size.width != width || inst.size.height != height
+            }
             None => true,
         };
         if needs_new {
@@ -302,6 +320,10 @@ impl TextInstance {
         width: u32,
         height: u32,
     ) -> Self {
+        // println!(
+        //     "Creating text instance for width: {}, height: {}",
+        //     width, height
+        // );
         let (copy_texture, gaussian_texture) =
             create_textures(device, pipeline.device_format, width, height);
 
@@ -364,7 +386,7 @@ impl TextInstance {
 
         let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("text.vertex_buffer"),
-            size: std::mem::size_of::<f32>() as u64 * 6 * 4000, // TODO: increase this limit
+            size: std::mem::size_of::<f32>() as u64 * 5 * 6 * 4000, // TODO: increase this limit
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -388,6 +410,7 @@ impl TextInstance {
             vertex_buffer,
             texture_atlas_bg,
             atlas_position: HashMap::new(),
+            allocator: AtlasAllocator::new(size2(TEXT_ATLAS_SIZE as i32, TEXT_ATLAS_SIZE as i32)),
             num_glyphs: 0,
         }
     }

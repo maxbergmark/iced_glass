@@ -53,7 +53,7 @@ where
     GlassText::new(content)
 }
 
-use cosmic_text::{Buffer, FontSystem, Metrics};
+use cosmic_text::{Buffer, FontSystem, LayoutGlyph, Metrics};
 use std::cell::RefCell;
 use ttf_parser::GlyphId;
 
@@ -62,6 +62,11 @@ struct FontData {
     font_system: RefCell<FontSystem>,
     metrics: Metrics,
     buffer: RefCell<Buffer>,
+
+    last_text: RefCell<Option<String>>,
+    last_bounds: RefCell<Option<(f32, f32)>>,
+    last_glyphs: RefCell<Option<Vec<GlyphData>>>,
+    last_metrics: RefCell<Option<Metrics>>,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -73,6 +78,19 @@ pub struct GlyphData {
     pub run_line_y: f32,
     pub w: f32,
     pub y_offset: f32,
+}
+
+impl GlyphData {
+    pub fn new(glyph: &LayoutGlyph, run_line_y: f32) -> Self {
+        Self {
+            glyph_id: GlyphId(glyph.glyph_id),
+            x: glyph.x,
+            y: glyph.y,
+            run_line_y,
+            w: glyph.w,
+            y_offset: glyph.y_offset,
+        }
+    }
 }
 
 impl FontData {
@@ -91,6 +109,11 @@ impl FontData {
             font_system: RefCell::new(font_system),
             metrics,
             buffer: RefCell::new(buffer),
+
+            last_text: RefCell::new(None),
+            last_bounds: RefCell::new(None),
+            last_glyphs: RefCell::new(None),
+            last_metrics: RefCell::new(None),
         }
     }
 }
@@ -132,46 +155,40 @@ where
         }
     }
 
-    fn parse_text(&self, s: &str, bounds: &Rectangle) -> Vec<GlyphData> {
+    fn parse_text(font_data: &FontData, s: &str, bounds: &Rectangle) -> Vec<GlyphData> {
         use cosmic_text::{Attrs, Shaping};
-        // Create font system (loads system fonts)
-        let start = std::time::Instant::now();
-        let mut font_system = self.font_data.font_system.borrow_mut();
-        let mut buffer = self.font_data.buffer.borrow_mut();
+
+        let needs_reshape = font_data.last_text.borrow().as_deref() != Some(s)
+            || font_data.last_bounds.borrow().as_ref() != Some(&(bounds.width, bounds.height))
+            || font_data.last_glyphs.borrow().is_none()
+            || font_data.last_metrics.borrow().as_ref() != Some(&font_data.metrics);
+
+        // println!("{}", font_data.metrics.font_size);
+        if !needs_reshape {
+            return font_data.last_glyphs.borrow().as_ref().unwrap().clone();
+        }
+        // println!("Reshaping text");
+
+        let mut font_system = font_data.font_system.borrow_mut();
+        let mut buffer = font_data.buffer.borrow_mut();
 
         let mut buffer = buffer.borrow_with(&mut font_system);
 
         buffer.set_size(Some(bounds.width), Some(bounds.height));
-        // Set the text to shape
-        // let attrs = Attrs::new().family(cosmic_text::Family::SansSerif);
-        // let attrs = Attrs::new().family(cosmic_text::Family::Name("Arial Unicode MS"));
         let attrs = Attrs::new().family(font::FAMILY);
         buffer.set_text(s, &attrs, Shaping::Advanced, None);
-        let elapsed = start.elapsed();
-        println!("Time taken: {:?}, text length: {}", elapsed, s.len());
-        // Iterate layout runs → glyphs
-        for run in buffer.layout_runs() {
-            for glyph in run.glyphs.iter() {
-                println!(
-                    "glyph_id: {}:\n\tx: {:.1}, y: {:.1}\n\tw: {:.1}, y_offset: {:.1}",
-                    glyph.glyph_id, glyph.x, glyph.y, glyph.w, glyph.y_offset,
-                );
-            }
-        }
-        buffer
+        font_data.last_text.replace(Some(s.to_string()));
+        font_data
+            .last_bounds
+            .replace(Some((bounds.width, bounds.height)));
+        let glyphs: Vec<GlyphData> = buffer
             .layout_runs()
             .flat_map(|run| run.glyphs.iter().map(move |glyph| (run.line_y, glyph)))
-            // .zip(s.chars())
-            .map(|(line_y, glyph)| GlyphData {
-                glyph_id: GlyphId(glyph.glyph_id),
-                // glyph: c,
-                x: glyph.x,
-                y: glyph.y,
-                run_line_y: line_y,
-                w: glyph.w,
-                y_offset: glyph.y_offset,
-            })
-            .collect()
+            .map(|(run_line_y, glyph)| GlyphData::new(glyph, run_line_y))
+            .collect();
+        font_data.last_glyphs.replace(Some(glyphs.clone()));
+        font_data.last_metrics.replace(Some(font_data.metrics));
+        glyphs
     }
 
     /// Sets the [`widget::Id`] of the [`Container`].
@@ -352,6 +369,7 @@ where
 
 struct State {
     id: u64,
+    font_data: FontData,
 }
 static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
@@ -368,6 +386,7 @@ where
         // self.content.as_widget().state()
         tree::State::new(State {
             id: NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
+            font_data: FontData::new(self.font_size, self.line_height),
         })
     }
 
@@ -376,9 +395,19 @@ where
         // vec![Tree::new(&self.content)]
     }
 
-    fn diff(&self, _tree: &mut Tree) {
+    fn diff(&self, tree: &mut Tree) {
         // self.content.as_widget().diff(tree);
         // tree.diff_children(std::slice::from_ref(&self.content));
+        let state = tree.state.downcast_mut::<State>();
+        if state.font_data.metrics.font_size != self.font_size
+            || state.font_data.metrics.line_height != self.line_height
+        {
+            let new_metrics = Metrics::new(self.font_size, self.line_height);
+            state.font_data.metrics = new_metrics;
+            state.font_data.buffer.borrow_mut().set_metrics(new_metrics);
+            // Invalidate cached glyphs so parse_text reshapes
+            *state.font_data.last_text.borrow_mut() = None;
+        }
     }
 
     fn size(&self) -> Size<Length> {
@@ -486,7 +515,7 @@ where
             })
             .unwrap_or(Color::WHITE);
 
-        let glyphs = self.parse_text(&self.content, &bounds);
+        let glyphs = Self::parse_text(&state.font_data, &self.content, &bounds);
 
         renderer.draw_primitive(
             bounds,

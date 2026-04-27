@@ -799,7 +799,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08bc795bdbccdbd461736fb163930a009da6597b226d6f6fce33e7a8eb6ec519"
 dependencies = [
  "cosmic-text 0.15.0",
- "etagere",
+ "etagere 0.2.15",
  "lru",
  "rustc-hash 2.1.2",
  "wgpu",
@@ -961,6 +961,15 @@ checksum = "fc89bf99e5dc15954a60f707c1e09d7540e5cd9af85fa75caa0b510bc08c5342"
 dependencies = [
  "euclid",
  "svg_fmt",
+]
+
+[[package]]
+name = "etagere"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ecb5c40d5683a270e077688f53a99eac51c1cb1ae5ba63b55590370cb3536bf"
+dependencies = [
+ "euclid",
 ]
 
 [[package]]
@@ -1582,6 +1591,7 @@ version = "0.1.0"
 dependencies = [
  "bytemuck",
  "cosmic-text 0.19.0",
+ "etagere 0.3.0",
  "fontdue",
  "iced",
  "iced_wgpu",
