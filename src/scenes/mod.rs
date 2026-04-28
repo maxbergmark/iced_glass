@@ -1,6 +1,7 @@
 use iced::{Length, Task};
 
 pub mod basic;
+mod declaration;
 pub mod large_slider;
 pub mod scroll_view;
 pub mod stress_test;

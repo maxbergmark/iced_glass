@@ -13,6 +13,7 @@ pub struct Uniforms {
     pub opacity: f32,
     pub tint: iced::Color,
     pub glyph: char,
+    pub content_scale: (f32, f32),
 }
 
 impl Uniforms {
@@ -30,6 +31,8 @@ impl Uniforms {
             opacity: self.opacity,
             tint: [self.tint.r, self.tint.g, self.tint.b, self.tint.a],
             _pad: 0.0,
+            _pad2: [0.0, 0.0],
+            content_scale: [self.content_scale.0, self.content_scale.1],
         }
     }
 
@@ -54,16 +57,19 @@ impl Uniforms {
 pub struct Raw {
     pub tint: [f32; 4],
     pub direction: [f32; 2],
+    pub content_scale: [f32; 2],
+
     pub blur_radius: f32,
     pub corner_radius: f32,
-
     pub saturation: f32,
     pub lightness: f32,
+
     pub edge_radius: f32,
     pub height: f32,
-
     pub refractive_index: f32,
     pub rim_width: f32,
+
     pub opacity: f32,
     pub _pad: f32,
+    pub _pad2: [f32; 2],
 }

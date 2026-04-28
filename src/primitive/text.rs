@@ -1,6 +1,6 @@
 use crate::{
     font,
-    pipeline::{AtlasPosition, Pipeline, TextInstance},
+    pipeline::{AtlasPosition, Pipeline, TextInstance, round_up},
     primitive::{copy_background, downsample, upsample},
     shader::text::TEXT_ATLAS_SIZE,
     uniforms::Uniforms,
@@ -31,6 +31,7 @@ impl iced::widget::shader::Primitive for TextPrimitive {
         bounds: &iced::Rectangle,
         viewport: &iced::widget::shader::Viewport,
     ) {
+        // let now = std::time::Instant::now();
         let scale = viewport.scale_factor();
         let w = (bounds.width * scale) as u32;
         let h = (bounds.height * scale) as u32;
@@ -41,6 +42,8 @@ impl iced::widget::shader::Primitive for TextPrimitive {
 
         let vertices = create_vertex_buffer(instance, &self.glyphs, queue, bounds, self.font_size);
         queue.write_buffer(&instance.vertex_buffer, 0, bytemuck::cast_slice(&vertices));
+        // let elapsed = now.elapsed();
+        // println!("Time taken to prepare text: {:?}", elapsed);
     }
 
     fn render(
@@ -50,11 +53,14 @@ impl iced::widget::shader::Primitive for TextPrimitive {
         target: &wgpu::TextureView,
         bounds: &iced::Rectangle<u32>,
     ) {
+        // let now = std::time::Instant::now();
         let texture = target.texture();
         let instance = pipeline.text_instance(self.id);
+        let width_limit = texture.width() - bounds.x;
+        let height_limit = texture.height() - bounds.y;
         let copy_size = wgpu::Extent3d {
-            width: bounds.width,
-            height: bounds.height,
+            width: round_up(bounds.width, 256).min(width_limit),
+            height: round_up(bounds.height, 256).min(height_limit),
             depth_or_array_layers: 1,
         };
         // let copy_size = match calculate_copy_size(texture, instance, bounds) {
@@ -88,6 +94,8 @@ impl iced::widget::shader::Primitive for TextPrimitive {
             bounds,
             instance.num_glyphs,
         );
+        // let elapsed = now.elapsed();
+        // println!("Time taken to render text: {:?}", elapsed);
     }
 }
 

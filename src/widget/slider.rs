@@ -506,6 +506,7 @@ where
                         opacity: 1.0,
                         tint,
                         glyph: ' ',
+                        content_scale: (1.0, 1.0),
                     },
                 },
             );

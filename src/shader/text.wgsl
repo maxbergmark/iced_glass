@@ -1,18 +1,22 @@
 struct Uniforms {
     tint: vec4<f32>,
     blur_direction: vec2<f32>,
+    content_scale: vec2<f32>,
+
     blur_radius: f32,
     corner_radius: f32,
-
     saturation: f32,
     lightness: f32,
+
     edge_radius: f32,
     height: f32,
-
     refractive_index: f32,
     rim_width: f32,
+
     opacity: f32,
     _pad: f32,
+    _pad2: f32,
+    _pad3: f32,
 };
 
 @group(1)
@@ -52,6 +56,7 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     out.position = vec4<f32>(pos, 0.0, 1.0);
     out.atlas_uv = input.atlas_uv;
     out.screen_uv = vec2<f32>(pos.x * 0.5 + 0.5, 1.0 - (pos.y * 0.5 + 0.5));
+    // out.screen_uv *= uniforms.content_scale;
     out.scale = input.scale;
     return out;
 }
@@ -71,9 +76,11 @@ fn fs_main(input: FragInput) -> @location(0) vec4<f32> {
     // return vec4<f32>(input.atlas_uv, 1.0, alpha);
     // let alpha = msdf_alpha(input.uv);
     // return vec4<f32>(1.0, 1.0, 1.0, alpha);
+    // return anti_alias(input);
     return mix(TRANSPARENT, physical_sampling(input), uniforms.opacity);
     // let bg = textureSample(image, image_sampler, input.uv);
     let sdf = msdf(input.atlas_uv, input.scale);
+    return vec4<f32>(fwidth(sdf) * 10.0, 0.0, 0.0, 1.0);
     // return mix(vec4<f32>(0.0), bg, sdf);
     let gradient = sdf_gradient(input.atlas_uv);
     // return vec4<f32>(msdf_alpha(input.uv));
@@ -82,12 +89,32 @@ fn fs_main(input: FragInput) -> @location(0) vec4<f32> {
     return vec4<f32>(gradient.x * 0.5 + 0.5, green, gradient.y * 0.5 + 0.5, 1.0);
 }
 
-fn msdf_alpha(uv: vec2<f32>) -> f32 {
-    let s = textureSample(texture_atlas, image_sampler, uv).rgb;
-    let d = median(s.r, s.g, s.b);
-    let w = fwidth(d);
-    return smoothstep(0.5 - w, 0.5 + w, d);
+fn anti_alias(input: FragInput) -> vec4<f32> {
+    var i = input;
+    let dimensions = vec2<f32>(textureDimensions(image)) * uniforms.content_scale;
+
+    let c1 = physical_sampling_with_opacity(i);
+    i.screen_uv = input.screen_uv - vec2<f32>(1.0 / dimensions.x, 0.0);
+    let c2 = physical_sampling_with_opacity(i);
+    i.screen_uv = input.screen_uv - vec2<f32>(0.0, 1.0 / dimensions.y);
+    let c3 = physical_sampling_with_opacity(i);
+    i.screen_uv = input.screen_uv + vec2<f32>(1.0 / dimensions.x, 0.0);
+    let c4 = physical_sampling_with_opacity(i);
+    i.screen_uv = input.screen_uv + vec2<f32>(0.0, 1.0 / dimensions.y);
+    let c5 = physical_sampling_with_opacity(i);
+    return (c1 + c2 + c3 + c4 + c5) / 5.0;
 }
+
+fn physical_sampling_with_opacity(input: FragInput) -> vec4<f32> {
+    return mix(TRANSPARENT, physical_sampling(input), uniforms.opacity);
+}
+
+// fn msdf_alpha(uv: vec2<f32>) -> f32 {
+//     let s = textureSample(texture_atlas, image_sampler, uv).rgb;
+//     let d = median(s.r, s.g, s.b);
+//     let w = fwidth(d);
+//     return smoothstep(0.5 - w, 0.5 + w, d);
+// }
 
 fn msdf(uv: vec2<f32>, scale: f32) -> f32 {
     let dimensions = vec2<f32>(textureDimensions(texture_atlas));
@@ -133,7 +160,8 @@ fn median_channel(c: vec3<f32>) -> u32 {
 
 fn physical_sampling(input: FragInput) -> vec4<f32> {
     let ixy = input.atlas_uv - vec2<f32>(0.5);
-    let dimensions = vec2<f32>(textureDimensions(image));
+    let dimensions = vec2<f32>(textureDimensions(image)) * uniforms.content_scale;
+    // return textureSample(image, image_sampler, input.screen_uv);
     let p = ixy * dimensions;
 
     let p_screen = (input.screen_uv - vec2<f32>(0.5)) * dimensions;
@@ -151,7 +179,8 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
     let dx = select(0.0, refract(sdf, r_edge, n, h), sdf > -r_edge);
     let offset = gradient * dx;
 
-    let sample_uv = (p_screen + offset) / dimensions + vec2<f32>(0.5);
+    var sample_uv = (p_screen + offset) / dimensions + vec2<f32>(0.5);
+    sample_uv *= uniforms.content_scale;
 
     var color = textureSample(image, image_sampler, sample_uv);
     color = saturate(color);
@@ -159,7 +188,8 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
     color = edge_highlight(color, sdf, gradient);
 
     let aa = fwidth(sdf);
-    let outside_factor = smoothstep(-aa, 0.0, sdf);
+    // let outside_factor = smoothstep(-aa, 0.0, sdf);
+    let outside_factor = smoothstep(-aa, aa, sdf);
     return mix(color, TRANSPARENT, outside_factor);
 }
 
@@ -170,7 +200,7 @@ fn edge_highlight(color: vec4<f32>, sdf: f32, sdf_gradient: vec2<f32>) -> vec4<f
     let highlight_width = uniforms.rim_width;
     let sun_direction = normalize(vec2<f32>(1.0, 2.0));
     let f = pow(dot(sdf_gradient, sun_direction), 2.0);
-    let t = smoothstep(-highlight_width - aa, -highlight_width, sdf);
+    let t = smoothstep(-highlight_width - aa, -highlight_width + aa, sdf);
     return mix(color, highlight_color, f * t);
 }
 

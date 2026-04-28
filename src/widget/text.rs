@@ -32,7 +32,7 @@ where
 
     font_size: f32,
     line_height: f32,
-    font_data: FontData,
+    // font_data: FontData,
 
     // GlassText specific properties
     blur_radius: f32,
@@ -57,7 +57,7 @@ use cosmic_text::{Buffer, FontSystem, LayoutGlyph, Metrics};
 use std::cell::RefCell;
 use ttf_parser::GlyphId;
 
-use crate::font;
+use crate::{font, pipeline::content_scale};
 struct FontData {
     font_system: RefCell<FontSystem>,
     metrics: Metrics,
@@ -142,8 +142,7 @@ where
 
             font_size: 48.0,
             line_height: 56.0,
-            font_data: FontData::new(48.0, 56.0),
-
+            // font_data: FontData::new(48.0, 56.0),
             blur_radius: 0.0,
             saturation: 1.0,
             lightness: 0.0,
@@ -168,6 +167,7 @@ where
             return font_data.last_glyphs.borrow().as_ref().unwrap().clone();
         }
         // println!("Reshaping text");
+        // let now = std::time::Instant::now();
 
         let mut font_system = font_data.font_system.borrow_mut();
         let mut buffer = font_data.buffer.borrow_mut();
@@ -177,6 +177,11 @@ where
         buffer.set_size(Some(bounds.width), Some(bounds.height));
         let attrs = Attrs::new().family(font::FAMILY);
         buffer.set_text(s, &attrs, Shaping::Advanced, None);
+
+        // let elapsed1 = now.elapsed();
+        // println!("Time taken to set text: {:?}", elapsed1);
+        // let now = std::time::Instant::now();
+
         font_data.last_text.replace(Some(s.to_string()));
         font_data
             .last_bounds
@@ -188,6 +193,8 @@ where
             .collect();
         font_data.last_glyphs.replace(Some(glyphs.clone()));
         font_data.last_metrics.replace(Some(font_data.metrics));
+        // let elapsed2 = now.elapsed();
+        // println!("Time taken to parse text: {:?}", elapsed2);
         glyphs
     }
 
@@ -348,21 +355,21 @@ where
 
     pub fn font_size(mut self, font_size: f32) -> Self {
         self.font_size = font_size;
-        self.font_data.metrics.font_size = font_size;
-        self.font_data
-            .buffer
-            .borrow_mut()
-            .set_metrics(self.font_data.metrics);
+        // self.font_data.metrics.font_size = font_size;
+        // self.font_data
+        //     .buffer
+        //     .borrow_mut()
+        //     .set_metrics(self.font_data.metrics);
         self
     }
 
     pub fn line_height(mut self, line_height: f32) -> Self {
         self.line_height = line_height;
-        self.font_data.metrics.line_height = line_height;
-        self.font_data
-            .buffer
-            .borrow_mut()
-            .set_metrics(self.font_data.metrics);
+        // self.font_data.metrics.line_height = line_height;
+        // self.font_data
+        //     .buffer
+        //     .borrow_mut()
+        //     .set_metrics(self.font_data.metrics);
         self
     }
 }
@@ -504,6 +511,7 @@ where
         _cursor: mouse::Cursor,
         _viewport: &Rectangle,
     ) {
+        // let now = std::time::Instant::now();
         let state = tree.state.downcast_ref::<State>();
         let bounds = layout.bounds();
         let style = theme.style(&self.class);
@@ -536,31 +544,14 @@ where
                     rim_width: self.rim_width,
                     opacity: self.opacity,
                     tint,
-                    glyph: self.content.chars().next().unwrap(),
+                    glyph: self.content.chars().next().unwrap_or('\0'),
+                    content_scale: content_scale(bounds.size()),
                 },
             },
         );
 
-        // if let Some(clipped_viewport) = bounds.intersection(viewport) {
-        //     // draw_background(renderer, &style, bounds);
-        //     renderer.with_layer(bounds, |renderer| {
-        //         self.content.as_widget().draw(
-        //             &tree.children[0],
-        //             renderer,
-        //             theme,
-        //             &renderer::Style {
-        //                 text_color: style.text_color.unwrap_or(renderer_style.text_color),
-        //             },
-        //             layout.children().next().unwrap(),
-        //             cursor,
-        //             if self.clip {
-        //                 &clipped_viewport
-        //             } else {
-        //                 viewport
-        //             },
-        //         );
-        //     });
-        // }
+        // let elapsed = now.elapsed();
+        // println!("Time taken to draw text: {:?}", elapsed);
     }
 
     // fn overlay<'b>(

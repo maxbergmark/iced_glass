@@ -223,18 +223,29 @@ impl Pipeline {
                 //     inst.size.width, inst.size.height
                 // );
                 // println!("Width: {}, Height: {}", width, height);
-                inst.size.width != width || inst.size.height != height
+                inst.size.width < width || inst.size.height < height
             }
             None => true,
         };
         if needs_new {
+            let alloc_width = round_up(width, 256);
+            let alloc_height = round_up(height, 256);
             self.text_instances.insert(
                 id,
-                TextInstance::new(self, device, &self.bgl_textures, width, height),
+                TextInstance::new(self, device, &self.bgl_textures, alloc_width, alloc_height),
             );
         }
         let inst = self.text_instances.get_mut(&id).unwrap();
-        inst.copy_uniforms_to_device(queue, uniforms, scale);
+
+        // TODO: find a cleaner way to do this
+        let cs = (
+            width as f32 / inst.size.width as f32,
+            height as f32 / inst.size.height as f32,
+        );
+        let mut uniforms = *uniforms;
+        uniforms.content_scale = cs;
+
+        inst.copy_uniforms_to_device(queue, &uniforms, scale);
         self.live_text_this_frame.insert(id);
     }
 
@@ -259,6 +270,17 @@ impl Pipeline {
         self.live_this_frame.clear();
         self.live_text_this_frame.clear();
     }
+}
+
+pub fn round_up(size: u32, granularity: u32) -> u32 {
+    size.div_ceil(granularity) * granularity
+}
+
+pub fn content_scale(size: iced::Size<f32>) -> (f32, f32) {
+    (
+        size.width / round_up(size.width as u32, 256) as f32,
+        size.height / round_up(size.height as u32, 256) as f32,
+    )
 }
 
 impl Instance {
@@ -320,10 +342,10 @@ impl TextInstance {
         width: u32,
         height: u32,
     ) -> Self {
-        // println!(
-        //     "Creating text instance for width: {}, height: {}",
-        //     width, height
-        // );
+        println!(
+            "Creating text instance for width: {}, height: {}",
+            width, height
+        );
         let (copy_texture, gaussian_texture) =
             create_textures(device, pipeline.device_format, width, height);
 
@@ -386,7 +408,7 @@ impl TextInstance {
 
         let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("text.vertex_buffer"),
-            size: std::mem::size_of::<f32>() as u64 * 5 * 6 * 4000, // TODO: increase this limit
+            size: std::mem::size_of::<f32>() as u64 * 5 * 6 * 80000, // TODO: increase this limit
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });

@@ -398,6 +398,7 @@ where
                     opacity: self.opacity,
                     tint,
                     glyph: ' ',
+                    content_scale: (1.0, 1.0),
                 },
             },
         );
