@@ -4,6 +4,8 @@
 
 # Iced Glass
 ![Rust](https://img.shields.io/badge/Rust-2024_edition-orange)
+[![Test Status](https://img.shields.io/github/actions/workflow/status/maxbergmark/iced_glass/build.yml?branch=main&event=push&label=test)](https://github.com/maxbergmark/iced_glass/actions)
+
 
 </div>
 
