@@ -70,7 +70,7 @@ impl Ui {
 
     pub fn view(&self) -> iced::Element<'_, Message> {
         iced::widget::stack![
-            iced::widget::image("assets/tulips.jpg")
+            iced::widget::image("assets/waterfall.jpg")
                 .width(Length::Fill)
                 .height(Length::Fill),
             iced::widget::column![
@@ -180,7 +180,7 @@ impl Ui {
                 .refractive_index(1.5)
                 .rim_width(0.5)
                 .opacity(1.0)
-                .lightness(2.0)
+                .lightness(1.0)
                 .font_size(self.font_size)
                 .line_height(self.font_size * 1.2),
         )
@@ -189,7 +189,7 @@ impl Ui {
         .style(|_theme: &iced::Theme| iced::widget::container::Style {
             border: iced::Border {
                 color: color!(0xFFFFFF),
-                width: 1.0,
+                width: 0.0,
                 radius: 5.0.into(),
             },
             ..Default::default()

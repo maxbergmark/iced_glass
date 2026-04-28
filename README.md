@@ -19,6 +19,12 @@ https://github.com/user-attachments/assets/eb63dcc4-f406-4a2a-9990-b35bba1ec828
 
 With the rewrite of the refraction math using signed distance functions, it is now possible to render text with refraction. This is still a work in progress, as characters are rendered one at a time.
 
+### Limitations
+
+- Font selection is not possible at this time. This will be added before the feature is completed
+- GPU textures are a bit wasteful to simplify the implementation. Hopefully this will get fixed
+- Due to starting from a `container` widget, the interface is slightly different than the original `text` widget. This will be addressed
+
 ## Usage
 
 This crate is meant to be a drop-in replacement for existing iced widgets, 
