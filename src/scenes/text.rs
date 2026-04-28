@@ -28,7 +28,7 @@ pub enum Message {
 impl Default for Ui {
     fn default() -> Self {
         Self {
-            size: 1000.0,
+            size: 100.0,
             edge_radius: 5.0,
             edge_height: 400.0,
             font_size: 200.0,

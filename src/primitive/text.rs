@@ -1,6 +1,6 @@
 use crate::{
     font,
-    pipeline::{AtlasPosition, Pipeline, TextInstance, round_up},
+    pipeline::{AtlasData, AtlasPosition, Pipeline, TextInstance, round_up},
     primitive::{copy_background, downsample, upsample},
     shader::text::TEXT_ATLAS_SIZE,
     uniforms::Uniforms,
@@ -37,10 +37,18 @@ impl iced::widget::shader::Primitive for TextPrimitive {
         let h = (bounds.height * scale) as u32;
         pipeline.prepare_text_instance(device, queue, self.id, w, h, scale, &self.uniforms);
 
-        let instance = pipeline.text_instance_mut(self.id);
-        instance.num_glyphs = 0;
+        let instance = pipeline.text_instances.get_mut(&self.id).unwrap();
+        let atlas_data = &mut pipeline.atlas_data;
 
-        let vertices = create_vertex_buffer(instance, &self.glyphs, queue, bounds, self.font_size);
+        instance.num_glyphs = 0;
+        let vertices = create_vertex_buffer(
+            atlas_data,
+            instance,
+            &self.glyphs,
+            queue,
+            bounds,
+            self.font_size,
+        );
         queue.write_buffer(&instance.vertex_buffer, 0, bytemuck::cast_slice(&vertices));
         // let elapsed = now.elapsed();
         // println!("Time taken to prepare text: {:?}", elapsed);
@@ -211,6 +219,7 @@ fn text_pass(
 }
 
 fn create_vertex_buffer(
+    atlas_data: &mut AtlasData,
     instance: &mut TextInstance,
     glyphs: &[GlyphData],
     queue: &wgpu::Queue,
@@ -225,7 +234,7 @@ fn create_vertex_buffer(
         // println!("Glyph: {:?} (ID: {:?})", glyph.glyph_id, glyph.glyph_id);
         // println!("Data length: {}", data.len());
         // let instance = pipeline.text_instance(self.id);
-        let ap = if let Some(ap) = instance.atlas_position.get(&glyph.glyph_id) {
+        let ap = if let Some(ap) = atlas_data.atlas_position.get(&glyph.glyph_id) {
             // println!(
             //     "Glyph already in atlas: {:?} (ID: {:?})",
             //     glyph.glyph_id, glyph.glyph_id
@@ -233,7 +242,7 @@ fn create_vertex_buffer(
             *ap
         } else {
             let (data, width, height, framing) = get_sdf_data(glyph.glyph_id);
-            let allocation = instance
+            let allocation = atlas_data
                 .allocator
                 .allocate(size2(width as i32, height as i32))
                 .unwrap();
@@ -263,10 +272,10 @@ fn create_vertex_buffer(
                 units_per_em,
                 framing,
             };
-            instance.atlas_position.insert(glyph.glyph_id, ap);
+            atlas_data.atlas_position.insert(glyph.glyph_id, ap);
             queue.write_texture(
                 wgpu::TexelCopyTextureInfo {
-                    texture: &instance.texture_atlas,
+                    texture: &atlas_data.texture_atlas,
                     mip_level: 0,
                     origin: wgpu::Origin3d {
                         x: offset_x,
