@@ -1,6 +1,5 @@
 #[allow(unused)]
-pub const DECLARATION: &str = r#"
-Universal Declaration of Human Rights
+pub const DECLARATION: &str = r#"Universal Declaration of Human Rights
 Preamble
 Whereas recognition of the inherent dignity and of the equal and inalienable rights of all members of the human family is the foundation of freedom, justice and peace in the world,
 

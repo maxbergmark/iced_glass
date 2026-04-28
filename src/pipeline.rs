@@ -22,18 +22,16 @@ pub struct Pipeline {
     pub fragment_pipeline: wgpu::RenderPipeline,
     pub text_pipeline: wgpu::RenderPipeline,
 
-    // One entry per GlassContainer:
-    instances: std::collections::HashMap<u64, Instance>,
-    live_this_frame: std::collections::HashSet<u64>,
+    instances: HashMap<u64, Instance>,
+    live_this_frame: HashSet<u64>,
 
-    pub text_instances: std::collections::HashMap<u64, TextInstance>,
-    pub live_text_this_frame: std::collections::HashSet<u64>,
+    pub text_instances: HashMap<u64, TextInstance>,
+    live_text_this_frame: HashSet<u64>,
 
     pub atlas_data: AtlasData,
 }
 
 pub struct SharedBindGroupData {
-    // Shared, created once:
     pub device_format: wgpu::TextureFormat,
     pub sampler: wgpu::Sampler,
     pub bgl_textures: wgpu::BindGroupLayout, // group 0 layout
@@ -59,18 +57,8 @@ pub struct Instance {
     pub size: wgpu::Extent3d,
 }
 
-// #[derive(Debug)]
 pub struct TextInstance {
-    pub tex_a: wgpu::Texture,
-    pub tex_b: wgpu::Texture,
-    pub uniforms_h: wgpu::Buffer,
-    pub uniforms_v: wgpu::Buffer,
-    pub uniform_bg_h: wgpu::BindGroup,
-    pub uniform_bg_v: wgpu::BindGroup,
-    pub tex_a_bg: Vec<wgpu::BindGroup>,
-    pub tex_b_bg: Vec<wgpu::BindGroup>,
-    pub size: wgpu::Extent3d,
-
+    pub instance: Instance,
     pub vertex_buffer: wgpu::Buffer,
     pub texture_atlas_bg: wgpu::BindGroup,
     pub num_glyphs: u32,
@@ -78,10 +66,8 @@ pub struct TextInstance {
 
 #[derive(Debug, Clone, Copy)]
 pub struct AtlasPosition {
-    pub x: u32,
-    pub y: u32,
-    pub width: u32,
-    pub height: u32,
+    pub position: iced::Point<u32>,
+    pub size: iced::Size<u32>,
     pub bbox: ttf_parser::Rect,
     pub units_per_em: f32,
     pub framing: msdfgen::Framing<f64>,
@@ -240,39 +226,20 @@ impl Pipeline {
         self.live_this_frame.insert(id);
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn prepare_text_instance(
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         id: u64,
-        width: u32,
-        height: u32,
+        size: iced::Size<u32>,
         scale: f32,
         uniforms: &Uniforms,
     ) {
-        // println!(
-        //     "Preparing text instance for id: {}, width: {}, height: {}",
-        //     id, width, height
-        // );
-        // println!(
-        //     "Existing instance size: {:?}",
-        //     self.text_instances.get(&id).map(|inst| inst.size)
-        // );
-        let needs_new = match self.text_instances.get(&id) {
-            Some(inst) => {
-                // println!(
-                //     "Inst size: Width: {}, Height: {}",
-                //     inst.size.width, inst.size.height
-                // );
-                // println!("Width: {}, Height: {}", width, height);
-                inst.size.width < width || inst.size.height < height
-            }
-            None => true,
-        };
+        let needs_new = self.text_instances.get(&id).is_none_or(|inst| {
+            inst.instance.size.width < size.width || inst.instance.size.height < size.height
+        });
         if needs_new {
-            let alloc_width = round_up(width, 256);
-            let alloc_height = round_up(height, 256);
+            let alloc_size = iced::Size::new(round_up(size.width, 256), round_up(size.height, 256));
 
             match self.text_instances.get_mut(&id) {
                 Some(inst) => {
@@ -280,8 +247,7 @@ impl Pipeline {
                         &self.shared_bind_group_data,
                         &self.atlas_data,
                         device,
-                        alloc_width,
-                        alloc_height,
+                        alloc_size,
                     );
                 }
                 None => {
@@ -291,22 +257,20 @@ impl Pipeline {
                             self,
                             device,
                             &self.shared_bind_group_data.bgl_textures,
-                            alloc_width,
-                            alloc_height,
+                            alloc_size,
                         ),
                     );
                 }
-            };
+            }
         }
         let inst = self.text_instances.get_mut(&id).unwrap();
 
         // TODO: find a cleaner way to do this
-        let cs = (
-            width as f32 / inst.size.width as f32,
-            height as f32 / inst.size.height as f32,
-        );
         let mut uniforms = *uniforms;
-        uniforms.content_scale = cs;
+        uniforms.content_scale = (
+            size.width as f32 / inst.instance.size.width as f32,
+            size.height as f32 / inst.instance.size.height as f32,
+        );
 
         inst.copy_uniforms_to_device(queue, &uniforms, scale);
         self.live_text_this_frame.insert(id);
@@ -414,18 +378,13 @@ impl TextInstance {
         pipeline: &Pipeline,
         device: &wgpu::Device,
         bgl_textures: &wgpu::BindGroupLayout,
-        width: u32,
-        height: u32,
+        size: iced::Size<u32>,
     ) -> Self {
-        println!(
-            "Creating text instance for width: {}, height: {}",
-            width, height
-        );
         let (copy_texture, gaussian_texture) = create_textures(
             device,
             pipeline.shared_bind_group_data.device_format,
-            width,
-            height,
+            size.width,
+            size.height,
         );
 
         let uniforms_h = create_uniforms_buffer(device);
@@ -445,61 +404,29 @@ impl TextInstance {
             &uniforms_v,
         );
 
-        let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("text.vertex_buffer"),
-            size: std::mem::size_of::<f32>() as u64 * 5 * 6 * 80000, // TODO: increase this limit
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let texture_atlas_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("text.texture_atlas_bg"),
-            layout: &pipeline.shared_bind_group_data.bgl_text,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(
-                        &pipeline.atlas_data.texture_atlas.create_view(
-                            &wgpu::TextureViewDescriptor {
-                                base_mip_level: 0,
-                                mip_level_count: Some(1),
-                                ..Default::default()
-                            },
-                        ),
-                    ),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&copy_texture.create_view(
-                        &wgpu::TextureViewDescriptor {
-                            base_mip_level: 0,
-                            mip_level_count: Some(1),
-                            ..Default::default()
-                        },
-                    )),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(
-                        &pipeline.shared_bind_group_data.sampler,
-                    ),
-                },
-            ],
-        });
+        let vertex_buffer = TextShader::create_vertex_buffer(device);
+        let texture_atlas_bg = TextShader::create_bind_group(
+            device,
+            &pipeline.shared_bind_group_data,
+            &pipeline.atlas_data,
+            &copy_texture,
+        );
 
         Self {
-            tex_a: copy_texture,
-            tex_b: gaussian_texture,
-            uniforms_h,
-            uniforms_v,
-            uniform_bg_h,
-            uniform_bg_v,
-            tex_a_bg: copy_texture_bg,
-            tex_b_bg: gaussian_texture_bg,
-            size: wgpu::Extent3d {
-                width: width.max(1),
-                height: height.max(1),
-                depth_or_array_layers: 1,
+            instance: Instance {
+                tex_a: copy_texture,
+                tex_b: gaussian_texture,
+                uniforms_h,
+                uniforms_v,
+                uniform_bg_h,
+                uniform_bg_v,
+                tex_a_bg: copy_texture_bg,
+                tex_b_bg: gaussian_texture_bg,
+                size: wgpu::Extent3d {
+                    width: size.width.max(1),
+                    height: size.height.max(1),
+                    depth_or_array_layers: 1,
+                },
             },
 
             vertex_buffer,
@@ -513,105 +440,50 @@ impl TextInstance {
         shared_bind_group_data: &SharedBindGroupData,
         atlas_data: &AtlasData,
         device: &wgpu::Device,
-        // bgl_textures: &wgpu::BindGroupLayout,
-        width: u32,
-        height: u32,
+        size: iced::Size<u32>,
     ) {
-        println!(
-            "Updating text instance size for width: {}, height: {}",
-            width, height
+        let (copy_texture, gaussian_texture) = create_textures(
+            device,
+            shared_bind_group_data.device_format,
+            size.width,
+            size.height,
         );
-        let (copy_texture, gaussian_texture) =
-            create_textures(device, shared_bind_group_data.device_format, width, height);
-        self.tex_a = copy_texture;
-        self.tex_b = gaussian_texture;
+        self.instance.tex_a = copy_texture;
+        self.instance.tex_b = gaussian_texture;
 
-        // let uniforms_h = create_uniforms_buffer(device);
-        // let uniforms_v = create_uniforms_buffer(device);
+        self.instance.tex_a_bg = texture_bind_groups(
+            device,
+            &shared_bind_group_data.bgl_textures,
+            &self.instance.tex_a,
+        );
+        self.instance.tex_b_bg = texture_bind_groups(
+            device,
+            &shared_bind_group_data.bgl_textures,
+            &self.instance.tex_b,
+        );
 
-        self.tex_a_bg =
-            texture_bind_groups(device, &shared_bind_group_data.bgl_textures, &self.tex_a);
-        self.tex_b_bg =
-            texture_bind_groups(device, &shared_bind_group_data.bgl_textures, &self.tex_b);
+        self.texture_atlas_bg = TextShader::create_bind_group(
+            device,
+            shared_bind_group_data,
+            atlas_data,
+            &self.instance.tex_a,
+        );
 
-        // let uniform_bg_h = uniforms_bind_group(device, &shared_bind_group_data.bgl_uniforms, &uniforms_h);
-        // let uniform_bg_v = uniforms_bind_group(device, &shared_bind_group_data.bgl_uniforms, &uniforms_v);
-
-        // let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        //     label: Some("text.vertex_buffer"),
-        //     size: std::mem::size_of::<f32>() as u64 * 5 * 6 * 80000, // TODO: increase this limit
-        //     usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-        //     mapped_at_creation: false,
-        // });
-
-        self.texture_atlas_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("text.texture_atlas_bg"),
-            layout: &shared_bind_group_data.bgl_text,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(
-                        &atlas_data
-                            .texture_atlas
-                            .create_view(&wgpu::TextureViewDescriptor {
-                                base_mip_level: 0,
-                                mip_level_count: Some(1),
-                                ..Default::default()
-                            }),
-                    ),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&self.tex_a.create_view(
-                        &wgpu::TextureViewDescriptor {
-                            base_mip_level: 0,
-                            mip_level_count: Some(1),
-                            ..Default::default()
-                        },
-                    )),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(&shared_bind_group_data.sampler),
-                },
-            ],
-        });
-
-        self.size = wgpu::Extent3d {
-            width: width.max(1),
-            height: height.max(1),
+        self.instance.size = wgpu::Extent3d {
+            width: size.width.max(1),
+            height: size.height.max(1),
             depth_or_array_layers: 1,
         };
-
-        // Self {
-        //     tex_a: copy_texture,
-        //     tex_b: gaussian_texture,
-        //     uniforms_h,
-        //     uniforms_v,
-        //     // uniform_bg_h: self.uniform_bg_h,
-        //     // uniform_bg_v: self.uniform_bg_v,
-        //     tex_a_bg: copy_texture_bg,
-        //     tex_b_bg: gaussian_texture_bg,
-        //     size: wgpu::Extent3d {
-        //         width: width.max(1),
-        //         height: height.max(1),
-        //         depth_or_array_layers: 1,
-        //     },
-
-        //     vertex_buffer,
-        //     texture_atlas_bg,
-        //     num_glyphs: 0,
-        // }
     }
 
     pub fn copy_uniforms_to_device(&self, queue: &wgpu::Queue, uniforms: &Uniforms, scale: f32) {
         queue.write_buffer(
-            &self.uniforms_h,
+            &self.instance.uniforms_h,
             0,
             bytemuck::bytes_of(&uniforms.to_raw([1.0, 0.0], scale)),
         );
         queue.write_buffer(
-            &self.uniforms_v,
+            &self.instance.uniforms_v,
             0,
             bytemuck::bytes_of(&uniforms.to_raw([0.0, 1.0], scale)),
         );

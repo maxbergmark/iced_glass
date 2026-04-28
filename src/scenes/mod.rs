@@ -1,4 +1,4 @@
-use iced::{Length, Task};
+use iced::{Alignment, Length, Task};
 
 pub mod basic;
 mod declaration;
@@ -113,7 +113,9 @@ impl Ui {
             Scene::StressTest(ui) => ui.view().map(Message::StressTest),
             Scene::Text(ui) => ui.view().map(Message::Text),
         };
-        iced::widget::column![self.scene_selector(), scene].into()
+        iced::widget::column![self.scene_selector(), scene]
+            .align_x(Alignment::Center)
+            .into()
     }
 
     fn scene_selector(&self) -> iced::Element<'_, Message> {

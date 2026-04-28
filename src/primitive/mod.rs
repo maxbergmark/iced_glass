@@ -44,20 +44,13 @@ impl iced::widget::shader::Primitive for Primitive {
 
         let mip_level = self.uniforms.mip_level();
         copy_background(encoder, &instance.tex_a, texture, bounds, &copy_size);
-        downsample(
-            encoder,
-            pipeline,
-            &instance.tex_a_bg,
-            &instance.tex_a,
-            mip_level,
-        );
+        downsample(encoder, pipeline, instance, mip_level);
         horizontal_blur(encoder, pipeline, instance, mip_level);
         vertical_blur(encoder, pipeline, instance, mip_level);
         upsample(
-            encoder,
-            pipeline,
-            &instance.tex_a_bg,
-            &instance.tex_a,
+            encoder, pipeline, instance,
+            // &instance.tex_a_bg,
+            // &instance.tex_a,
             mip_level,
         );
         fragment_pass(encoder, pipeline, instance, target, bounds);
@@ -117,10 +110,13 @@ fn copy_background(
 fn downsample(
     encoder: &mut wgpu::CommandEncoder,
     pipeline: &Pipeline,
-    tex_a_bg: &[wgpu::BindGroup],
-    texture: &wgpu::Texture,
+    instance: &Instance,
+    // tex_a_bg: &[wgpu::BindGroup],
+    // texture: &wgpu::Texture,
     mip_level: u32,
 ) {
+    let texture = &instance.tex_a;
+    let tex_a_bg = &instance.tex_a_bg;
     #[allow(clippy::reversed_empty_ranges)]
     for level in 1..=mip_level {
         let dst_view = texture.create_view(&wgpu::TextureViewDescriptor {
@@ -151,10 +147,11 @@ fn downsample(
 fn upsample(
     encoder: &mut wgpu::CommandEncoder,
     pipeline: &Pipeline,
-    tex_a_bg: &[wgpu::BindGroup],
-    texture: &wgpu::Texture,
+    instance: &Instance,
     mip_level: u32,
 ) {
+    let tex_a_bg = &instance.tex_a_bg;
+    let texture = &instance.tex_a;
     #[allow(clippy::reversed_empty_ranges)]
     for level in (1..=mip_level).rev() {
         let dst_view = texture.create_view(&wgpu::TextureViewDescriptor {

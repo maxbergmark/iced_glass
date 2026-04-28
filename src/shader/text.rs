@@ -1,8 +1,14 @@
 use std::borrow::Cow;
 
-use crate::shader::uniforms_bind_group_layout;
+use crate::{
+    pipeline::{AtlasData, SharedBindGroupData},
+    primitive::text::{VERTICES_PER_GLYPH, VertexData},
+    shader::uniforms_bind_group_layout,
+};
 
-pub const TEXT_ATLAS_SIZE: u32 = 4096;
+// TODO: make these dynamic based on the texture atlas size and the number of glyphs
+pub const TEXT_ATLAS_SIZE: u32 = 2048;
+pub const MAX_GLYPHS: u32 = 80000;
 pub struct TextShader;
 
 impl TextShader {
@@ -102,6 +108,59 @@ impl TextShader {
                     count: None,
                 },
             ],
+        })
+    }
+
+    pub fn create_bind_group(
+        device: &wgpu::Device,
+        shared_bind_group_data: &SharedBindGroupData,
+        atlas_data: &AtlasData,
+        copy_texture: &wgpu::Texture,
+    ) -> wgpu::BindGroup {
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("text.texture_atlas_bg"),
+            layout: &shared_bind_group_data.bgl_text,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(
+                        &atlas_data
+                            .texture_atlas
+                            .create_view(&wgpu::TextureViewDescriptor {
+                                base_mip_level: 0,
+                                mip_level_count: Some(1),
+                                ..Default::default()
+                            }),
+                    ),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&copy_texture.create_view(
+                        &wgpu::TextureViewDescriptor {
+                            base_mip_level: 0,
+                            mip_level_count: Some(1),
+                            ..Default::default()
+                        },
+                    )),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&shared_bind_group_data.sampler),
+                },
+            ],
+        })
+    }
+
+    // TODO: make this dynamic based on the number of glyphs
+    pub fn create_vertex_buffer(device: &wgpu::Device) -> wgpu::Buffer {
+        device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("text.vertex_buffer"),
+            size: std::mem::size_of::<f32>() as u64
+                * std::mem::size_of::<VertexData>() as u64
+                * VERTICES_PER_GLYPH as u64
+                * MAX_GLYPHS as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
         })
     }
 }

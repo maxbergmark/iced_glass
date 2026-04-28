@@ -28,9 +28,9 @@ pub enum Message {
 impl Default for Ui {
     fn default() -> Self {
         Self {
-            size: 100.0,
-            edge_radius: 5.0,
-            edge_height: 400.0,
+            size: 500.0,
+            edge_radius: 1.5,
+            edge_height: 100.0,
             font_size: 200.0,
             blur_radius: 100.0,
             text: String::new(),
@@ -104,40 +104,16 @@ impl Ui {
                 .align_y(Alignment::Center)
                 .padding(20.0)
                 .spacing(20.0),
-                // iced::widget::slider(0.0..=1000.0, self.size, Message::Size),
-                // iced::widget::slider(0.0..=20.0, self.edge_radius, Message::EdgeRadius).step(0.01),
-                // iced::widget::slider(0.0..=1000.0, self.edge_height, Message::EdgeHeight),
-                // iced::widget::slider(0.0..=400.0, self.font_size, Message::FontSize),
-                // iced::widget::slider(0.0..=1000.0, self.blur_radius, Message::BlurRadius),
                 self.text_input(),
                 iced::widget::space().height(100.0),
-                iced::widget::container(iced::widget::row![
-                    // self.styled_text("Hiello"),
-                    // self.styled_text("你好齉蘭"),
-                    // self.styled_text(declaration::DECLARATION),
-                    // self.styled_text("Hello\nHallå\n你好\nสวัสดี"),
-                    self.styled_text(&self.text),
-                    // self.normal_text("Hello\nHallå\n你好\nสวัสดี"),
-                    // self.styled_text("สวัสดี_"),
-                    // self.styled_text("Héllö"),
-                    // biang
-                    // self.styled_text("𰻞"),
-                    // self.styled_text("abcdefghijklmnopqrstuvwxyzåäö"),
-                    // self.styled_text("wxy"),
-                    // self.styled_text("However, I have to use a custom fork of iced due to not being able to copy the underlying background texture into my own texture for blurring and sampling. The diff in iced, is literally one line of code (https://github.com/iced-rs/iced/compare/latest...maxbergmark:iced:latest), which enables support for these types of effects. Both the master branch and the latest branch could be updated in the same way.\n\nIs this the best way to enable these types of effects? Is there anything I'm not considering that makes this a bad approach? I'm definitely not an expert when it comes to iced or wgpu, so I'm interested in hearing your input."),
-                    // self.styled_text("วั"),
-                    // self.styled_text('好'),
-                    // iced::widget::row![
-                    //     iced::widget::row![self.styled_text("1"), self.styled_text("2"),]
-                    //         .spacing(-self.size / 3.0),
-                    //     self.styled_text(":"),
-                    //     iced::widget::row![self.styled_text("3"), self.styled_text("4"),]
-                    //         .spacing(-self.size / 3.0),
-                    // ]
-                    // .spacing(-self.size / 2.0)
-                ])
-                // .width(self.size)
-                // .height(self.size)
+                iced::widget::container(
+                    iced::widget::row![
+                        self.styled_text(declaration::DECLARATION),
+                        self.styled_text(&self.text),
+                        self.styled_text("Hello\nHallå\n你好\nสวัสดี"),
+                    ]
+                    .spacing(20.0)
+                )
                 .center_x(Length::Fill)
                 .style(|_theme: &iced::Theme| {
                     iced::widget::container::Style {
@@ -156,7 +132,6 @@ impl Ui {
     }
 
     fn text_input(&self) -> iced::Element<'_, Message> {
-        // iced::widget::container(
         iced_glass::widget::container(
             iced::widget::column![
                 iced::widget::text("Text: "),
@@ -171,16 +146,13 @@ impl Ui {
                 left: 15.0,
             }),
         )
-        // .style(|theme| self.style(theme))
-        .center_x(Length::from(800.0))
-        .center_y(Length::from(100.0))
+        .center_x(5.0 * 200.0 + 4.0 * 20.0)
+        .center_y(100.0)
         .padding(10.0)
         .blur_radius(50.0)
         .saturation(1.0)
         .lightness(0.0)
         .rim_width(1.0)
-        // .edge_radius(self.edge_radius)
-        // .edge_height(self.edge_height)
         .style(|_theme| iced::widget::container::Style {
             shadow: iced::Shadow {
                 color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
@@ -216,9 +188,9 @@ impl Ui {
         .height(self.size)
         .style(|_theme: &iced::Theme| iced::widget::container::Style {
             border: iced::Border {
-                color: color!(0xFF0000),
-                width: 0.0,
-                radius: 0.0.into(),
+                color: color!(0xFFFFFF),
+                width: 1.0,
+                radius: 5.0.into(),
             },
             ..Default::default()
         })
@@ -231,25 +203,10 @@ impl Ui {
             iced::widget::text(s)
                 .width(Length::Fill)
                 .height(Length::Fill)
-                // .blur_radius(self.blur_radius)
-                // .edge_radius(self.edge_radius)
-                // .edge_height(self.edge_height)
-                // .refractive_index(1.5)
-                // .rim_width(0.5)
-                // .opacity(1.0)
-                // .lightness(2.0)
-                .size(self.font_size), // .line_height(self.font_size * 1.2),
+                .size(self.font_size),
         )
         .width(self.size)
         .height(self.size)
-        // .style(|_theme: &iced::Theme| iced::widget::container::Style {
-        //     border: iced::Border {
-        //         color: color!(0xFF0000),
-        //         width: 0.0,
-        //         radius: 0.0.into(),
-        //     },
-        //     ..Default::default()
-        // })
         .into()
     }
 
@@ -260,7 +217,6 @@ impl Ui {
         range: RangeInclusive<f32>,
         message: impl Fn(f32) -> Message + 'static,
     ) -> iced::Element<'_, Message> {
-        // iced::widget::container(
         iced_glass::widget::container(
             iced::widget::column![
                 iced::widget::row![
@@ -282,7 +238,6 @@ impl Ui {
                 left: 15.0,
             }),
         )
-        // .style(|theme| self.style(theme))
         .center_x(Length::from(200.0))
         .center_y(Length::from(100.0))
         .padding(10.0)
@@ -290,8 +245,6 @@ impl Ui {
         .saturation(1.0)
         .lightness(0.0)
         .rim_width(1.0)
-        // .edge_radius(self.edge_radius)
-        // .edge_height(self.edge_height)
         .style(|_theme| iced::widget::container::Style {
             shadow: iced::Shadow {
                 color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
@@ -334,58 +287,5 @@ impl Ui {
                 border_color: iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0),
             },
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use iced_glass::font;
-
-    #[test]
-    fn test_text() {
-        use msdfgen::{Bitmap, FillRule, FontExt, Gray, MID_VALUE, MsdfGeneratorConfig, Range};
-        use std::fs::File;
-        use ttf_parser::Face;
-
-        let font = Face::parse(font::FONT, 0).unwrap();
-        let glyph = font.glyph_index('D').unwrap();
-        let mut shape = font.glyph_shape(glyph).unwrap();
-        // let mut shape = font.(glyph).unwrap();
-
-        let width = 32;
-        let height = 32;
-
-        let bound = shape.get_bound();
-        let framing = bound
-            .autoframe(width, height, Range::Px(4.0), None)
-            .unwrap();
-        let fill_rule = FillRule::default();
-
-        let mut bitmap = Bitmap::new(width, height);
-
-        shape.edge_coloring_simple(3.0, 0);
-
-        let config = MsdfGeneratorConfig::default();
-
-        shape.generate_msdf(&mut bitmap, framing, config);
-
-        // optionally
-        shape.correct_sign(&mut bitmap, framing, fill_rule);
-        shape.correct_msdf_error(&mut bitmap, framing, config);
-
-        let error = shape.estimate_error(&mut bitmap, framing, 5, Default::default());
-
-        println!("Estimated error: {}", error);
-
-        bitmap.flip_y();
-
-        let mut output = File::create("A-letter-msdf.png").unwrap();
-        bitmap.write_png(&mut output).unwrap();
-
-        let mut preview = Bitmap::<Gray<f32>>::new(width * 20, height * 20);
-        bitmap.render(&mut preview, Default::default(), MID_VALUE);
-
-        let mut output = File::create("A-letter-preview.png").unwrap();
-        preview.write_png(&mut output).unwrap();
     }
 }

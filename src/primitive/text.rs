@@ -1,7 +1,7 @@
 use crate::{
     font,
     pipeline::{AtlasData, AtlasPosition, Pipeline, TextInstance, round_up},
-    primitive::{copy_background, downsample, upsample},
+    primitive::{copy_background, downsample, horizontal_blur, upsample, vertical_blur},
     shader::text::TEXT_ATLAS_SIZE,
     uniforms::Uniforms,
     widget::text::GlyphData,
@@ -12,13 +12,14 @@ pub struct TextPrimitive {
     pub id: u64,
     pub text: String,
     pub font_size: f32,
-    // pub line_height: f32,
     pub glyphs: Vec<GlyphData>,
     pub uniforms: Uniforms,
 }
 
-pub const MSDF_FONT_SIZE: f32 = 128.0;
+// TODO: make these configurable
+pub const MSDF_FONT_SIZE: f32 = 64.0;
 pub const MSDF_PADDING: u32 = 32;
+pub const VERTICES_PER_GLYPH: u32 = 6;
 
 impl iced::widget::shader::Primitive for TextPrimitive {
     type Pipeline = Pipeline;
@@ -31,27 +32,21 @@ impl iced::widget::shader::Primitive for TextPrimitive {
         bounds: &iced::Rectangle,
         viewport: &iced::widget::shader::Viewport,
     ) {
-        // let now = std::time::Instant::now();
         let scale = viewport.scale_factor();
-        let w = (bounds.width * scale) as u32;
-        let h = (bounds.height * scale) as u32;
-        pipeline.prepare_text_instance(device, queue, self.id, w, h, scale, &self.uniforms);
+        let size = iced::Size::new(
+            (bounds.width * scale) as u32,
+            (bounds.height * scale) as u32,
+        );
+        pipeline.prepare_text_instance(device, queue, self.id, size, scale, &self.uniforms);
 
         let instance = pipeline.text_instances.get_mut(&self.id).unwrap();
         let atlas_data = &mut pipeline.atlas_data;
 
-        instance.num_glyphs = 0;
-        let vertices = create_vertex_buffer(
-            atlas_data,
-            instance,
-            &self.glyphs,
-            queue,
-            bounds,
-            self.font_size,
-        );
+        let vertices = self
+            .create_vertex_buffer(atlas_data, queue, bounds)
+            .unwrap_or_default();
+        instance.num_glyphs = vertices.len() as u32 / VERTICES_PER_GLYPH;
         queue.write_buffer(&instance.vertex_buffer, 0, bytemuck::cast_slice(&vertices));
-        // let elapsed = now.elapsed();
-        // println!("Time taken to prepare text: {:?}", elapsed);
     }
 
     fn render(
@@ -61,9 +56,9 @@ impl iced::widget::shader::Primitive for TextPrimitive {
         target: &wgpu::TextureView,
         bounds: &iced::Rectangle<u32>,
     ) {
-        // let now = std::time::Instant::now();
         let texture = target.texture();
-        let instance = pipeline.text_instance(self.id);
+        let text_instance = pipeline.text_instance(self.id);
+        let instance = &text_instance.instance;
         let width_limit = texture.width() - bounds.x;
         let height_limit = texture.height() - bounds.y;
         let copy_size = wgpu::Extent3d {
@@ -71,109 +66,22 @@ impl iced::widget::shader::Primitive for TextPrimitive {
             height: round_up(bounds.height, 256).min(height_limit),
             depth_or_array_layers: 1,
         };
-        // let copy_size = match calculate_copy_size(texture, instance, bounds) {
-        //     Some(size) => size,
-        //     None => return,
-        // };
 
         let mip_level = self.uniforms.mip_level();
         copy_background(encoder, &instance.tex_a, texture, bounds, &copy_size);
-        downsample(
-            encoder,
-            pipeline,
-            &instance.tex_a_bg,
-            &instance.tex_a,
-            mip_level,
-        );
-        text_horizontal_blur(encoder, pipeline, instance, mip_level);
-        text_vertical_blur(encoder, pipeline, instance, mip_level);
-        upsample(
-            encoder,
-            pipeline,
-            &instance.tex_a_bg,
-            &instance.tex_a,
-            mip_level,
-        );
+        downsample(encoder, pipeline, instance, mip_level);
+        horizontal_blur(encoder, pipeline, instance, mip_level);
+        vertical_blur(encoder, pipeline, instance, mip_level);
+        upsample(encoder, pipeline, instance, mip_level);
         text_pass(
             encoder,
             pipeline,
-            instance,
+            text_instance,
             target,
             bounds,
-            instance.num_glyphs,
+            text_instance.num_glyphs,
         );
-        // let elapsed = now.elapsed();
-        // println!("Time taken to render text: {:?}", elapsed);
     }
-}
-
-fn text_horizontal_blur(
-    encoder: &mut wgpu::CommandEncoder,
-    pipeline: &Pipeline,
-    instance: &TextInstance,
-    mip_level: u32,
-) {
-    let mut horizontal_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        label: Some("primitive.horizontal_pass"),
-        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-            view: &instance.tex_b.create_view(&wgpu::TextureViewDescriptor {
-                base_mip_level: mip_level,
-                mip_level_count: Some(1),
-                ..Default::default()
-            }),
-            resolve_target: None,
-            ops: wgpu::Operations {
-                load: wgpu::LoadOp::Load,
-                store: wgpu::StoreOp::Store,
-            },
-            depth_slice: None,
-        })],
-        depth_stencil_attachment: None,
-        timestamp_writes: None,
-        occlusion_query_set: None,
-    });
-
-    horizontal_pass.set_pipeline(&pipeline.blur_pipeline);
-    horizontal_pass.set_bind_group(0, &instance.tex_a_bg[mip_level as usize], &[]);
-    horizontal_pass.set_bind_group(1, &instance.uniform_bg_h, &[]);
-    horizontal_pass.draw(0..6, 0..1);
-}
-
-fn text_vertical_blur(
-    encoder: &mut wgpu::CommandEncoder,
-    pipeline: &Pipeline,
-    instance: &TextInstance,
-    mip_level: u32,
-) {
-    let mut vertical_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        label: Some("primitive.vertical_pass"),
-        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-            view: &instance.tex_a.create_view(&wgpu::TextureViewDescriptor {
-                base_mip_level: mip_level,
-                mip_level_count: Some(1),
-                ..Default::default() // label: todo!(),
-                                     // format: todo!(),
-                                     // dimension: todo!(),
-                                     // usage: todo!(),
-                                     // aspect: todo!(),
-                                     // mip_level_count: todo!(),
-            }),
-            resolve_target: None,
-            ops: wgpu::Operations {
-                load: wgpu::LoadOp::Load,
-                store: wgpu::StoreOp::Store,
-            },
-            depth_slice: None,
-        })],
-        depth_stencil_attachment: None,
-        timestamp_writes: None,
-        occlusion_query_set: None,
-    });
-
-    vertical_pass.set_pipeline(&pipeline.blur_pipeline);
-    vertical_pass.set_bind_group(0, &instance.tex_b_bg[mip_level as usize], &[]);
-    vertical_pass.set_bind_group(1, &instance.uniform_bg_v, &[]);
-    vertical_pass.draw(0..6, 0..1);
 }
 
 fn text_pass(
@@ -211,229 +119,66 @@ fn text_pass(
 
     pass.set_pipeline(&pipeline.text_pipeline);
     pass.set_bind_group(0, &instance.texture_atlas_bg, &[]);
-    pass.set_bind_group(1, &instance.uniform_bg_h, &[]);
+    pass.set_bind_group(1, &instance.instance.uniform_bg_h, &[]);
     pass.set_vertex_buffer(0, instance.vertex_buffer.slice(..));
-    // pass.set_index_buffer(instance.index_buffer.slice(..));
-    // pass.draw(0..(num_glyphs * 6), 0..1);
     pass.draw(0..(num_glyphs * 6), 0..1);
 }
 
-fn create_vertex_buffer(
-    atlas_data: &mut AtlasData,
-    instance: &mut TextInstance,
-    glyphs: &[GlyphData],
-    queue: &wgpu::Queue,
-    bounds: &iced::Rectangle<f32>,
-    font_size: f32,
-) -> Vec<f32> {
-    let mut vertices = Vec::new();
-    for glyph in glyphs.iter() {
-        if glyph.glyph_id == GlyphId(32) || glyph.glyph_id == GlyphId(3) {
-            continue;
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct VertexData {
+    pub x: f32,
+    pub y: f32,
+    pub u: f32,
+    pub v: f32,
+    pub sdf_scale: f32,
+}
+
+impl TextPrimitive {
+    fn create_vertex_buffer(
+        &self,
+        atlas_data: &mut AtlasData,
+        queue: &wgpu::Queue,
+        bounds: &iced::Rectangle<f32>,
+    ) -> Option<Vec<VertexData>> {
+        let mut vertices = Vec::new();
+        for glyph in self.glyphs.iter().filter(is_visible) {
+            let ap = atlas_data
+                .atlas_position
+                .get(&glyph.glyph_id)
+                .copied()
+                .or_else(|| add_to_atlas(atlas_data, queue, glyph))?;
+
+            vertices.extend(add_vertices(bounds, &ap, glyph, self.font_size));
         }
-        // println!("Glyph: {:?} (ID: {:?})", glyph.glyph_id, glyph.glyph_id);
-        // println!("Data length: {}", data.len());
-        // let instance = pipeline.text_instance(self.id);
-        let ap = if let Some(ap) = atlas_data.atlas_position.get(&glyph.glyph_id) {
-            // println!(
-            //     "Glyph already in atlas: {:?} (ID: {:?})",
-            //     glyph.glyph_id, glyph.glyph_id
-            // );
-            *ap
-        } else {
-            let (data, width, height, framing) = get_sdf_data(glyph.glyph_id);
-            let allocation = atlas_data
-                .allocator
-                .allocate(size2(width as i32, height as i32))
-                .unwrap();
-
-            let (offset_x, offset_y) = allocation.rectangle.min.to_tuple();
-            let offset_x = offset_x as u32;
-            let offset_y = offset_y as u32;
-
-            let font = Face::parse(font::FONT, 0).unwrap();
-            // println!(
-            //     "Adding glyph to atlas: {:?} at offset: ({}, {})",
-            //     glyph.glyph_id, offset_x, offset_y
-            // );
-            // println!(
-            //     "Getting glyph bounding box for glyph: (ID: {:?})",
-            //     glyph.glyph_id
-            // );
-            let bbox = font.glyph_bounding_box(glyph.glyph_id).unwrap();
-            let units_per_em = font.units_per_em() as f32;
-
-            let ap = AtlasPosition {
-                x: offset_x,
-                y: offset_y,
-                width,
-                height,
-                bbox,
-                units_per_em,
-                framing,
-            };
-            atlas_data.atlas_position.insert(glyph.glyph_id, ap);
-            queue.write_texture(
-                wgpu::TexelCopyTextureInfo {
-                    texture: &atlas_data.texture_atlas,
-                    mip_level: 0,
-                    origin: wgpu::Origin3d {
-                        x: offset_x,
-                        y: offset_y,
-                        z: 0,
-                    },
-                    aspect: wgpu::TextureAspect::All,
-                },
-                &data,
-                wgpu::TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(width * 4),
-                    rows_per_image: Some(height),
-                },
-                wgpu::Extent3d {
-                    width,
-                    height,
-                    depth_or_array_layers: 1,
-                },
-            );
-            // offset_x += width + 2;
-            // if offset_x > TEXT_ATLAS_SIZE {
-            //     offset_x = 0;
-            //     offset_y += 100;
-            // }
-
-            ap
-        };
-
-        // let bbox = ap.bbox;
-        // let scale = self.font_size / ap.units_per_em;
-        // let glyph_width = (bbox.x_max - bbox.x_min) as f32 * scale;
-        // let glyph_height = (bbox.y_max - bbox.y_min) as f32 * scale;
-        // let bearing_x = bbox.x_min as f32 * scale;
-        // let bearing_y = bbox.y_max as f32 * scale; // top of glyph relative to baseline
-
-        // println!(
-        //     "glyph.y_offset ({:?}): {:.1}",
-        //     glyph.glyph_id, glyph.y_offset
-        // );
-        // let screen_scale = self.font_size / MSDF_FONT_SIZE;
-        // let top = glyph.run_line_y + glyph.y_offset - bearing_y;
-        // let bottom = glyph.run_line_y - bbox.y_min as f32 * scale;
-        // let pad = 8.0 * screen_scale; // uniform padding in screen pixels
-
-        // bitmap-to-screen scale: how many screen pixels per bitmap pixel
-        let origin_bmp_x =
-            (ap.framing.projection.translate.x * ap.framing.projection.scale.x) as f32;
-        let origin_bmp_y =
-            (ap.framing.projection.translate.y * ap.framing.projection.scale.y) as f32;
-        let bmp_to_screen = (font_size / ap.units_per_em) / ap.framing.projection.scale.x as f32;
-
-        // Full quad = full bitmap mapped to screen
-        let quad_w = ap.width as f32 * bmp_to_screen;
-        let quad_h = ap.height as f32 * bmp_to_screen;
-
-        // Origin in bitmap (after flip_y)
-        let origin_bmp_y_flipped = ap.height as f32 - origin_bmp_y;
-
-        // Anchor the quad so the font origin maps to (glyph.x, run_line_y)
-        let quad_x = glyph.x - origin_bmp_x * bmp_to_screen;
-        let quad_y = glyph.run_line_y - origin_bmp_y_flipped * bmp_to_screen;
-
-        // println!(
-        //     "quad_x: {:.1}, quad_y: {:.1}, quad_w: {:.1}, quad_h: {:.1}",
-        //     quad_x, quad_y, quad_w, quad_h
-        // );
-
-        let uv_left = ap.x as f32 / TEXT_ATLAS_SIZE as f32;
-        let uv_bottom = ap.y as f32 / TEXT_ATLAS_SIZE as f32; // glyph.y / TEXT_ATLAS_SIZE as f32;
-        let uv_right = (ap.x as f32 + ap.width as f32) / TEXT_ATLAS_SIZE as f32;
-        let uv_top = (ap.y as f32 + ap.height as f32) / TEXT_ATLAS_SIZE as f32;
-
-        let clip_x = (quad_x / bounds.width) * 2.0 - 1.0;
-        let clip_y = 1.0 - (quad_y / bounds.height) * 2.0;
-        let clip_w = (quad_w / bounds.width) * 2.0;
-        let clip_h = -(quad_h / bounds.height) * 2.0; // negative because Y is flipped
-        // println!("Clip: {} {} {} {}", clip_x, clip_y, clip_w, clip_h);
-        // println!(
-        //     "bbox: x_min={}, y_min={}, x_max={}, y_max={}",
-        //     bbox.x_min, bbox.y_min, bbox.x_max, bbox.y_max
-        // );
-        // println!("glyph pixel size: {:.1}x{:.1}", glyph_width, glyph_height);
-        // println!("bounds: {:.1}x{:.1}", bounds.width, bounds.height);
-        let sdf_scale = 16.0 * bmp_to_screen; // range_px * bmp_to_screen
-        vertices.extend_from_slice(&[
-            clip_x, clip_y, uv_left, uv_top, // TL
-            sdf_scale,
-        ]);
-        vertices.extend_from_slice(&[
-            clip_x + clip_w,
-            clip_y,
-            uv_right,
-            uv_top, // TR
-            sdf_scale,
-        ]);
-        vertices.extend_from_slice(&[
-            clip_x,
-            clip_y + clip_h,
-            uv_left,
-            uv_bottom, // BL
-            sdf_scale,
-        ]);
-        vertices.extend_from_slice(&[
-            clip_x,
-            clip_y + clip_h,
-            uv_left,
-            uv_bottom, // BL
-            sdf_scale,
-        ]);
-        vertices.extend_from_slice(&[
-            clip_x + clip_w,
-            clip_y,
-            uv_right,
-            uv_top, // TR
-            sdf_scale,
-        ]);
-        vertices.extend_from_slice(&[
-            clip_x + clip_w,
-            clip_y + clip_h,
-            uv_right,
-            uv_bottom, // BR
-            sdf_scale,
-        ]);
-        instance.num_glyphs += 1;
-        // println!();
+        Some(vertices)
     }
-    vertices
+}
+
+fn is_visible(glyph: &&GlyphData) -> bool {
+    glyph.glyph_id != GlyphId(32) && glyph.glyph_id != GlyphId(3)
 }
 
 use etagere::size2;
 use msdfgen::{Bitmap, FillRule, FontExt, Framing, MsdfGeneratorConfig, Range, Rgb};
 use ttf_parser::{Face, GlyphId};
-fn get_sdf_data(glyph: GlyphId) -> (Vec<u8>, u32, u32, Framing<f64>) {
+fn get_sdf_data(glyph: GlyphId) -> Option<(Vec<u8>, iced::Size<u32>, Framing<f64>)> {
     // let c = glyph;
 
-    let font = Face::parse(font::FONT, 0).unwrap();
+    let font = Face::parse(font::FONT, 0).ok()?;
     // let glyph = font.glyph_index(glyph).unwrap();
 
-    let mut shape = font.glyph_shape(glyph).unwrap();
+    let mut shape = font.glyph_shape(glyph)?;
 
-    let (width, height) = get_font_size(&font, glyph);
+    let size = get_glyph_size(&font, glyph);
     // println!("Font size MSDF: {}x{} (ID: {:?})", width, height, glyph);
 
     let bound = shape.get_bound();
-    let framing = bound
-        .autoframe(width, height, Range::Px(MSDF_PADDING as f64), None)
-        .unwrap();
+    let range = Range::Px(MSDF_PADDING as f64);
+    let framing = bound.autoframe(size.width, size.height, range, None)?;
 
-    // framing.scale = msdfgen::Vector2 { x: 0.04, y: 0.04 };
-    // println!("framing: {:?}", framing);
-
-    // This helps with glyph positioning, but could affect SDF accuracy
-    // framing.translate.x = 100.0;
-    // framing.translate.y = 100.0;
     let fill_rule = FillRule::default();
-
-    let mut bitmap = Bitmap::<Rgb<f32>>::new(width, height);
+    let mut bitmap = Bitmap::<Rgb<f32>>::new(size.width, size.height);
 
     shape.edge_coloring_simple(3.0, 0);
 
@@ -448,7 +193,7 @@ fn get_sdf_data(glyph: GlyphId) -> (Vec<u8>, u32, u32, Framing<f64>) {
     // bitmap.flip_y();
     let data = to_rgbau8(&bitmap);
 
-    (data, width, height, framing)
+    Some((data, size, framing))
 }
 
 fn to_rgbau8(bitmap: &Bitmap<Rgb<f32>>) -> Vec<u8> {
@@ -467,7 +212,7 @@ fn to_rgbau8(bitmap: &Bitmap<Rgb<f32>>) -> Vec<u8> {
         .collect()
 }
 
-fn get_font_size(font: &Face, glyph: GlyphId) -> (u32, u32) {
+fn get_glyph_size(font: &Face, glyph: GlyphId) -> iced::Size<u32> {
     let bbox = font.glyph_bounding_box(glyph).unwrap();
     let units_per_em = font.units_per_em() as f32;
     let scale = MSDF_FONT_SIZE / units_per_em;
@@ -479,8 +224,198 @@ fn get_font_size(font: &Face, glyph: GlyphId) -> (u32, u32) {
     let width = x_max - x_min;
     let height = y_max - y_min;
 
-    (
+    iced::Size::new(
         width.ceil() as u32 + MSDF_PADDING * 2,
         height.ceil() as u32 + MSDF_PADDING * 2,
     )
+}
+
+fn add_to_atlas(
+    atlas_data: &mut AtlasData,
+    queue: &wgpu::Queue,
+    glyph: &GlyphData,
+) -> Option<AtlasPosition> {
+    let (data, size, framing) = get_sdf_data(glyph.glyph_id)?;
+    let allocation = atlas_data
+        .allocator
+        .allocate(size2(size.width as i32, size.height as i32))
+        .unwrap();
+
+    let offset = allocation.rectangle.min;
+    let position = iced::Point::new(offset.x as u32, offset.y as u32);
+
+    let font = Face::parse(font::FONT, 0).unwrap();
+    let bbox = font.glyph_bounding_box(glyph.glyph_id).unwrap();
+    let units_per_em = font.units_per_em() as f32;
+
+    let ap = AtlasPosition {
+        position,
+        size,
+        bbox,
+        units_per_em,
+        framing,
+    };
+    atlas_data.atlas_position.insert(glyph.glyph_id, ap);
+    queue.write_texture(
+        wgpu::TexelCopyTextureInfo {
+            texture: &atlas_data.texture_atlas,
+            mip_level: 0,
+            origin: wgpu::Origin3d {
+                x: position.x,
+                y: position.y,
+                z: 0,
+            },
+            aspect: wgpu::TextureAspect::All,
+        },
+        &data,
+        wgpu::TexelCopyBufferLayout {
+            offset: 0,
+            bytes_per_row: Some(size.width * 4),
+            rows_per_image: Some(size.height),
+        },
+        wgpu::Extent3d {
+            width: size.width,
+            height: size.height,
+            depth_or_array_layers: 1,
+        },
+    );
+    // offset_x += width + 2;
+    // if offset_x > TEXT_ATLAS_SIZE {
+    //     offset_x = 0;
+    //     offset_y += 100;
+    // }
+
+    Some(ap)
+}
+
+struct Quad {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+}
+
+fn compute_quad(ap: &AtlasPosition, glyph: &GlyphData, bmp_to_screen: f32) -> Quad {
+    // bitmap-to-screen scale: how many screen pixels per bitmap pixel
+    let origin_bmp_x = (ap.framing.projection.translate.x * ap.framing.projection.scale.x) as f32;
+    let origin_bmp_y = (ap.framing.projection.translate.y * ap.framing.projection.scale.y) as f32;
+
+    // Origin in bitmap (after flip_y)
+    let origin_bmp_y_flipped = ap.size.height as f32 - origin_bmp_y;
+
+    // Full quad = full bitmap mapped to screen
+    let quad_w = ap.size.width as f32 * bmp_to_screen;
+    let quad_h = ap.size.height as f32 * bmp_to_screen;
+
+    // Anchor the quad so the font origin maps to (glyph.x, run_line_y)
+    let quad_x = glyph.x - origin_bmp_x * bmp_to_screen;
+    let quad_y = glyph.run_line_y - origin_bmp_y_flipped * bmp_to_screen;
+
+    Quad {
+        x: quad_x,
+        y: quad_y,
+        w: quad_w,
+        h: quad_h,
+    }
+}
+
+fn compute_clip(
+    ap: &AtlasPosition,
+    bounds: &iced::Rectangle<f32>,
+    glyph: &GlyphData,
+    bmp_to_screen: f32,
+) -> Bounds {
+    let quad = compute_quad(ap, glyph, bmp_to_screen);
+
+    let clip_x = (quad.x / bounds.width) * 2.0 - 1.0;
+    let clip_y = 1.0 - (quad.y / bounds.height) * 2.0;
+    let clip_w = (quad.w / bounds.width) * 2.0;
+    let clip_h = -(quad.h / bounds.height) * 2.0; // negative because Y is flipped
+
+    Bounds {
+        left: clip_x,
+        bottom: clip_y,
+        right: clip_x + clip_w,
+        top: clip_y + clip_h,
+    }
+}
+
+struct Bounds {
+    pub left: f32,
+    pub bottom: f32,
+    pub right: f32,
+    pub top: f32,
+}
+
+fn compute_uv(ap: &AtlasPosition) -> Bounds {
+    let uv_left = ap.position.x as f32 / TEXT_ATLAS_SIZE as f32;
+    let uv_bottom = ap.position.y as f32 / TEXT_ATLAS_SIZE as f32; // glyph.y / TEXT_ATLAS_SIZE as f32;
+    let uv_right = (ap.position.x as f32 + ap.size.width as f32) / TEXT_ATLAS_SIZE as f32;
+    let uv_top = (ap.position.y as f32 + ap.size.height as f32) / TEXT_ATLAS_SIZE as f32;
+
+    Bounds {
+        left: uv_left,
+        bottom: uv_bottom,
+        right: uv_right,
+        top: uv_top,
+    }
+}
+
+fn add_vertices(
+    bounds: &iced::Rectangle<f32>,
+    ap: &AtlasPosition,
+    glyph: &GlyphData,
+    font_size: f32,
+) -> impl Iterator<Item = VertexData> {
+    let bmp_to_screen = (font_size / ap.units_per_em) / ap.framing.projection.scale.x as f32;
+    let clip = compute_clip(ap, bounds, glyph, bmp_to_screen);
+    let uv = compute_uv(ap);
+    let sdf_scale = MSDF_PADDING as f32 * bmp_to_screen;
+
+    [
+        VertexData {
+            x: clip.left,
+            y: clip.bottom,
+            u: uv.left,
+            v: uv.top,
+            sdf_scale,
+        },
+        VertexData {
+            x: clip.right,
+            y: clip.bottom,
+            u: uv.right,
+            v: uv.top,
+            sdf_scale,
+        },
+        VertexData {
+            x: clip.left,
+            y: clip.top,
+            u: uv.left,
+            v: uv.bottom,
+            sdf_scale,
+        },
+        VertexData {
+            x: clip.left,
+            y: clip.top,
+            u: uv.left,
+            v: uv.bottom,
+            sdf_scale,
+        },
+        VertexData {
+            x: clip.right,
+            y: clip.bottom,
+            u: uv.right,
+            v: uv.top,
+            sdf_scale,
+        },
+        VertexData {
+            x: clip.right,
+            y: clip.top,
+            u: uv.right,
+            v: uv.bottom,
+            sdf_scale,
+        },
+    ]
+    .into_iter()
+    // .flatten()
 }
