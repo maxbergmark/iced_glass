@@ -1,9 +1,11 @@
-use iced::{Length, Task};
+use iced::{Alignment, Length, Task};
 
 pub mod basic;
+mod declaration;
 pub mod large_slider;
 pub mod scroll_view;
 pub mod stress_test;
+pub mod text;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -12,6 +14,7 @@ pub enum Message {
     ScrollView(scroll_view::Message),
     LargeSlider(large_slider::Message),
     StressTest(stress_test::Message),
+    Text(text::Message),
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -21,14 +24,16 @@ pub enum Scene {
     ScrollView(scroll_view::Ui),
     LargeSlider(large_slider::Ui),
     StressTest(stress_test::Ui),
+    Text(text::Ui),
 }
 
 impl Default for Scene {
     fn default() -> Self {
-        Self::Basic(basic::Ui::default())
+        // Self::Basic(basic::Ui::default())
         // Self::ScrollView(scroll_view::Ui::default())
         // Self::LargeSlider(large_slider::Ui::default())
         // Self::StressTest(stress_test::Ui::default())
+        Self::Text(text::Ui::default())
     }
 }
 
@@ -76,6 +81,13 @@ impl Ui {
                     Task::none()
                 }
             }
+            Message::Text(message) => {
+                if let Scene::Text(ui) = &mut self.scene {
+                    ui.update(message).map(Message::Text)
+                } else {
+                    Task::none()
+                }
+            }
         }
     }
 
@@ -99,8 +111,11 @@ impl Ui {
             Scene::ScrollView(ui) => ui.view().map(Message::ScrollView),
             Scene::LargeSlider(ui) => ui.view().map(Message::LargeSlider),
             Scene::StressTest(ui) => ui.view().map(Message::StressTest),
+            Scene::Text(ui) => ui.view().map(Message::Text),
         };
-        iced::widget::column![self.scene_selector(), scene].into()
+        iced::widget::column![self.scene_selector(), scene]
+            .align_x(Alignment::Center)
+            .into()
     }
 
     fn scene_selector(&self) -> iced::Element<'_, Message> {
@@ -116,6 +131,8 @@ impl Ui {
             iced::widget::button("StressTest").on_press(Message::SetScene(Scene::StressTest(
                 stress_test::Ui::default()
             ))),
+            iced::widget::button("Text")
+                .on_press(Message::SetScene(Scene::Text(text::Ui::default()))),
         ]
         .spacing(10.0)
         .padding(10.0)

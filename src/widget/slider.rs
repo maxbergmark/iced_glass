@@ -505,6 +505,7 @@ where
                         rim_width: 1.0,
                         opacity: 1.0,
                         tint,
+                        content_scale: (1.0, 1.0),
                     },
                 },
             );

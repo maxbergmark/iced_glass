@@ -1,7 +1,9 @@
 use crate::{
-    pipeline::{Instance, Pipeline},
+    pipeline::{Pipeline, instance::Instance},
     uniforms::Uniforms,
 };
+
+pub mod text;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Primitive {
@@ -41,11 +43,11 @@ impl iced::widget::shader::Primitive for Primitive {
         };
 
         let mip_level = self.uniforms.mip_level();
-        copy_background(encoder, instance, texture, bounds, &copy_size);
-        downsample(encoder, pipeline, instance, &instance.tex_a, mip_level);
+        copy_background(encoder, &instance.tex_a, texture, bounds, &copy_size);
+        downsample(encoder, pipeline, instance, mip_level);
         horizontal_blur(encoder, pipeline, instance, mip_level);
         vertical_blur(encoder, pipeline, instance, mip_level);
-        upsample(encoder, pipeline, instance, &instance.tex_a, mip_level);
+        upsample(encoder, pipeline, instance, mip_level);
         fragment_pass(encoder, pipeline, instance, target, bounds);
     }
 }
@@ -79,7 +81,7 @@ fn calculate_copy_size(
 
 fn copy_background(
     encoder: &mut wgpu::CommandEncoder,
-    instance: &Instance,
+    tex_a: &wgpu::Texture,
     texture: &wgpu::Texture,
     bounds: &iced::Rectangle<u32>,
     copy_size: &wgpu::Extent3d,
@@ -95,7 +97,7 @@ fn copy_background(
             },
             aspect: wgpu::TextureAspect::All,
         },
-        instance.tex_a.as_image_copy(),
+        tex_a.as_image_copy(),
         *copy_size,
     );
 }
@@ -104,9 +106,10 @@ fn downsample(
     encoder: &mut wgpu::CommandEncoder,
     pipeline: &Pipeline,
     instance: &Instance,
-    texture: &wgpu::Texture,
     mip_level: u32,
 ) {
+    let texture = &instance.tex_a;
+    let tex_a_bg = &instance.tex_a_bg;
     #[allow(clippy::reversed_empty_ranges)]
     for level in 1..=mip_level {
         let dst_view = texture.create_view(&wgpu::TextureViewDescriptor {
@@ -129,7 +132,7 @@ fn downsample(
             ..Default::default()
         });
         pass.set_pipeline(&pipeline.downsample_pipeline);
-        pass.set_bind_group(0, &instance.tex_a_bg[(level - 1) as usize], &[]);
+        pass.set_bind_group(0, &tex_a_bg[(level - 1) as usize], &[]);
         pass.draw(0..6, 0..1);
     }
 }
@@ -138,9 +141,10 @@ fn upsample(
     encoder: &mut wgpu::CommandEncoder,
     pipeline: &Pipeline,
     instance: &Instance,
-    texture: &wgpu::Texture,
     mip_level: u32,
 ) {
+    let tex_a_bg = &instance.tex_a_bg;
+    let texture = &instance.tex_a;
     #[allow(clippy::reversed_empty_ranges)]
     for level in (1..=mip_level).rev() {
         let dst_view = texture.create_view(&wgpu::TextureViewDescriptor {
@@ -163,7 +167,7 @@ fn upsample(
             ..Default::default()
         });
         pass.set_pipeline(&pipeline.downsample_pipeline);
-        pass.set_bind_group(0, &instance.tex_a_bg[level as usize], &[]);
+        pass.set_bind_group(0, &tex_a_bg[level as usize], &[]);
         pass.draw(0..6, 0..1);
     }
 }
@@ -180,14 +184,7 @@ fn horizontal_blur(
             view: &instance.tex_b.create_view(&wgpu::TextureViewDescriptor {
                 base_mip_level: mip_level,
                 mip_level_count: Some(1),
-                ..Default::default() // label: todo!(),
-                                     // format: todo!(),
-                                     // dimension: todo!(),
-                                     // usage: todo!(),
-                                     // aspect: todo!(),
-                                     // mip_level_count: todo!(),
-                                     // base_array_layer: todo!(),
-                                     // array_layer_count: todo!(),
+                ..Default::default()
             }),
             resolve_target: None,
             ops: wgpu::Operations {
@@ -219,12 +216,7 @@ fn vertical_blur(
             view: &instance.tex_a.create_view(&wgpu::TextureViewDescriptor {
                 base_mip_level: mip_level,
                 mip_level_count: Some(1),
-                ..Default::default() // label: todo!(),
-                                     // format: todo!(),
-                                     // dimension: todo!(),
-                                     // usage: todo!(),
-                                     // aspect: todo!(),
-                                     // mip_level_count: todo!(),
+                ..Default::default()
             }),
             resolve_target: None,
             ops: wgpu::Operations {

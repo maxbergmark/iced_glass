@@ -1,18 +1,22 @@
 struct Uniforms {
     tint: vec4<f32>,
     blur_direction: vec2<f32>,
+    content_scale: vec2<f32>,
+
     blur_radius: f32,
     corner_radius: f32,
-
     saturation: f32,
     lightness: f32,
+
     edge_radius: f32,
     height: f32,
-
     refractive_index: f32,
     rim_width: f32,
+
     opacity: f32,
     _pad: f32,
+    _pad2: f32,
+    _pad3: f32,
 };
 
 @group(1)
@@ -46,7 +50,9 @@ fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
     let pos = positions[vertex_index];
     var out: VertexOutput;
     out.position = vec4<f32>(pos, 0.0, 1.0);
-    out.uv = pos * 0.5 + vec2<f32>(0.5, 0.5); // Map from [-1,1] to [0,1]
+    // out.uv = pos * 0.5 + vec2<f32>(0.5, 0.5); // Map from [-1,1] to [0,1]
+    // out.uv.y = 1.0 - out.uv.y; // Flip Y for texture coordinates
+    out.uv = pos * 0.5 + vec2<f32>(0.5, 0.5);
     out.uv.y = 1.0 - out.uv.y; // Flip Y for texture coordinates
     return out;
 }
@@ -66,7 +72,8 @@ fn gaussian_blur(input: FragInput) -> @location(0) vec4<f32> {
     var total_weight = 0.0;
     for (var x = -radius; x <= radius; x += round(step)) {
         let offset = direction * x * texel_size;
-        let sample_uv = uv + offset;
+        // let sample_uv = uv + offset;
+        let sample_uv = clamp(uv + offset, vec2(0.0), uniforms.content_scale);
         let dist = x * x;
         let weight = exp(-dist / (2.0 * radius));
         total_weight += weight;

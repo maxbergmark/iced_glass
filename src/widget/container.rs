@@ -397,6 +397,7 @@ where
                     rim_width: self.rim_width,
                     opacity: self.opacity,
                     tint,
+                    content_scale: (1.0, 1.0),
                 },
             },
         );
