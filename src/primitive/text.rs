@@ -1,3 +1,7 @@
+use etagere::size2;
+use msdfgen::{Bitmap, FillRule, FontExt, Framing, MsdfGeneratorConfig, Range, Rgb};
+use ttf_parser::{Face, GlyphId};
+
 use crate::{
     font,
     pipeline::{AtlasData, AtlasPosition, Pipeline, TextInstance, round_up},
@@ -159,9 +163,6 @@ fn is_visible(glyph: &&GlyphData) -> bool {
     glyph.glyph_id != GlyphId(32) && glyph.glyph_id != GlyphId(3)
 }
 
-use etagere::size2;
-use msdfgen::{Bitmap, FillRule, FontExt, Framing, MsdfGeneratorConfig, Range, Rgb};
-use ttf_parser::{Face, GlyphId};
 fn get_sdf_data(glyph: GlyphId) -> Option<(Vec<u8>, iced::Size<u32>, Framing<f64>)> {
     // let c = glyph;
 

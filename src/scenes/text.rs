@@ -7,32 +7,50 @@ use crate::scenes::declaration;
 
 #[derive(Debug, Clone)]
 pub struct Ui {
-    size: f32,
+    container_size: f32,
+    blur_radius: f32,
+    saturation: f32,
+    lightness: f32,
     edge_radius: f32,
     edge_height: f32,
+    refractive_index: f32,
+    rim_width: f32,
+    opacity: f32,
     font_size: f32,
-    blur_radius: f32,
+    line_height: f32,
     text: String,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    Size(f32),
+    ContainerSize(f32),
+    BlurRadius(f32),
+    Saturation(f32),
+    Lightness(f32),
     EdgeRadius(f32),
     EdgeHeight(f32),
     FontSize(f32),
-    BlurRadius(f32),
+    LineHeight(f32),
+    RefractiveIndex(f32),
+    RimWidth(f32),
+    Opacity(f32),
     Text(String),
 }
 
 impl Default for Ui {
     fn default() -> Self {
         Self {
-            size: 500.0,
+            container_size: 500.0,
             edge_radius: 1.5,
             edge_height: 100.0,
             font_size: 200.0,
+            line_height: 1.2,
             blur_radius: 100.0,
+            saturation: 1.0,
+            lightness: 0.0,
+            refractive_index: 1.5,
+            rim_width: 0.5,
+            opacity: 1.0,
             text: String::new(),
         }
     }
@@ -41,8 +59,8 @@ impl Default for Ui {
 impl Ui {
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::Size(size) => {
-                self.size = size;
+            Message::ContainerSize(size) => {
+                self.container_size = size;
                 Task::none()
             }
             Message::EdgeRadius(edge_radius) => {
@@ -65,6 +83,30 @@ impl Ui {
                 self.text = text;
                 Task::none()
             }
+            Message::LineHeight(line_height) => {
+                self.line_height = line_height;
+                Task::none()
+            }
+            Message::Saturation(saturation) => {
+                self.saturation = saturation;
+                Task::none()
+            }
+            Message::Lightness(lightness) => {
+                self.lightness = lightness;
+                Task::none()
+            }
+            Message::RefractiveIndex(refractive_index) => {
+                self.refractive_index = refractive_index;
+                Task::none()
+            }
+            Message::RimWidth(rim_width) => {
+                self.rim_width = rim_width;
+                Task::none()
+            }
+            Message::Opacity(opacity) => {
+                self.opacity = opacity;
+                Task::none()
+            }
         }
     }
 
@@ -75,7 +117,12 @@ impl Ui {
                 .height(Length::Fill),
             iced::widget::column![
                 iced::widget::row![
-                    self.styled_slider("Size: ", self.size, 100.0..=1000.0, Message::Size),
+                    self.styled_slider(
+                        "Container Size: ",
+                        self.container_size,
+                        100.0..=1000.0,
+                        Message::ContainerSize
+                    ),
                     self.styled_slider(
                         "Blur Radius: ",
                         self.blur_radius,
@@ -99,6 +146,37 @@ impl Ui {
                         self.font_size,
                         1.0..=400.0,
                         Message::FontSize
+                    ),
+                ]
+                .align_y(Alignment::Center)
+                .padding(20.0)
+                .spacing(20.0),
+                iced::widget::row![
+                    self.styled_slider(
+                        "Line Height: ",
+                        self.line_height,
+                        1.0..=4.0,
+                        Message::LineHeight
+                    ),
+                    self.styled_slider(
+                        "Refractive Index: ",
+                        self.refractive_index,
+                        1.0..=10.0,
+                        Message::RefractiveIndex
+                    ),
+                    self.styled_slider("Rim Width: ", self.rim_width, 0.0..=1.0, Message::RimWidth),
+                    self.styled_slider("Opacity: ", self.opacity, 0.0..=1.0, Message::Opacity),
+                    self.styled_slider(
+                        "Saturation: ",
+                        self.saturation,
+                        0.0..=1.5,
+                        Message::Saturation
+                    ),
+                    self.styled_slider(
+                        "Lightness: ",
+                        self.lightness,
+                        -3.0..=3.0,
+                        Message::Lightness
                     ),
                 ]
                 .align_y(Alignment::Center)
@@ -134,8 +212,8 @@ impl Ui {
     fn text_input(&self) -> iced::Element<'_, Message> {
         iced_glass::widget::container(
             iced::widget::column![
-                iced::widget::text("Text: "),
-                iced::widget::text_input("Text: ", &self.text).on_input(Message::Text)
+                iced::widget::text("Text input: "),
+                iced::widget::text_input("Text...", &self.text).on_input(Message::Text)
             ]
             .align_x(Alignment::Center)
             .spacing(5.0)
@@ -151,7 +229,7 @@ impl Ui {
         .padding(10.0)
         .blur_radius(50.0)
         .saturation(1.0)
-        .lightness(0.0)
+        .lightness(-2.0)
         .rim_width(1.0)
         .style(|_theme| iced::widget::container::Style {
             shadow: iced::Shadow {
@@ -169,7 +247,7 @@ impl Ui {
     }
 
     #[allow(dead_code)]
-    fn styled_text(&self, s: &str) -> iced::Element<'_, Message> {
+    fn styled_text<'a>(&self, s: &'a str) -> iced::Element<'a, Message> {
         iced::widget::container(
             iced_glass::widget::text(s)
                 .width(Length::Fill)
@@ -177,15 +255,16 @@ impl Ui {
                 .blur_radius(self.blur_radius)
                 .edge_radius(self.edge_radius)
                 .edge_height(self.edge_height)
-                .refractive_index(1.5)
-                .rim_width(0.5)
-                .opacity(1.0)
-                .lightness(1.0)
-                .font_size(self.font_size)
-                .line_height(self.font_size * 1.2),
+                .refractive_index(self.refractive_index)
+                .rim_width(self.rim_width)
+                .opacity(self.opacity)
+                .saturation(self.saturation)
+                .lightness(self.lightness)
+                .size(self.font_size)
+                .line_height(self.line_height),
         )
-        .width(self.size)
-        .height(self.size)
+        .width(self.container_size)
+        .height(self.container_size)
         .style(|_theme: &iced::Theme| iced::widget::container::Style {
             border: iced::Border {
                 color: color!(0xFFFFFF),
@@ -205,8 +284,8 @@ impl Ui {
                 .height(Length::Fill)
                 .size(self.font_size),
         )
-        .width(self.size)
-        .height(self.size)
+        .width(self.container_size)
+        .height(self.container_size)
         .into()
     }
 
@@ -243,7 +322,7 @@ impl Ui {
         .padding(10.0)
         .blur_radius(50.0)
         .saturation(1.0)
-        .lightness(0.0)
+        .lightness(-2.0)
         .rim_width(1.0)
         .style(|_theme| iced::widget::container::Style {
             shadow: iced::Shadow {
