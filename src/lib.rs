@@ -30,7 +30,7 @@
 //!     .into()
 //! }
 //! ```
-pub mod font;
+
 pub mod pipeline;
 pub mod primitive;
 pub mod shader;

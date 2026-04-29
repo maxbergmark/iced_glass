@@ -1,5 +1,5 @@
 use crate::{
-    pipeline::{Instance, Pipeline},
+    pipeline::{Pipeline, instance::Instance},
     uniforms::Uniforms,
 };
 
@@ -47,12 +47,7 @@ impl iced::widget::shader::Primitive for Primitive {
         downsample(encoder, pipeline, instance, mip_level);
         horizontal_blur(encoder, pipeline, instance, mip_level);
         vertical_blur(encoder, pipeline, instance, mip_level);
-        upsample(
-            encoder, pipeline, instance,
-            // &instance.tex_a_bg,
-            // &instance.tex_a,
-            mip_level,
-        );
+        upsample(encoder, pipeline, instance, mip_level);
         fragment_pass(encoder, pipeline, instance, target, bounds);
     }
 }
@@ -111,8 +106,6 @@ fn downsample(
     encoder: &mut wgpu::CommandEncoder,
     pipeline: &Pipeline,
     instance: &Instance,
-    // tex_a_bg: &[wgpu::BindGroup],
-    // texture: &wgpu::Texture,
     mip_level: u32,
 ) {
     let texture = &instance.tex_a;
@@ -223,12 +216,7 @@ fn vertical_blur(
             view: &instance.tex_a.create_view(&wgpu::TextureViewDescriptor {
                 base_mip_level: mip_level,
                 mip_level_count: Some(1),
-                ..Default::default() // label: todo!(),
-                                     // format: todo!(),
-                                     // dimension: todo!(),
-                                     // usage: todo!(),
-                                     // aspect: todo!(),
-                                     // mip_level_count: todo!(),
+                ..Default::default()
             }),
             resolve_target: None,
             ops: wgpu::Operations {

@@ -21,21 +21,7 @@ where
     id: Option<iced::widget::Id>,
     format: Format<Renderer::Font>,
     fragment: text::Fragment<'a>,
-
-    // padding: Padding,
-    // width: Length,
-    // height: Length,
-    // max_width: f32,
-    // max_height: f32,
-    // horizontal_alignment: iced::alignment::Horizontal,
-    // vertical_alignment: iced::alignment::Vertical,
-    // clip: bool,
-    // content: String,
     class: Theme::Class<'a>,
-
-    // font_size: f32,
-    // line_height: f32,
-    // font_data: FontData,
 
     // GlassText specific properties
     blur_radius: f32,
@@ -94,8 +80,7 @@ where
 
 use cosmic_text::{Attrs, Buffer, FontSystem, LayoutGlyph, Metrics};
 use itertools::Itertools;
-use std::{cell::RefCell, collections::HashMap};
-// use ttf_parser::GlyphId;
+use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
 use crate::pipeline::{GlyphId, content_scale};
 struct FontData {
@@ -105,13 +90,24 @@ struct FontData {
     buffer: RefCell<Buffer>,
 
     // font_cache: RefCell<HashMap<FontKey, (Vec<u8>, u32)>>,
-    font_cache: RefCell<HashMap<cosmic_text::fontdb::ID, (Vec<u8>, u32)>>,
+    #[allow(clippy::type_complexity)]
+    font_cache: RefCell<HashMap<cosmic_text::fontdb::ID, Arc<(Vec<u8>, u32)>>>,
 
     last_text: RefCell<Option<String>>,
     last_bounds: RefCell<Option<(f32, f32)>>,
     last_glyphs: RefCell<Option<Vec<GlyphData>>>,
     last_metrics: RefCell<Option<Metrics>>,
     last_font: RefCell<Option<iced::Font>>,
+}
+
+impl FontData {
+    fn needs_reshape(&self, s: &str, bounds: &Rectangle) -> bool {
+        self.last_text.borrow().as_deref() != Some(s)
+            || self.last_bounds.borrow().as_ref() != Some(&(bounds.width, bounds.height))
+            || self.last_glyphs.borrow().is_none()
+            || self.last_metrics.borrow().as_ref() != Some(&self.metrics)
+            || self.last_font.borrow().as_ref() != self.font.as_ref()
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
@@ -125,7 +121,6 @@ pub struct FontKey {
 pub struct GlyphData {
     pub glyph_id: GlyphId,
     pub font_id: cosmic_text::fontdb::ID,
-    // pub glyph: char,
     pub x: f32,
     pub y: f32,
     pub run_line_y: f32,
@@ -150,11 +145,6 @@ impl GlyphData {
 impl FontData {
     fn new(font: Option<iced::Font>, font_size: Pixels, line_height: LineHeight) -> Self {
         let mut font_system = FontSystem::new();
-        // let f = include_bytes!("/System/Library/Fonts/Supplemental/Arial Unicode.ttf");
-
-        // let font = Face::parse(f, 0).unwrap();
-        // TODO: how will this work with multiple fonts?
-        // font_system.db_mut().load_font_data(font::FONT.to_vec());
         font_system
             .db_mut()
             .load_font_data(notosans::REGULAR_TTF.to_vec());
@@ -168,21 +158,17 @@ impl FontData {
             .db_mut()
             .load_font_data(notosans::BOLD_ITALIC_TTF.to_vec());
 
-        // font_system.db_mut().load_font_data(f.to_vec());
-        // Metrics: font_size, line_height
         let lh = match line_height {
             LineHeight::Relative(factor) => Pixels(factor * font_size.0),
             LineHeight::Absolute(pixels) => pixels,
         };
         let metrics = Metrics::new(font_size.into(), lh.into());
         let buffer = Buffer::new(&mut font_system, metrics);
-        // Set available width/height
 
         Self {
             font_system: RefCell::new(font_system),
             metrics,
             buffer: RefCell::new(buffer),
-            // TODO: fix this
             font,
 
             font_cache: RefCell::new(HashMap::new()),
@@ -220,64 +206,10 @@ where
         }
     }
 
-    // Creates a [`Container`] with the given content.
-    // pub fn new(content: impl Into<String>) -> Self {
-    //     let content = content.into();
-    //     // let size = content.as_widget().size_hint();
-
-    //     GlassText {
-    //         id: None,
-    //         format: Format {
-    //             width: Length::Fill,
-    //             height: Length::Fill,
-    //             size: None,
-    //             font: None,
-    //             line_height: LineHeight::default(),
-    //             align_x: text::Alignment::Left,
-    //             align_y: alignment::Vertical::Top,
-    //             shaping: Shaping::Advanced,
-    //             wrapping: Wrapping::default(),
-    //         },
-    //         // padding: Padding::ZERO,
-    //         // width: 1.0.into(),
-    //         // height: 1.0.into(),
-    //         // max_width: f32::INFINITY,
-    //         // max_height: f32::INFINITY,
-    //         // horizontal_alignment: alignment::Horizontal::Left,
-    //         // vertical_alignment: alignment::Vertical::Top,
-    //         // clip: false,
-    //         class: Theme::default(),
-    //         content,
-
-    //         // font_size: 48.0,
-    //         // line_height: 56.0,
-    //         // font_data: FontData::new(48.0, 56.0),
-    //         blur_radius: 0.0,
-    //         saturation: 1.0,
-    //         lightness: 0.0,
-    //         edge_radius: 0.0,
-    //         edge_height: 0.0,
-    //         refractive_index: 1.5,
-    //         rim_width: 1.0,
-    //         opacity: 1.0,
-    //     }
-    // }
-
     fn parse_text(font_data: &FontData, s: &str, bounds: &Rectangle) -> Vec<GlyphData> {
-        // println!("family: {:?}", font_data.family);
-        // println!("last_family: {:?}", font_data.last_family.borrow());
-        let needs_reshape = font_data.last_text.borrow().as_deref() != Some(s)
-            || font_data.last_bounds.borrow().as_ref() != Some(&(bounds.width, bounds.height))
-            || font_data.last_glyphs.borrow().is_none()
-            || font_data.last_metrics.borrow().as_ref() != Some(&font_data.metrics)
-            || font_data.last_font.borrow().as_ref() != font_data.font.as_ref();
-
-        // println!("{}", font_data.metrics.font_size);
-        if !needs_reshape {
+        if !font_data.needs_reshape(s, bounds) {
             return font_data.last_glyphs.borrow().as_ref().unwrap().clone();
         }
-        // println!("Reshaping text");
-        // let now = std::time::Instant::now();
 
         let mut font_system = font_data.font_system.borrow_mut();
         let mut buffer = font_data.buffer.borrow_mut();
@@ -289,17 +221,12 @@ where
         let weight = iced_weight(font_data.font);
         let style = iced_style(font_data.font);
         let stretch = iced_stretch(font_data.font);
-        // println!("style: {:?}", font_data.font);
         let attrs = Attrs::new()
             .family(family)
             .weight(weight)
             .style(style)
             .stretch(stretch);
         buffer.set_text(s, &attrs, cosmic_text::Shaping::Advanced, None);
-
-        // let elapsed1 = now.elapsed();
-        // println!("Time taken to set text: {:?}", elapsed1);
-        // let now = std::time::Instant::now();
 
         font_data.last_text.replace(Some(s.to_string()));
         font_data
@@ -318,11 +245,6 @@ where
             glyphs.iter().map(|glyph| glyph.font_id).unique().collect();
 
         for font_id in all_fonts {
-            // let font_key = FontKey {
-            //     font_id,
-            //     style,
-            //     weight,
-            // };
             let _font_bytes = font_data
                 .font_cache
                 .borrow_mut()
@@ -332,11 +254,9 @@ where
                     font_system.db().with_face_data(font_id, |bytes, index| {
                         data = Some((bytes.to_vec(), index));
                     });
-                    data.unwrap()
+                    Arc::new(data.unwrap())
                 });
         }
-        // let elapsed2 = now.elapsed();
-        // println!("Time taken to parse text: {:?}", elapsed2);
         glyphs
     }
 
@@ -349,12 +269,6 @@ where
     /// Sets the size of the [`Text`].
     pub fn size(mut self, size: impl Into<Pixels>) -> Self {
         self.format.size = Some(size.into());
-        // self.font_data.metrics.font_size = font_size;
-        //     // self.font_data
-        //     //     .buffer
-        //     //     .borrow_mut()
-        //     //     .set_metrics(self.font_data.metrics);
-
         self
     }
 
@@ -496,26 +410,6 @@ where
         self.opacity = opacity;
         self
     }
-
-    // pub fn font_size(mut self, font_size: f32) -> Self {
-    //     self.font_size = font_size;
-    //     // self.font_data.metrics.font_size = font_size;
-    //     // self.font_data
-    //     //     .buffer
-    //     //     .borrow_mut()
-    //     //     .set_metrics(self.font_data.metrics);
-    //     self
-    // }
-
-    // pub fn line_height(mut self, line_height: f32) -> Self {
-    //     self.line_height = line_height;
-    //     // self.font_data.metrics.line_height = line_height;
-    //     // self.font_data
-    //     //     .buffer
-    //     //     .borrow_mut()
-    //     //     .set_metrics(self.font_data.metrics);
-    //     self
-    // }
 }
 
 struct State<P: iced::advanced::text::Paragraph> {
@@ -532,12 +426,10 @@ where
     Renderer: iced::advanced::text::Renderer<Font = iced::Font> + iced_wgpu::primitive::Renderer,
 {
     fn tag(&self) -> tree::Tag {
-        // self.content.as_widget().tag()
         tree::Tag::of::<State<Renderer::Paragraph>>()
     }
 
     fn state(&self) -> tree::State {
-        // self.content.as_widget().state()
         tree::State::new(State {
             id: NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             font_data: FontData::new(
@@ -551,20 +443,15 @@ where
 
     fn children(&self) -> Vec<Tree> {
         vec![]
-        // vec![Tree::new(&self.content)]
     }
 
     fn diff(&self, tree: &mut Tree) {
-        // self.content.as_widget().diff(tree);
-        // tree.diff_children(std::slice::from_ref(&self.content));
         let state = tree.state.downcast_mut::<State<Renderer::Paragraph>>();
         let fs = self.format.size.unwrap_or(16.0.into());
         let lh = match self.format.line_height {
             LineHeight::Relative(factor) => Pixels(factor * fs.0),
             LineHeight::Absolute(pixels) => pixels,
         };
-
-        // let new_family = iced_font_to_family(self.format.font);
 
         if state.font_data.metrics.font_size != fs.0 || state.font_data.metrics.line_height != lh.0
         {
@@ -605,76 +492,7 @@ where
             &self.fragment,
             self.format,
         )
-        // layout(
-        //     limits,
-        //     self.width,
-        //     self.height,
-        //     self.max_width,
-        //     self.max_height,
-        //     self.padding,
-        //     self.horizontal_alignment,
-        //     self.vertical_alignment,
-        //     |limits| layout::atomic(limits, self.width, self.height),
-        // )
     }
-
-    // fn operate(
-    //     &mut self,
-    //     tree: &mut Tree,
-    //     layout: Layout<'_>,
-    //     renderer: &Renderer,
-    //     operation: &mut dyn Operation,
-    // ) {
-    //     operation.container(self.id.as_ref(), layout.bounds());
-    //     operation.traverse(&mut |operation| {
-    //         self.content.as_widget_mut().operate(
-    //             &mut tree.children[0],
-    //             layout.children().next().unwrap(),
-    //             renderer,
-    //             operation,
-    //         );
-    //     });
-    // }
-
-    // fn update(
-    //     &mut self,
-    //     tree: &mut Tree,
-    //     event: &Event,
-    //     layout: Layout<'_>,
-    //     cursor: mouse::Cursor,
-    //     renderer: &Renderer,
-    //     clipboard: &mut dyn Clipboard,
-    //     shell: &mut Shell<'_, Message>,
-    //     viewport: &Rectangle,
-    // ) {
-    //     self.content.as_widget_mut().update(
-    //         &mut tree.children[0],
-    //         event,
-    //         layout.children().next().unwrap(),
-    //         cursor,
-    //         renderer,
-    //         clipboard,
-    //         shell,
-    //         viewport,
-    //     );
-    // }
-
-    // fn mouse_interaction(
-    //     &self,
-    //     tree: &Tree,
-    //     layout: Layout<'_>,
-    //     cursor: mouse::Cursor,
-    //     viewport: &Rectangle,
-    //     renderer: &Renderer,
-    // ) -> mouse::Interaction {
-    //     self.content.as_widget().mouse_interaction(
-    //         &tree.children[0],
-    //         layout.children().next().unwrap(),
-    //         cursor,
-    //         viewport,
-    //         renderer,
-    //     )
-    // }
 
     fn draw(
         &self,
@@ -686,7 +504,6 @@ where
         _cursor: mouse::Cursor,
         _viewport: &Rectangle,
     ) {
-        // let now = std::time::Instant::now();
         let state = tree.state.downcast_ref::<State<Renderer::Paragraph>>();
         let bounds = layout.bounds();
         let style = theme.style(&self.class);
@@ -694,35 +511,11 @@ where
 
         let glyphs = Self::parse_text(&state.font_data, &self.fragment, &bounds);
 
-        // let font = Face::parse(state.font_data.family.clone(), 0).unwrap();
         if glyphs.is_empty() {
             return;
         }
-        // let weight = iced_weight(state.font_data.font);
-        // let style = iced_style(state.font_data.font);
-        // only keep fonts matching the current weight and style
-        // let fonts: HashMap<cosmic_text::fontdb::ID, (Vec<u8>, u32)> = state
-        //     .font_data
-        //     .font_cache
-        //     .borrow()
-        //     .iter()
-        //     .filter(|(key, (_, _))| {
-        //         let font_key = FontKey {
-        //             font_id: key.font_id,
-        //             style,
-        //             weight,
-        //         };
-        //         font_key == font_key
-        //     })
-        //     .collect();
+
         let fonts = state.font_data.font_cache.borrow().clone();
-        // for (font_id, _font_bytes) in fonts.iter() {
-        //     if let Some(info) = state.font_data.font_system.borrow().db().face(*font_id) {
-        //         println!("Font: {:?} {:?} {:?}", font_id, info.families, info.weight);
-        //     }
-        // }
-        // println!("font_bytes: {:?} {}", font_bytes.0.len(), font_bytes.1);
-        // let font = Face::parse(a.get(&glyphs[0].font_id).unwrap().as_ref(), 0).unwrap();
 
         renderer.draw_primitive(
             bounds,
@@ -748,31 +541,7 @@ where
                 },
             },
         );
-
-        // let elapsed = now.elapsed();
-        // println!("Time taken to draw text: {:?}", elapsed);
     }
-
-    // fn overlay<'b>(
-    //     &'b mut self,
-    //     tree: &'b mut Tree,
-    //     layout: Layout<'b>,
-    //     renderer: &Renderer,
-    //     viewport: &Rectangle,
-    //     translation: Vector,
-    // ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
-    //     self.content.as_widget_mut().overlay(
-    //         &mut tree.children[0],
-    //         layout.children().next().unwrap(),
-    //         renderer,
-    //         viewport,
-    //         translation,
-    //     )
-    // }
-
-    // fn size_hint(&self) -> Size<Length> {
-    //     self.size()
-    // }
 }
 
 impl<'a, Message, Theme, Renderer> From<GlassText<'a, Renderer, Theme>>
@@ -786,35 +555,6 @@ where
         Element::new(text)
     }
 }
-
-// #[allow(clippy::too_many_arguments)]
-// /// Computes the layout of a [`Container`].
-// pub fn layout(
-//     limits: &layout::Limits,
-//     width: Length,
-//     height: Length,
-//     max_width: f32,
-//     max_height: f32,
-//     padding: Padding,
-//     horizontal_alignment: alignment::Horizontal,
-//     vertical_alignment: alignment::Vertical,
-//     layout_content: impl FnOnce(&layout::Limits) -> layout::Node,
-// ) -> layout::Node {
-//     layout::positioned(
-//         &limits.max_width(max_width).max_height(max_height),
-//         width,
-//         height,
-//         padding,
-//         |limits| layout_content(&limits.loose()),
-//         |content, size| {
-//             content.align(
-//                 Alignment::from(horizontal_alignment),
-//                 Alignment::from(vertical_alignment),
-//                 size,
-//             )
-//         },
-//     )
-// }
 
 /// Produces the [`layout::Node`] of a [`Text`] widget.
 pub fn layout<Renderer>(
@@ -848,26 +588,6 @@ where
         paragraph.min_bounds()
     })
 }
-
-// Draws the background of a [`Container`] given its [`Style`] and its `bounds`.
-// pub fn draw_background<Renderer>(renderer: &mut Renderer, style: &Style, bounds: Rectangle)
-// where
-//     Renderer: iced::advanced::Renderer,
-// {
-//     if style.background.is_some() || style.border.width > 0.0 || style.shadow.color.a > 0.0 {
-//         renderer.fill_quad(
-//             renderer::Quad {
-//                 bounds,
-//                 border: style.border,
-//                 shadow: style.shadow,
-//                 snap: style.snap,
-//             },
-//             style
-//                 .background
-//                 .unwrap_or(Background::Color(Color::TRANSPARENT)),
-//         );
-//     }
-// }
 
 fn iced_font_to_family(font: Option<iced::Font>) -> cosmic_text::Family<'static> {
     match font
