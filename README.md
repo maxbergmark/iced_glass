@@ -21,13 +21,13 @@ With the rewrite of the refraction math using signed distance functions, it is n
 
 ### Limitations
 
-- Font selection is not possible at this time. This will be added before the feature is completed
+- <s>Font selection is not possible at this time. This will be added before the feature is completed</s>
 - GPU textures are a bit wasteful to simplify the implementation. Hopefully this will get fixed
-- Due to starting from a `container` widget, the interface is slightly different than the original `text` widget. This will be addressed
+- <s>Due to starting from a `container` widget, the interface is slightly different than the original `text` widget. This will be addressed</s>
 
 ## Usage
 
-This crate is meant to be a drop-in replacement for existing iced widgets, 
+This crate is meant to be a drop-in replacement for existing iced widgets, making it possible to add extra styling for liquid glass-like effects.
 
 ```rust
 impl Ui {
@@ -69,7 +69,7 @@ impl Ui {
 - **Rim highlights** — angle-dependent edge glow along the rounded-rect SDF
 - **Rounded corners** and **opacity** controls
 
-All rendering happens on the GPU via WGSL shaders (`fragment.wgsl` for the composite pass, `gaussian.wgsl` for the separable blur, `downsample.wgsl` for downsampling before blurring, and upsampling after blurring).
+All rendering happens on the GPU via WGSL shaders (`fragment.wgsl` / `text.wgsl` for the composite pass, `gaussian.wgsl` for the separable blur, `downsample.wgsl` for downsampling before blurring, and upsampling after blurring).
 
 ## Widgets
 
@@ -90,6 +90,7 @@ More widgets are planned to be added.
 - [x] Add downsampling and upsampling to improve blur performance
 - [ ] Add `Button` widget with default styling
 - [ ] Add `Toggle` widget with default styling
+- [x] Add `Text` widget with default styling
 - [ ] Add configurable chromatic aberration
 - [x] Add timing metrics for GPU shader stages
     - This has been tested locally, but it requires enabling feature flags on device creation in iced. 
@@ -121,6 +122,8 @@ The binary crate includes three demo scenes, selectable at runtime:
 - **Basic** — A 2×2 photo wallpaper grid with a draggable glass panel. Sliders inside the panel control every glass parameter in real time.
 - **ScrollView** — A mock music browser with a scrollable album grid (loaded from `albums.json`), a frosted-glass search bar, and a playback bar with a glass slider for scrubbing.
 - **LargeSlider** — A stress-test scene with an oversized glass slider on a gradient background, plus standard sliders to tune the refraction parameters.
+- **StressTest** - A proper stress-testing scene which adds a lot of liquid glass containers to check performance.
+- **Text** - A test scene for all text-related styling options, along with a dynamic text input which renders to a liquid glass text widget
 
 ## Dependencies
 

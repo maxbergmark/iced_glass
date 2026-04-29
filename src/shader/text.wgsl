@@ -71,94 +71,23 @@ const TRANSPARENT: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 0.0);
 
 @fragment
 fn fs_main(input: FragInput) -> @location(0) vec4<f32> {
-    // return vec4<f32>(input.atlas_uv, 1.0, 1.0);
-    // let alpha = msdf_alpha(input.atlas_uv);
-    // return vec4<f32>(input.atlas_uv, 1.0, alpha);
-    // let alpha = msdf_alpha(input.uv);
-    // return vec4<f32>(1.0, 1.0, 1.0, alpha);
-    // return anti_alias(input);
-    return mix(TRANSPARENT, physical_sampling(input), uniforms.opacity);
-    // let bg = textureSample(image, image_sampler, input.uv);
-    let sdf = msdf(input.atlas_uv, input.scale);
-    return vec4<f32>(fwidth(sdf) * 10.0, 0.0, 0.0, 1.0);
-    // return mix(vec4<f32>(0.0), bg, sdf);
-    let gradient = sdf_gradient(input.atlas_uv);
-    // return vec4<f32>(msdf_alpha(input.uv));
-    // let sdg = sdf_gradient(input.uv);
-    let green = clamp(sdf / uniforms.edge_radius + 1.0, 0.0, 1.0);
-    return vec4<f32>(gradient.x * 0.5 + 0.5, green, gradient.y * 0.5 + 0.5, 1.0);
-}
-
-fn anti_alias(input: FragInput) -> vec4<f32> {
-    var i = input;
-    let dimensions = vec2<f32>(textureDimensions(image)) * uniforms.content_scale;
-
-    let c1 = physical_sampling_with_opacity(i);
-    i.screen_uv = input.screen_uv - vec2<f32>(1.0 / dimensions.x, 0.0);
-    let c2 = physical_sampling_with_opacity(i);
-    i.screen_uv = input.screen_uv - vec2<f32>(0.0, 1.0 / dimensions.y);
-    let c3 = physical_sampling_with_opacity(i);
-    i.screen_uv = input.screen_uv + vec2<f32>(1.0 / dimensions.x, 0.0);
-    let c4 = physical_sampling_with_opacity(i);
-    i.screen_uv = input.screen_uv + vec2<f32>(0.0, 1.0 / dimensions.y);
-    let c5 = physical_sampling_with_opacity(i);
-    return (c1 + c2 + c3 + c4 + c5) / 5.0;
-}
-
-fn physical_sampling_with_opacity(input: FragInput) -> vec4<f32> {
     return mix(TRANSPARENT, physical_sampling(input), uniforms.opacity);
 }
-
-
-// fn msdf(uv: vec2<f32>, scale: f32) -> f32 {
-//     let dimensions = vec2<f32>(textureDimensions(texture_atlas));
-//     let s = textureSample(texture_atlas, image_sampler, uv).rgb;
-//     let d = median(s.r, s.g, s.b);
-//     return (0.5 - d) * 1.0 * scale;
-// }
-
-// fn median(r: f32, g: f32, b: f32) -> f32 {
-//     return max(min(r, g), min(max(r, g), b));
-// }
-
-// fn sdf_gradient(uv: vec2<f32>) -> vec2<f32> {
-//     let texel = 1.0 / vec2<f32>(textureDimensions(texture_atlas));
-
-//     let c  = textureSample(texture_atlas, image_sampler, uv).rgb;
-//     let r  = textureSample(texture_atlas, image_sampler, uv + vec2<f32>(texel.x, 0.0)).rgb;
-//     let l  = textureSample(texture_atlas, image_sampler, uv - vec2<f32>(texel.x, 0.0)).rgb;
-//     let u  = textureSample(texture_atlas, image_sampler, uv + vec2<f32>(0.0, texel.y)).rgb;
-//     let dn = textureSample(texture_atlas, image_sampler, uv - vec2<f32>(0.0, texel.y)).rgb;
-
-//     let ch = median_channel(c);
-//     let gx = (r[ch] - l[ch]) * 0.5;
-//     let gy = (u[ch] - dn[ch]) * 0.5;
-//     let g = vec2<f32>(gx, gy);
-//     let len = length(g);
-//     return select(vec2<f32>(0.0), g / len, len > 1e-6);
-// }
-
-// fn median_channel(c: vec3<f32>) -> u32 {
-//     if (c.r >= c.g && c.r <= c.b) || (c.r <= c.g && c.r >= c.b) {
-//         return 0u;
-//     }
-//     if (c.g >= c.r && c.g <= c.b) || (c.g <= c.r && c.g >= c.b) {
-//         return 1u;
-//     }
-//     return 2u;
-// }
 
 fn msdf(uv: vec2<f32>, scale: f32) -> f32 {
     let d = msdf_bilinear(uv);
     return (0.5 - d) * scale;
 }
+
 fn median(r: f32, g: f32, b: f32) -> f32 {
     return max(min(r, g), min(max(r, g), b));
 }
+
 fn texel_median(coord: vec2<i32>) -> f32 {
     let s = textureLoad(texture_atlas, coord, 0).rgb;
     return median(s.r, s.g, s.b);
 }
+
 // Bilinear interpolation of per-texel median values.
 // Computing median before interpolation avoids the classic MSDF
 // medial-axis artifact caused by independently filtering the channels.
@@ -173,6 +102,7 @@ fn msdf_bilinear(uv: vec2<f32>) -> f32 {
     let d11 = texel_median(i + vec2(1, 1));
     return mix(mix(d00, d10, f.x), mix(d01, d11, f.x), f.y);
 }
+
 fn sdf_gradient(uv: vec2<f32>) -> vec2<f32> {
     let size = vec2<f32>(textureDimensions(texture_atlas));
     let center = vec2<i32>(round(uv * size - 0.5));
@@ -187,23 +117,14 @@ fn sdf_gradient(uv: vec2<f32>) -> vec2<f32> {
     return select(vec2<f32>(0.0), g / len, len > 1e-6);
 }
 
-// fn msdf_distance(uv: vec2<f32>) -> f32 {
-//     let s = textureSample(image, image_sampler, uv).rgb;
-//     return median(s.r, s.g, s.b);
-// }
-
 fn physical_sampling(input: FragInput) -> vec4<f32> {
     let ixy = input.atlas_uv - vec2<f32>(0.5);
     let dimensions = vec2<f32>(textureDimensions(image)) * uniforms.content_scale;
-    // return textureSample(image, image_sampler, input.screen_uv);
     let p = ixy * dimensions;
 
     let p_screen = (input.screen_uv - vec2<f32>(0.5)) * dimensions;
 
-    // let angle = atan2(p.y, p.x);
-
     let r = clamp_radius(uniforms.corner_radius, dimensions);
-    // let sdf_gradient = sdg_rounded_box(p, dimensions / 2.0, r);
     let gradient = sdf_gradient(input.atlas_uv);
     let sdf = msdf(input.atlas_uv, input.scale);
 
@@ -222,7 +143,6 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
     color = edge_highlight(color, sdf, gradient);
 
     let aa = fwidth(sdf);
-    // let outside_factor = smoothstep(-aa, 0.0, sdf);
     let outside_factor = smoothstep(-aa, aa, sdf);
     return mix(color, TRANSPARENT, outside_factor);
 }
@@ -238,32 +158,6 @@ fn edge_highlight(color: vec4<f32>, sdf: f32, sdf_gradient: vec2<f32>) -> vec4<f
     return mix(color, highlight_color, f * t);
 }
 
-
-fn sdg_rounded_box(p: vec2<f32>, b: vec2<f32>, r: f32) -> vec3<f32> {
-    let dis_gra = sdg_box(p, b - r);
-    return vec3<f32>( dis_gra.x - r, dis_gra.y, dis_gra.z );
-}
-
-fn sdg_box( p: vec2<f32>, b: vec2<f32> ) -> vec3<f32> {
-    let w = abs(p)-b;
-    let s = vec2<f32>(
-        select(1.0, -1.0, p.x < 0.0),
-        select(1.0, -1.0, p.y < 0.0));
-    let g = max(w.x,w.y);
-    let  q = max(w,vec2<f32>(0.0));
-    let l = length(q);
-
-
-    return vec3<f32>(   
-        select(g, l, g > 0.0),
-        s * select(
-            select(vec2<f32>(0,1), vec2<f32>(1,0), w.x>w.y),
-            q/l,
-            g>0.0
-        ),
-    
-    );
-}
 
 fn clamp_radius(radius: f32, dimensions: vec2<f32>) -> f32 {
     return min(radius, min(dimensions.x, dimensions.y) / 2.0);

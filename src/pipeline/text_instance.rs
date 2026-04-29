@@ -1,9 +1,6 @@
 use crate::{
-    pipeline::{
-        AtlasData, Pipeline, SharedBindGroupData, create_textures, create_uniforms_buffer,
-        instance::Instance,
-    },
-    shader::{text::TextShader, texture_bind_groups, uniforms_bind_group},
+    pipeline::{AtlasData, Pipeline, SharedBindGroupData, create_textures, instance::Instance},
+    shader::{text::TextShader, texture_bind_groups},
     uniforms::Uniforms,
 };
 pub struct TextInstance {
@@ -20,55 +17,18 @@ impl TextInstance {
         bgl_textures: &wgpu::BindGroupLayout,
         size: iced::Size<u32>,
     ) -> Self {
-        let (copy_texture, gaussian_texture) = create_textures(
-            device,
-            pipeline.shared_bind_group_data.device_format,
-            size.width,
-            size.height,
-        );
-
-        let uniforms_h = create_uniforms_buffer(device);
-        let uniforms_v = create_uniforms_buffer(device);
-
-        let copy_texture_bg = texture_bind_groups(device, bgl_textures, &copy_texture);
-        let gaussian_texture_bg = texture_bind_groups(device, bgl_textures, &gaussian_texture);
-
-        let uniform_bg_h = uniforms_bind_group(
-            device,
-            &pipeline.shared_bind_group_data.bgl_uniforms,
-            &uniforms_h,
-        );
-        let uniform_bg_v = uniforms_bind_group(
-            device,
-            &pipeline.shared_bind_group_data.bgl_uniforms,
-            &uniforms_v,
-        );
+        let instance = Instance::new(pipeline, device, bgl_textures, size.width, size.height);
 
         let vertex_buffer = TextShader::create_vertex_buffer(device);
         let texture_atlas_bg = TextShader::create_bind_group(
             device,
             &pipeline.shared_bind_group_data,
             &pipeline.atlas_data,
-            &copy_texture,
+            &instance.tex_a,
         );
 
         Self {
-            instance: Instance {
-                tex_a: copy_texture,
-                tex_b: gaussian_texture,
-                uniforms_h,
-                uniforms_v,
-                uniform_bg_h,
-                uniform_bg_v,
-                tex_a_bg: copy_texture_bg,
-                tex_b_bg: gaussian_texture_bg,
-                size: wgpu::Extent3d {
-                    width: size.width.max(1),
-                    height: size.height.max(1),
-                    depth_or_array_layers: 1,
-                },
-            },
-
+            instance,
             vertex_buffer,
             texture_atlas_bg,
             num_glyphs: 0,
