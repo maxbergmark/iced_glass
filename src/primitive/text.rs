@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use etagere::size2;
 use msdfgen::{Bitmap, FillRule, FontExt, Framing, MsdfGeneratorConfig, Range, Rgb};
-use ttf_parser::{Face, GlyphId};
+// use ttf_parser::{Face, GlyphId};
+use freetype::Face;
 
 use crate::{
-    pipeline::{AtlasData, AtlasPosition, Pipeline, TextInstance, round_up},
+    pipeline::{AtlasData, AtlasPosition, GlyphId, Pipeline, Rect, TextInstance, round_up},
     primitive::{copy_background, downsample, horizontal_blur, upsample, vertical_blur},
     shader::text::TEXT_ATLAS_SIZE,
     uniforms::Uniforms,
@@ -15,7 +18,8 @@ pub struct TextPrimitive {
     pub id: u64,
     pub text: String,
     pub font_size: f32,
-    pub font_bytes: (Vec<u8>, u32),
+    pub fonts: HashMap<cosmic_text::fontdb::ID, (Vec<u8>, u32)>,
+    // pub fonts: HashMap<FontKey, (Vec<u8>, u32)>,
     pub glyphs: Vec<GlyphData>,
     pub uniforms: Uniforms,
 }
@@ -151,7 +155,7 @@ impl TextPrimitive {
         //     self.font_bytes.0.len(),
         //     self.font_bytes.1
         // );
-        let font = Face::parse(&self.font_bytes.0, self.font_bytes.1).unwrap();
+        // let font = Face::parse(&self.font_bytes.0, self.font_bytes.1).unwrap();
         // println!("font: {:?}", font);
         // println!(
         //     "tables: glyf={}, cff={}, cff2={}",
@@ -192,7 +196,17 @@ impl TextPrimitive {
         //     c.0
         // );
 
+        let mut font_cache = HashMap::new();
+
         for glyph in self.glyphs.iter().filter(is_visible) {
+            let font = font_cache.entry(glyph.font_id).or_insert_with(|| {
+                let font_bytes = self.fonts.get(&glyph.font_id).unwrap();
+                let library = freetype::Library::init().unwrap();
+                library
+                    .new_memory_face(font_bytes.0.clone(), font_bytes.1 as isize)
+                    .unwrap()
+                // Face::parse(&font_bytes.0, font_bytes.1).unwrap()
+            });
             // println!(
             //     "glyph: {:?} atlas_position: {:?}",
             //     glyph.glyph_id,
@@ -208,9 +222,18 @@ impl TextPrimitive {
                 .atlas_position
                 .get(&(glyph.font_id, glyph.glyph_id))
                 .copied()
-                .or_else(|| add_to_atlas(atlas_data, queue, &font, glyph));
+                .or_else(|| add_to_atlas(atlas_data, queue, font, glyph));
             // println!("ap: {:?}", ap);
             if let Some(ap) = ap {
+                if (ap.bbox.x_max - ap.bbox.x_min).abs() < 1
+                    && (ap.bbox.y_max - ap.bbox.y_min).abs() < 1
+                {
+                    println!(
+                        "glyph: {:?} has invalid bounding box: {:?}",
+                        glyph.glyph_id, ap.bbox
+                    );
+                }
+
                 vertices.extend(add_vertices(bounds, &ap, glyph, self.font_size));
             }
         }
@@ -223,12 +246,30 @@ fn is_visible(glyph: &&GlyphData) -> bool {
 }
 
 fn get_sdf_data(font: &Face, glyph: GlyphId) -> Option<(Vec<u8>, iced::Size<u32>, Framing<f64>)> {
-    // let c = glyph;
+    // struct Dummy;
+    // impl ttf_parser::OutlineBuilder for Dummy {
+    //     fn move_to(&mut self, _: f32, _: f32) {}
+    //     fn line_to(&mut self, _: f32, _: f32) {}
+    //     fn quad_to(&mut self, _: f32, _: f32, _: f32, _: f32) {}
+    //     fn curve_to(&mut self, _: f32, _: f32, _: f32, _: f32, _: f32, _: f32) {}
+    //     fn close(&mut self) {}
+    // }
+    // let can_outline = font.outline_glyph(glyph, &mut Dummy).is_some();
+    // let can_shape = font.glyph_shape(glyph).is_some();
+    // if can_outline != can_shape {
+    //     println!(
+    //         "MISMATCH for {:?}: outline_glyph={}, glyph_shape={}",
+    //         glyph, can_outline, can_shape
+    //     );
+    // }
 
     // let font = Face::parse(font::FONT, 0).ok()?;
     // let glyph = font.glyph_index(glyph).unwrap();
-
-    let mut shape = font.glyph_shape(glyph)?;
+    // println!("font: {:?}", font);
+    // println!("can_outline: {:?}, can_shape: {:?}", can_outline, can_shape);
+    let mut shape = font.glyph_shape(glyph.0 as u32)?;
+    // println!("got shape");
+    // println!("shape: {:?}", shape.get_bound());
 
     let size = get_glyph_size(font, glyph);
     // println!("Font size MSDF: {}x{} (ID: {:?})", width, height, glyph);
@@ -273,8 +314,10 @@ fn to_rgbau8(bitmap: &Bitmap<Rgb<f32>>) -> Vec<u8> {
 }
 
 fn get_glyph_size(font: &Face, glyph: GlyphId) -> iced::Size<u32> {
-    let bbox = font.glyph_bounding_box(glyph).unwrap();
-    let units_per_em = font.units_per_em() as f32;
+    // let bbox = font.glyph_bounding_box(glyph).unwrap();
+    let bbox = get_glyph_bounding_box(font, glyph).unwrap();
+    // let units_per_em = font.units_per_em() as f32;
+    let units_per_em = font.em_size() as f32;
     let scale = MSDF_FONT_SIZE / units_per_em;
 
     let x_min = bbox.x_min as f32 * scale;
@@ -300,7 +343,10 @@ fn add_to_atlas(
     let (data, size, framing) = match get_sdf_data(font, glyph.glyph_id) {
         Some(d) => d,
         None => {
-            println!("Failed to get sdf data for glyph: {:?}", glyph.glyph_id);
+            println!(
+                "Failed to get sdf data for glyph: {:?} (font: {:?})",
+                glyph.glyph_id, glyph.font_id
+            );
             return None;
         }
     };
@@ -314,8 +360,10 @@ fn add_to_atlas(
     let position = iced::Point::new(offset.x as u32, offset.y as u32);
 
     // let font = Face::parse(font::FONT, 0).unwrap();
-    let bbox = font.glyph_bounding_box(glyph.glyph_id).unwrap();
-    let units_per_em = font.units_per_em() as f32;
+    // let bbox = font.glyph_bounding_box(glyph.glyph_id).unwrap();
+    let bbox = get_glyph_bounding_box(font, glyph.glyph_id).unwrap();
+    // let units_per_em = font.units_per_em() as f32;
+    let units_per_em = font.em_size() as f32;
 
     let ap = AtlasPosition {
         position,
@@ -357,6 +405,23 @@ fn add_to_atlas(
     // }
 
     Some(ap)
+}
+
+fn get_glyph_bounding_box(face: &Face, glyph: GlyphId) -> Option<Rect> {
+    use freetype::face::LoadFlag;
+    face.load_glyph(glyph.0 as u32, LoadFlag::NO_SCALE).unwrap();
+    let metrics = face.glyph().metrics();
+    // ttf-parser's Rect has: x_min, y_min, x_max, y_max (in font units)
+    let x_min = metrics.horiBearingX as i16;
+    let y_min = (metrics.horiBearingY - metrics.height) as i16;
+    let x_max = (metrics.horiBearingX + metrics.width) as i16;
+    let y_max = metrics.horiBearingY as i16;
+    Some(Rect {
+        x_min,
+        y_min,
+        x_max,
+        y_max,
+    })
 }
 
 struct Quad {

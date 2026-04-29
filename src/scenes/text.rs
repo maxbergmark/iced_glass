@@ -19,6 +19,9 @@ pub struct Ui {
     font_size: f32,
     line_height: f32,
     font_selection: Option<FontSelection>,
+    style: iced::font::Style,
+    weight: iced::font::Weight,
+    stretch: iced::font::Stretch,
     text: String,
 }
 
@@ -36,6 +39,9 @@ pub enum Message {
     RimWidth(f32),
     Opacity(f32),
     FontSelection(FontSelection),
+    Style(iced::font::Style),
+    Weight(iced::font::Weight),
+    Stretch(iced::font::Stretch),
     Text(String),
 }
 
@@ -44,6 +50,7 @@ pub enum FontSelection {
     NotoSans,
     ArialUnicodeMS,
     SongtiSC,
+    System,
 }
 
 impl FontSelection {
@@ -52,6 +59,7 @@ impl FontSelection {
             FontSelection::NotoSans => "Noto Sans",
             FontSelection::ArialUnicodeMS => "Arial Unicode MS",
             FontSelection::SongtiSC => "Songti SC",
+            FontSelection::System => "System",
         }
     }
 }
@@ -70,7 +78,10 @@ impl Default for Ui {
             refractive_index: 1.5,
             rim_width: 0.5,
             opacity: 1.0,
-            font_selection: Some(FontSelection::ArialUnicodeMS),
+            font_selection: None,
+            style: iced::font::Style::Normal,
+            weight: iced::font::Weight::Normal,
+            stretch: iced::font::Stretch::Normal,
             text: String::new(),
         }
     }
@@ -128,7 +139,23 @@ impl Ui {
                 Task::none()
             }
             Message::FontSelection(font_selection) => {
-                self.font_selection = Some(font_selection);
+                if font_selection == FontSelection::System {
+                    self.font_selection = None;
+                } else {
+                    self.font_selection = Some(font_selection);
+                }
+                Task::none()
+            }
+            Message::Style(style) => {
+                self.style = style;
+                Task::none()
+            }
+            Message::Weight(weight) => {
+                self.weight = weight;
+                Task::none()
+            }
+            Message::Stretch(stretch) => {
+                self.stretch = stretch;
                 Task::none()
             }
         }
@@ -207,13 +234,20 @@ impl Ui {
                 .align_y(Alignment::Center)
                 .padding(20.0)
                 .spacing(20.0),
-                self.text_input(),
+                iced::widget::row![
+                    self.text_input(),
+                    self.style_selector(),
+                    self.weight_selector(),
+                    self.stretch_selector()
+                ]
+                .spacing(20.0),
                 iced::widget::space().height(100.0),
                 iced::widget::container(
                     iced::widget::row![
                         self.styled_text(declaration::DECLARATION),
                         self.styled_text(&self.text),
                         self.styled_text("Hello\nHallå\n你好\nสวัสดี"),
+                        // self.normal_text("Hello\nHallå\n你好\nสวัสดี"),
                     ]
                     .spacing(20.0)
                 )
@@ -253,11 +287,196 @@ impl Ui {
                             Message::FontSelection
                         ),
                     ],
+                    iced::widget::column![
+                        iced::widget::radio(
+                            "Songti",
+                            FontSelection::SongtiSC,
+                            self.font_selection,
+                            Message::FontSelection
+                        ),
+                        iced::widget::radio(
+                            "System",
+                            FontSelection::System,
+                            self.font_selection,
+                            Message::FontSelection
+                        ),
+                    ],
+                ]
+                .spacing(10.0),
+            ]
+            .align_x(Alignment::Center)
+            .spacing(5.0)
+            .padding(iced::Padding {
+                top: 0.0,
+                right: 15.0,
+                bottom: 0.0,
+                left: 15.0,
+            }),
+        )
+        .center_x(200.0)
+        .center_y(100.0)
+        .padding(10.0)
+        .blur_radius(50.0)
+        .saturation(1.0)
+        .lightness(-2.0)
+        .rim_width(1.0)
+        .style(|_theme| iced::widget::container::Style {
+            shadow: iced::Shadow {
+                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+                offset: iced::Vector::new(0.0, 12.0),
+                blur_radius: 40.0,
+            },
+            border: iced::Border {
+                radius: 20.0.into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .into()
+    }
+
+    fn style_selector(&self) -> iced::Element<'_, Message> {
+        iced_glass::widget::container(
+            iced::widget::column![
+                iced::widget::text("Style: "),
+                iced::widget::row![
+                    iced::widget::column![
+                        iced::widget::radio(
+                            "Normal",
+                            iced::font::Style::Normal,
+                            Some(self.style),
+                            Message::Style
+                        ),
+                        iced::widget::radio(
+                            "Italic",
+                            iced::font::Style::Italic,
+                            Some(self.style),
+                            Message::Style
+                        ),
+                    ],
                     iced::widget::column![iced::widget::radio(
-                        "Songti",
-                        FontSelection::SongtiSC,
-                        self.font_selection,
-                        Message::FontSelection
+                        "Oblique",
+                        iced::font::Style::Oblique,
+                        Some(self.style),
+                        Message::Style
+                    ),],
+                ]
+                .spacing(10.0),
+            ]
+            .align_x(Alignment::Center)
+            .spacing(5.0)
+            .padding(iced::Padding {
+                top: 0.0,
+                right: 15.0,
+                bottom: 0.0,
+                left: 15.0,
+            }),
+        )
+        .center_x(200.0)
+        .center_y(100.0)
+        .padding(10.0)
+        .blur_radius(50.0)
+        .saturation(1.0)
+        .lightness(-2.0)
+        .rim_width(1.0)
+        .style(|_theme| iced::widget::container::Style {
+            shadow: iced::Shadow {
+                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+                offset: iced::Vector::new(0.0, 12.0),
+                blur_radius: 40.0,
+            },
+            border: iced::Border {
+                radius: 20.0.into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .into()
+    }
+
+    fn weight_selector(&self) -> iced::Element<'_, Message> {
+        iced_glass::widget::container(
+            iced::widget::column![
+                iced::widget::text("Weight: "),
+                iced::widget::row![
+                    iced::widget::column![
+                        iced::widget::radio(
+                            "ExtraLight",
+                            iced::font::Weight::ExtraLight,
+                            Some(self.weight),
+                            Message::Weight
+                        ),
+                        iced::widget::radio(
+                            "Normal",
+                            iced::font::Weight::Normal,
+                            Some(self.weight),
+                            Message::Weight
+                        ),
+                    ],
+                    iced::widget::column![iced::widget::radio(
+                        "ExtraBold",
+                        iced::font::Weight::ExtraBold,
+                        Some(self.weight),
+                        Message::Weight
+                    ),],
+                ]
+                .spacing(10.0),
+            ]
+            .align_x(Alignment::Center)
+            .spacing(5.0)
+            .padding(iced::Padding {
+                top: 0.0,
+                right: 15.0,
+                bottom: 0.0,
+                left: 15.0,
+            }),
+        )
+        .center_x(200.0)
+        .center_y(100.0)
+        .padding(10.0)
+        .blur_radius(50.0)
+        .saturation(1.0)
+        .lightness(-2.0)
+        .rim_width(1.0)
+        .style(|_theme| iced::widget::container::Style {
+            shadow: iced::Shadow {
+                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+                offset: iced::Vector::new(0.0, 12.0),
+                blur_radius: 40.0,
+            },
+            border: iced::Border {
+                radius: 20.0.into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .into()
+    }
+
+    fn stretch_selector(&self) -> iced::Element<'_, Message> {
+        iced_glass::widget::container(
+            iced::widget::column![
+                iced::widget::text("Stretch: "),
+                iced::widget::row![
+                    iced::widget::column![
+                        iced::widget::radio(
+                            "Condensed",
+                            iced::font::Stretch::Condensed,
+                            Some(self.stretch),
+                            Message::Stretch
+                        ),
+                        iced::widget::radio(
+                            "Normal",
+                            iced::font::Stretch::Normal,
+                            Some(self.stretch),
+                            Message::Stretch
+                        ),
+                    ],
+                    iced::widget::column![iced::widget::radio(
+                        "Expanded",
+                        iced::font::Stretch::Expanded,
+                        Some(self.stretch),
+                        Message::Stretch
                     ),],
                 ]
                 .spacing(10.0),
@@ -308,7 +527,7 @@ impl Ui {
                 left: 15.0,
             }),
         )
-        .center_x(5.0 * 200.0 + 4.0 * 20.0)
+        .center_x(3.0 * 200.0 + 2.0 * 20.0)
         .center_y(100.0)
         .padding(10.0)
         .blur_radius(50.0)
@@ -332,7 +551,12 @@ impl Ui {
 
     #[allow(dead_code)]
     fn styled_text<'a>(&self, s: &'a str) -> iced::Element<'a, Message> {
-        let family = self.font_selection.map(|f| iced::Font::with_name(f.name()));
+        let font = self.font_selection.map(|f| iced::Font {
+            family: iced::font::Family::Name(f.name()),
+            weight: self.weight,
+            stretch: self.stretch,
+            style: self.style,
+        });
         iced::widget::container(
             iced_glass::widget::text(s)
                 .width(Length::Fill)
@@ -346,7 +570,7 @@ impl Ui {
                 .saturation(self.saturation)
                 .lightness(self.lightness)
                 .size(self.font_size)
-                .font_maybe(family)
+                .font_maybe(font)
                 .line_height(self.line_height),
         )
         .width(self.container_size)
@@ -364,11 +588,20 @@ impl Ui {
 
     #[allow(dead_code)]
     fn normal_text(&self, s: &'static str) -> iced::Element<'_, Message> {
+        let font = self.font_selection.map(|f| iced::Font {
+            family: iced::font::Family::Name(f.name()),
+            weight: self.weight,
+            stretch: self.stretch,
+            style: self.style,
+        });
         iced::widget::container(
             iced::widget::text(s)
                 .width(Length::Fill)
                 .height(Length::Fill)
-                .size(self.font_size),
+                .size(self.font_size)
+                .shaping(iced::widget::text::Shaping::Advanced)
+                .font_maybe(font)
+                .line_height(self.line_height),
         )
         .width(self.container_size)
         .height(self.container_size)

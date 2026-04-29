@@ -109,48 +109,82 @@ fn physical_sampling_with_opacity(input: FragInput) -> vec4<f32> {
     return mix(TRANSPARENT, physical_sampling(input), uniforms.opacity);
 }
 
-// fn msdf_alpha(uv: vec2<f32>) -> f32 {
+
+// fn msdf(uv: vec2<f32>, scale: f32) -> f32 {
+//     let dimensions = vec2<f32>(textureDimensions(texture_atlas));
 //     let s = textureSample(texture_atlas, image_sampler, uv).rgb;
 //     let d = median(s.r, s.g, s.b);
-//     let w = fwidth(d);
-//     return smoothstep(0.5 - w, 0.5 + w, d);
+//     return (0.5 - d) * 1.0 * scale;
+// }
+
+// fn median(r: f32, g: f32, b: f32) -> f32 {
+//     return max(min(r, g), min(max(r, g), b));
+// }
+
+// fn sdf_gradient(uv: vec2<f32>) -> vec2<f32> {
+//     let texel = 1.0 / vec2<f32>(textureDimensions(texture_atlas));
+
+//     let c  = textureSample(texture_atlas, image_sampler, uv).rgb;
+//     let r  = textureSample(texture_atlas, image_sampler, uv + vec2<f32>(texel.x, 0.0)).rgb;
+//     let l  = textureSample(texture_atlas, image_sampler, uv - vec2<f32>(texel.x, 0.0)).rgb;
+//     let u  = textureSample(texture_atlas, image_sampler, uv + vec2<f32>(0.0, texel.y)).rgb;
+//     let dn = textureSample(texture_atlas, image_sampler, uv - vec2<f32>(0.0, texel.y)).rgb;
+
+//     let ch = median_channel(c);
+//     let gx = (r[ch] - l[ch]) * 0.5;
+//     let gy = (u[ch] - dn[ch]) * 0.5;
+//     let g = vec2<f32>(gx, gy);
+//     let len = length(g);
+//     return select(vec2<f32>(0.0), g / len, len > 1e-6);
+// }
+
+// fn median_channel(c: vec3<f32>) -> u32 {
+//     if (c.r >= c.g && c.r <= c.b) || (c.r <= c.g && c.r >= c.b) {
+//         return 0u;
+//     }
+//     if (c.g >= c.r && c.g <= c.b) || (c.g <= c.r && c.g >= c.b) {
+//         return 1u;
+//     }
+//     return 2u;
 // }
 
 fn msdf(uv: vec2<f32>, scale: f32) -> f32 {
-    let dimensions = vec2<f32>(textureDimensions(texture_atlas));
-    let s = textureSample(texture_atlas, image_sampler, uv).rgb;
-    let d = median(s.r, s.g, s.b);
-    // let w = fwidth(d);
-    return (0.5 - d) * 1.0 * scale;
+    let d = msdf_bilinear(uv);
+    return (0.5 - d) * scale;
 }
-
 fn median(r: f32, g: f32, b: f32) -> f32 {
     return max(min(r, g), min(max(r, g), b));
 }
-
-fn sdf_gradient(uv: vec2<f32>) -> vec2<f32> {
-    let texel = 1.0 / vec2<f32>(textureDimensions(texture_atlas));
-
-    let c  = textureSample(texture_atlas, image_sampler, uv).rgb;
-    let r  = textureSample(texture_atlas, image_sampler, uv + vec2<f32>(texel.x, 0.0)).rgb;
-    let l  = textureSample(texture_atlas, image_sampler, uv - vec2<f32>(texel.x, 0.0)).rgb;
-    let u  = textureSample(texture_atlas, image_sampler, uv + vec2<f32>(0.0, texel.y)).rgb;
-    let dn = textureSample(texture_atlas, image_sampler, uv - vec2<f32>(0.0, texel.y)).rgb;
-
-    let ch = median_channel(c);
-    let gx = (r[ch] - l[ch]) * 0.5;
-    let gy = (u[ch] - dn[ch]) * 0.5;
-    return normalize(vec2<f32>(gx, gy));
+fn texel_median(coord: vec2<i32>) -> f32 {
+    let s = textureLoad(texture_atlas, coord, 0).rgb;
+    return median(s.r, s.g, s.b);
 }
-
-fn median_channel(c: vec3<f32>) -> u32 {
-    if (c.r >= c.g && c.r <= c.b) || (c.r <= c.g && c.r >= c.b) {
-        return 0u;
-    }
-    if (c.g >= c.r && c.g <= c.b) || (c.g <= c.r && c.g >= c.b) {
-        return 1u;
-    }
-    return 2u;
+// Bilinear interpolation of per-texel median values.
+// Computing median before interpolation avoids the classic MSDF
+// medial-axis artifact caused by independently filtering the channels.
+fn msdf_bilinear(uv: vec2<f32>) -> f32 {
+    let size = vec2<f32>(textureDimensions(texture_atlas));
+    let pos = uv * size - 0.5;
+    let i = vec2<i32>(floor(pos));
+    let f = fract(pos);
+    let d00 = texel_median(i);
+    let d10 = texel_median(i + vec2(1, 0));
+    let d01 = texel_median(i + vec2(0, 1));
+    let d11 = texel_median(i + vec2(1, 1));
+    return mix(mix(d00, d10, f.x), mix(d01, d11, f.x), f.y);
+}
+fn sdf_gradient(uv: vec2<f32>) -> vec2<f32> {
+    let size = vec2<f32>(textureDimensions(texture_atlas));
+    let center = vec2<i32>(round(uv * size - 0.5));
+    let r = texel_median(center + vec2(1, 0));
+    let l = texel_median(center + vec2(-1, 0));
+    let u = texel_median(center + vec2(0, 1));
+    let d = texel_median(center + vec2(0, -1));
+    let gx = (r - l) * 0.5;
+    let gy = (u - d) * 0.5;
+    let g = vec2<f32>(gx, gy);
+    let len = length(g);
+    return select(vec2<f32>(0.0), g / len, len > 1e-6);
 }
 
 // fn msdf_distance(uv: vec2<f32>) -> f32 {
@@ -176,7 +210,7 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
     let h = uniforms.height;
     let n = uniforms.refractive_index;
     let r_edge = clamp_radius(uniforms.edge_radius, dimensions);
-    let dx = select(0.0, refract(sdf, r_edge, n, h), sdf > -r_edge);
+    let dx = select(0.0, refract(sdf, r_edge, n, h), sdf > -r_edge && sdf < 0.0);
     let offset = gradient * dx;
 
     var sample_uv = (p_screen + offset) / dimensions + vec2<f32>(0.5);

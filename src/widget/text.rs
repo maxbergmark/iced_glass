@@ -92,28 +92,36 @@ where
     GlassText::new(content)
 }
 
-use cosmic_text::{Buffer, FontSystem, LayoutGlyph, Metrics};
+use cosmic_text::{Attrs, Buffer, FontSystem, LayoutGlyph, Metrics};
 use itertools::Itertools;
 use std::{cell::RefCell, collections::HashMap};
-use ttf_parser::GlyphId;
+// use ttf_parser::GlyphId;
 
-use crate::pipeline::content_scale;
+use crate::pipeline::{GlyphId, content_scale};
 struct FontData {
     font_system: RefCell<FontSystem>,
     metrics: Metrics,
-    family: cosmic_text::Family<'static>,
+    font: Option<iced::Font>,
     buffer: RefCell<Buffer>,
 
+    // font_cache: RefCell<HashMap<FontKey, (Vec<u8>, u32)>>,
     font_cache: RefCell<HashMap<cosmic_text::fontdb::ID, (Vec<u8>, u32)>>,
 
     last_text: RefCell<Option<String>>,
     last_bounds: RefCell<Option<(f32, f32)>>,
     last_glyphs: RefCell<Option<Vec<GlyphData>>>,
     last_metrics: RefCell<Option<Metrics>>,
-    last_family: RefCell<Option<cosmic_text::Family<'static>>>,
+    last_font: RefCell<Option<iced::Font>>,
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
+pub struct FontKey {
+    pub font_id: cosmic_text::fontdb::ID,
+    pub style: cosmic_text::fontdb::Style,
+    pub weight: cosmic_text::fontdb::Weight,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct GlyphData {
     pub glyph_id: GlyphId,
     pub font_id: cosmic_text::fontdb::ID,
@@ -140,11 +148,7 @@ impl GlyphData {
 }
 
 impl FontData {
-    fn new(
-        family: cosmic_text::Family<'static>,
-        font_size: Pixels,
-        line_height: LineHeight,
-    ) -> Self {
+    fn new(font: Option<iced::Font>, font_size: Pixels, line_height: LineHeight) -> Self {
         let mut font_system = FontSystem::new();
         // let f = include_bytes!("/System/Library/Fonts/Supplemental/Arial Unicode.ttf");
 
@@ -154,6 +158,16 @@ impl FontData {
         font_system
             .db_mut()
             .load_font_data(notosans::REGULAR_TTF.to_vec());
+        font_system
+            .db_mut()
+            .load_font_data(notosans::ITALIC_TTF.to_vec());
+        font_system
+            .db_mut()
+            .load_font_data(notosans::BOLD_TTF.to_vec());
+        font_system
+            .db_mut()
+            .load_font_data(notosans::BOLD_ITALIC_TTF.to_vec());
+
         // font_system.db_mut().load_font_data(f.to_vec());
         // Metrics: font_size, line_height
         let lh = match line_height {
@@ -169,7 +183,7 @@ impl FontData {
             metrics,
             buffer: RefCell::new(buffer),
             // TODO: fix this
-            family,
+            font,
 
             font_cache: RefCell::new(HashMap::new()),
 
@@ -177,7 +191,7 @@ impl FontData {
             last_bounds: RefCell::new(None),
             last_glyphs: RefCell::new(None),
             last_metrics: RefCell::new(None),
-            last_family: RefCell::new(None),
+            last_font: RefCell::new(None),
         }
     }
 }
@@ -250,15 +264,13 @@ where
     // }
 
     fn parse_text(font_data: &FontData, s: &str, bounds: &Rectangle) -> Vec<GlyphData> {
-        use cosmic_text::{Attrs, Shaping};
-
         // println!("family: {:?}", font_data.family);
         // println!("last_family: {:?}", font_data.last_family.borrow());
         let needs_reshape = font_data.last_text.borrow().as_deref() != Some(s)
             || font_data.last_bounds.borrow().as_ref() != Some(&(bounds.width, bounds.height))
             || font_data.last_glyphs.borrow().is_none()
             || font_data.last_metrics.borrow().as_ref() != Some(&font_data.metrics)
-            || font_data.last_family.borrow().as_ref() != Some(&font_data.family);
+            || font_data.last_font.borrow().as_ref() != font_data.font.as_ref();
 
         // println!("{}", font_data.metrics.font_size);
         if !needs_reshape {
@@ -273,8 +285,17 @@ where
         let mut buffer = buffer.borrow_with(&mut font_system);
 
         buffer.set_size(Some(bounds.width), Some(bounds.height));
-        let attrs = Attrs::new().family(font_data.family);
-        buffer.set_text(s, &attrs, Shaping::Advanced, None);
+        let family = iced_font_to_family(font_data.font);
+        let weight = iced_weight(font_data.font);
+        let style = iced_style(font_data.font);
+        let stretch = iced_stretch(font_data.font);
+        // println!("style: {:?}", font_data.font);
+        let attrs = Attrs::new()
+            .family(family)
+            .weight(weight)
+            .style(style)
+            .stretch(stretch);
+        buffer.set_text(s, &attrs, cosmic_text::Shaping::Advanced, None);
 
         // let elapsed1 = now.elapsed();
         // println!("Time taken to set text: {:?}", elapsed1);
@@ -291,12 +312,17 @@ where
             .collect();
         font_data.last_glyphs.replace(Some(glyphs.clone()));
         font_data.last_metrics.replace(Some(font_data.metrics));
-        font_data.last_family.replace(Some(font_data.family));
+        font_data.last_font.replace(font_data.font);
 
         let all_fonts: Vec<cosmic_text::fontdb::ID> =
             glyphs.iter().map(|glyph| glyph.font_id).unique().collect();
 
         for font_id in all_fonts {
+            // let font_key = FontKey {
+            //     font_id,
+            //     style,
+            //     weight,
+            // };
             let _font_bytes = font_data
                 .font_cache
                 .borrow_mut()
@@ -515,7 +541,7 @@ where
         tree::State::new(State {
             id: NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             font_data: FontData::new(
-                iced_font_to_family(self.format.font),
+                self.format.font,
                 self.format.size.unwrap_or(16.0.into()),
                 self.format.line_height,
             ),
@@ -538,7 +564,7 @@ where
             LineHeight::Absolute(pixels) => pixels,
         };
 
-        let new_family = iced_font_to_family(self.format.font);
+        // let new_family = iced_font_to_family(self.format.font);
 
         if state.font_data.metrics.font_size != fs.0 || state.font_data.metrics.line_height != lh.0
         {
@@ -549,8 +575,8 @@ where
             *state.font_data.last_text.borrow_mut() = None;
         }
 
-        if state.font_data.family != new_family {
-            state.font_data.family = new_family;
+        if state.font_data.font != self.format.font {
+            state.font_data.font = self.format.font;
             // Invalidate cached glyphs so parse_text reshapes
             *state.font_data.last_text.borrow_mut() = None;
         }
@@ -672,13 +698,29 @@ where
         if glyphs.is_empty() {
             return;
         }
-        let font_bytes = state
-            .font_data
-            .font_cache
-            .borrow()
-            .get(&glyphs[0].font_id)
-            .cloned()
-            .unwrap_or_default();
+        // let weight = iced_weight(state.font_data.font);
+        // let style = iced_style(state.font_data.font);
+        // only keep fonts matching the current weight and style
+        // let fonts: HashMap<cosmic_text::fontdb::ID, (Vec<u8>, u32)> = state
+        //     .font_data
+        //     .font_cache
+        //     .borrow()
+        //     .iter()
+        //     .filter(|(key, (_, _))| {
+        //         let font_key = FontKey {
+        //             font_id: key.font_id,
+        //             style,
+        //             weight,
+        //         };
+        //         font_key == font_key
+        //     })
+        //     .collect();
+        let fonts = state.font_data.font_cache.borrow().clone();
+        // for (font_id, _font_bytes) in fonts.iter() {
+        //     if let Some(info) = state.font_data.font_system.borrow().db().face(*font_id) {
+        //         println!("Font: {:?} {:?} {:?}", font_id, info.families, info.weight);
+        //     }
+        // }
         // println!("font_bytes: {:?} {}", font_bytes.0.len(), font_bytes.1);
         // let font = Face::parse(a.get(&glyphs[0].font_id).unwrap().as_ref(), 0).unwrap();
 
@@ -687,7 +729,7 @@ where
             crate::primitive::text::TextPrimitive {
                 id: state.id,
                 text: self.fragment.to_string(),
-                font_bytes,
+                fonts,
                 glyphs,
                 font_size: self.format.size.unwrap_or(16.0.into()).0,
                 uniforms: crate::uniforms::Uniforms {
@@ -838,5 +880,46 @@ fn iced_font_to_family(font: Option<iced::Font>) -> cosmic_text::Family<'static>
         iced::font::Family::Cursive => cosmic_text::Family::Cursive,
         iced::font::Family::Monospace => cosmic_text::Family::Monospace,
         iced::font::Family::Fantasy => cosmic_text::Family::Fantasy,
+    }
+}
+
+fn iced_weight(font: Option<iced::Font>) -> cosmic_text::Weight {
+    cosmic_text::Weight(
+        match font.map(|f| f.weight).unwrap_or(iced::font::Weight::Normal) {
+            iced::font::Weight::Thin => 100,
+            iced::font::Weight::ExtraLight => 200,
+            iced::font::Weight::Light => 300,
+            iced::font::Weight::Normal => 400,
+            iced::font::Weight::Medium => 500,
+            iced::font::Weight::Semibold => 600,
+            iced::font::Weight::Bold => 700,
+            iced::font::Weight::ExtraBold => 800,
+            iced::font::Weight::Black => 900,
+        },
+    )
+}
+
+fn iced_style(font: Option<iced::Font>) -> cosmic_text::Style {
+    match font.map(|f| f.style).unwrap_or(iced::font::Style::Normal) {
+        iced::font::Style::Normal => cosmic_text::Style::Normal,
+        iced::font::Style::Italic => cosmic_text::Style::Italic,
+        iced::font::Style::Oblique => cosmic_text::Style::Oblique,
+    }
+}
+
+fn iced_stretch(font: Option<iced::Font>) -> cosmic_text::Stretch {
+    match font
+        .map(|f| f.stretch)
+        .unwrap_or(iced::font::Stretch::Normal)
+    {
+        iced::font::Stretch::UltraCondensed => cosmic_text::Stretch::UltraCondensed,
+        iced::font::Stretch::ExtraCondensed => cosmic_text::Stretch::ExtraCondensed,
+        iced::font::Stretch::Condensed => cosmic_text::Stretch::Condensed,
+        iced::font::Stretch::SemiCondensed => cosmic_text::Stretch::SemiCondensed,
+        iced::font::Stretch::Normal => cosmic_text::Stretch::Normal,
+        iced::font::Stretch::SemiExpanded => cosmic_text::Stretch::SemiExpanded,
+        iced::font::Stretch::Expanded => cosmic_text::Stretch::Expanded,
+        iced::font::Stretch::ExtraExpanded => cosmic_text::Stretch::ExtraExpanded,
+        iced::font::Stretch::UltraExpanded => cosmic_text::Stretch::UltraExpanded,
     }
 }

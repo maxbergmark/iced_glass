@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 
 use cosmic_text::fontdb;
 use etagere::{AtlasAllocator, size2};
-use ttf_parser::GlyphId;
 
 use crate::{
     shader::{
@@ -40,6 +39,17 @@ pub struct SharedBindGroupData {
     pub bgl_text: wgpu::BindGroupLayout,     // group 0 layout
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+pub struct GlyphId(pub u16);
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Rect {
+    pub x_min: i16,
+    pub y_min: i16,
+    pub x_max: i16,
+    pub y_max: i16,
+}
+
 pub struct AtlasData {
     pub texture_atlas: wgpu::Texture,
     pub atlas_position: HashMap<(fontdb::ID, GlyphId), AtlasPosition>,
@@ -69,7 +79,7 @@ pub struct TextInstance {
 pub struct AtlasPosition {
     pub position: iced::Point<u32>,
     pub size: iced::Size<u32>,
-    pub bbox: ttf_parser::Rect,
+    pub bbox: Rect,
     pub units_per_em: f32,
     pub framing: msdfgen::Framing<f64>,
 }
