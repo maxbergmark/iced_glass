@@ -87,30 +87,36 @@ pub fn glass_text<'a, Renderer, Theme>(
 ) -> GlassText<'a, Renderer, Theme>
 where
     Theme: Catalog + 'a,
-    Renderer: iced::advanced::text::Renderer,
+    Renderer: iced::advanced::text::Renderer<Font = iced::Font>,
 {
     GlassText::new(content)
 }
 
 use cosmic_text::{Buffer, FontSystem, LayoutGlyph, Metrics};
-use std::cell::RefCell;
+use itertools::Itertools;
+use std::{cell::RefCell, collections::HashMap};
 use ttf_parser::GlyphId;
 
-use crate::{font, pipeline::content_scale};
+use crate::pipeline::content_scale;
 struct FontData {
     font_system: RefCell<FontSystem>,
     metrics: Metrics,
+    family: cosmic_text::Family<'static>,
     buffer: RefCell<Buffer>,
+
+    font_cache: RefCell<HashMap<cosmic_text::fontdb::ID, (Vec<u8>, u32)>>,
 
     last_text: RefCell<Option<String>>,
     last_bounds: RefCell<Option<(f32, f32)>>,
     last_glyphs: RefCell<Option<Vec<GlyphData>>>,
     last_metrics: RefCell<Option<Metrics>>,
+    last_family: RefCell<Option<cosmic_text::Family<'static>>>,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct GlyphData {
     pub glyph_id: GlyphId,
+    pub font_id: cosmic_text::fontdb::ID,
     // pub glyph: char,
     pub x: f32,
     pub y: f32,
@@ -123,6 +129,7 @@ impl GlyphData {
     pub fn new(glyph: &LayoutGlyph, run_line_y: f32) -> Self {
         Self {
             glyph_id: GlyphId(glyph.glyph_id),
+            font_id: glyph.font_id,
             x: glyph.x,
             y: glyph.y,
             run_line_y,
@@ -133,12 +140,21 @@ impl GlyphData {
 }
 
 impl FontData {
-    fn new(font_size: Pixels, line_height: LineHeight) -> Self {
+    fn new(
+        family: cosmic_text::Family<'static>,
+        font_size: Pixels,
+        line_height: LineHeight,
+    ) -> Self {
         let mut font_system = FontSystem::new();
         // let f = include_bytes!("/System/Library/Fonts/Supplemental/Arial Unicode.ttf");
 
         // let font = Face::parse(f, 0).unwrap();
-        font_system.db_mut().load_font_data(font::FONT.to_vec());
+        // TODO: how will this work with multiple fonts?
+        // font_system.db_mut().load_font_data(font::FONT.to_vec());
+        font_system
+            .db_mut()
+            .load_font_data(notosans::REGULAR_TTF.to_vec());
+        // font_system.db_mut().load_font_data(f.to_vec());
         // Metrics: font_size, line_height
         let lh = match line_height {
             LineHeight::Relative(factor) => Pixels(factor * font_size.0),
@@ -152,11 +168,16 @@ impl FontData {
             font_system: RefCell::new(font_system),
             metrics,
             buffer: RefCell::new(buffer),
+            // TODO: fix this
+            family,
+
+            font_cache: RefCell::new(HashMap::new()),
 
             last_text: RefCell::new(None),
             last_bounds: RefCell::new(None),
             last_glyphs: RefCell::new(None),
             last_metrics: RefCell::new(None),
+            last_family: RefCell::new(None),
         }
     }
 }
@@ -164,7 +185,7 @@ impl FontData {
 impl<'a, Renderer, Theme> GlassText<'a, Renderer, Theme>
 where
     Theme: Catalog,
-    Renderer: iced::advanced::text::Renderer,
+    Renderer: iced::advanced::text::Renderer<Font = iced::Font>,
 {
     /// Create a new fragment of [`Text`] with the given contents.
     pub fn new(fragment: impl text::IntoFragment<'a>) -> Self {
@@ -231,10 +252,13 @@ where
     fn parse_text(font_data: &FontData, s: &str, bounds: &Rectangle) -> Vec<GlyphData> {
         use cosmic_text::{Attrs, Shaping};
 
+        // println!("family: {:?}", font_data.family);
+        // println!("last_family: {:?}", font_data.last_family.borrow());
         let needs_reshape = font_data.last_text.borrow().as_deref() != Some(s)
             || font_data.last_bounds.borrow().as_ref() != Some(&(bounds.width, bounds.height))
             || font_data.last_glyphs.borrow().is_none()
-            || font_data.last_metrics.borrow().as_ref() != Some(&font_data.metrics);
+            || font_data.last_metrics.borrow().as_ref() != Some(&font_data.metrics)
+            || font_data.last_family.borrow().as_ref() != Some(&font_data.family);
 
         // println!("{}", font_data.metrics.font_size);
         if !needs_reshape {
@@ -249,7 +273,7 @@ where
         let mut buffer = buffer.borrow_with(&mut font_system);
 
         buffer.set_size(Some(bounds.width), Some(bounds.height));
-        let attrs = Attrs::new().family(font::FAMILY);
+        let attrs = Attrs::new().family(font_data.family);
         buffer.set_text(s, &attrs, Shaping::Advanced, None);
 
         // let elapsed1 = now.elapsed();
@@ -267,6 +291,24 @@ where
             .collect();
         font_data.last_glyphs.replace(Some(glyphs.clone()));
         font_data.last_metrics.replace(Some(font_data.metrics));
+        font_data.last_family.replace(Some(font_data.family));
+
+        let all_fonts: Vec<cosmic_text::fontdb::ID> =
+            glyphs.iter().map(|glyph| glyph.font_id).unique().collect();
+
+        for font_id in all_fonts {
+            let _font_bytes = font_data
+                .font_cache
+                .borrow_mut()
+                .entry(font_id)
+                .or_insert_with(|| {
+                    let mut data = None;
+                    font_system.db().with_face_data(font_id, |bytes, index| {
+                        data = Some((bytes.to_vec(), index));
+                    });
+                    data.unwrap()
+                });
+        }
         // let elapsed2 = now.elapsed();
         // println!("Time taken to parse text: {:?}", elapsed2);
         glyphs
@@ -461,7 +503,7 @@ impl<Message, Theme, Renderer> iced::advanced::Widget<Message, Theme, Renderer>
     for GlassText<'_, Renderer, Theme>
 where
     Theme: Catalog,
-    Renderer: iced::advanced::text::Renderer + iced_wgpu::primitive::Renderer,
+    Renderer: iced::advanced::text::Renderer<Font = iced::Font> + iced_wgpu::primitive::Renderer,
 {
     fn tag(&self) -> tree::Tag {
         // self.content.as_widget().tag()
@@ -473,6 +515,7 @@ where
         tree::State::new(State {
             id: NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             font_data: FontData::new(
+                iced_font_to_family(self.format.font),
                 self.format.size.unwrap_or(16.0.into()),
                 self.format.line_height,
             ),
@@ -494,11 +537,20 @@ where
             LineHeight::Relative(factor) => Pixels(factor * fs.0),
             LineHeight::Absolute(pixels) => pixels,
         };
+
+        let new_family = iced_font_to_family(self.format.font);
+
         if state.font_data.metrics.font_size != fs.0 || state.font_data.metrics.line_height != lh.0
         {
             let new_metrics = Metrics::new(fs.0, lh.0);
             state.font_data.metrics = new_metrics;
             state.font_data.buffer.borrow_mut().set_metrics(new_metrics);
+            // Invalidate cached glyphs so parse_text reshapes
+            *state.font_data.last_text.borrow_mut() = None;
+        }
+
+        if state.font_data.family != new_family {
+            state.font_data.family = new_family;
             // Invalidate cached glyphs so parse_text reshapes
             *state.font_data.last_text.borrow_mut() = None;
         }
@@ -616,11 +668,26 @@ where
 
         let glyphs = Self::parse_text(&state.font_data, &self.fragment, &bounds);
 
+        // let font = Face::parse(state.font_data.family.clone(), 0).unwrap();
+        if glyphs.is_empty() {
+            return;
+        }
+        let font_bytes = state
+            .font_data
+            .font_cache
+            .borrow()
+            .get(&glyphs[0].font_id)
+            .cloned()
+            .unwrap_or_default();
+        // println!("font_bytes: {:?} {}", font_bytes.0.len(), font_bytes.1);
+        // let font = Face::parse(a.get(&glyphs[0].font_id).unwrap().as_ref(), 0).unwrap();
+
         renderer.draw_primitive(
             bounds,
             crate::primitive::text::TextPrimitive {
                 id: state.id,
                 text: self.fragment.to_string(),
+                font_bytes,
                 glyphs,
                 font_size: self.format.size.unwrap_or(16.0.into()).0,
                 uniforms: crate::uniforms::Uniforms {
@@ -670,7 +737,8 @@ impl<'a, Message, Theme, Renderer> From<GlassText<'a, Renderer, Theme>>
     for Element<'a, Message, Theme, Renderer>
 where
     Theme: Catalog + 'a,
-    Renderer: iced::advanced::text::Renderer + iced_wgpu::primitive::Renderer + 'a,
+    Renderer:
+        iced::advanced::text::Renderer<Font = iced::Font> + iced_wgpu::primitive::Renderer + 'a,
 {
     fn from(text: GlassText<'a, Renderer, Theme>) -> Element<'a, Message, Theme, Renderer> {
         Element::new(text)
@@ -758,3 +826,17 @@ where
 //         );
 //     }
 // }
+
+fn iced_font_to_family(font: Option<iced::Font>) -> cosmic_text::Family<'static> {
+    match font
+        .map(|f| f.family)
+        .unwrap_or(iced::font::Family::SansSerif)
+    {
+        iced::font::Family::Name(name) => cosmic_text::Family::Name(name),
+        iced::font::Family::SansSerif => cosmic_text::Family::SansSerif,
+        iced::font::Family::Serif => cosmic_text::Family::Serif,
+        iced::font::Family::Cursive => cosmic_text::Family::Cursive,
+        iced::font::Family::Monospace => cosmic_text::Family::Monospace,
+        iced::font::Family::Fantasy => cosmic_text::Family::Fantasy,
+    }
+}

@@ -18,6 +18,7 @@ pub struct Ui {
     opacity: f32,
     font_size: f32,
     line_height: f32,
+    font_selection: Option<FontSelection>,
     text: String,
 }
 
@@ -34,7 +35,25 @@ pub enum Message {
     RefractiveIndex(f32),
     RimWidth(f32),
     Opacity(f32),
+    FontSelection(FontSelection),
     Text(String),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FontSelection {
+    NotoSans,
+    ArialUnicodeMS,
+    SongtiSC,
+}
+
+impl FontSelection {
+    fn name(&self) -> &'static str {
+        match self {
+            FontSelection::NotoSans => "Noto Sans",
+            FontSelection::ArialUnicodeMS => "Arial Unicode MS",
+            FontSelection::SongtiSC => "Songti SC",
+        }
+    }
 }
 
 impl Default for Ui {
@@ -47,10 +66,11 @@ impl Default for Ui {
             line_height: 1.2,
             blur_radius: 100.0,
             saturation: 1.0,
-            lightness: 0.0,
+            lightness: 2.0,
             refractive_index: 1.5,
             rim_width: 0.5,
             opacity: 1.0,
+            font_selection: Some(FontSelection::ArialUnicodeMS),
             text: String::new(),
         }
     }
@@ -107,6 +127,10 @@ impl Ui {
                 self.opacity = opacity;
                 Task::none()
             }
+            Message::FontSelection(font_selection) => {
+                self.font_selection = Some(font_selection);
+                Task::none()
+            }
         }
     }
 
@@ -147,6 +171,7 @@ impl Ui {
                         1.0..=400.0,
                         Message::FontSize
                     ),
+                    self.font_selector(),
                 ]
                 .align_y(Alignment::Center)
                 .padding(20.0)
@@ -209,6 +234,65 @@ impl Ui {
         .into()
     }
 
+    fn font_selector(&self) -> iced::Element<'_, Message> {
+        iced_glass::widget::container(
+            iced::widget::column![
+                iced::widget::text("Font: "),
+                iced::widget::row![
+                    iced::widget::column![
+                        iced::widget::radio(
+                            "Noto",
+                            FontSelection::NotoSans,
+                            self.font_selection,
+                            Message::FontSelection
+                        ),
+                        iced::widget::radio(
+                            "Arial",
+                            FontSelection::ArialUnicodeMS,
+                            self.font_selection,
+                            Message::FontSelection
+                        ),
+                    ],
+                    iced::widget::column![iced::widget::radio(
+                        "Songti",
+                        FontSelection::SongtiSC,
+                        self.font_selection,
+                        Message::FontSelection
+                    ),],
+                ]
+                .spacing(10.0),
+            ]
+            .align_x(Alignment::Center)
+            .spacing(5.0)
+            .padding(iced::Padding {
+                top: 0.0,
+                right: 15.0,
+                bottom: 0.0,
+                left: 15.0,
+            }),
+        )
+        .center_x(200.0)
+        .center_y(100.0)
+        .padding(10.0)
+        .blur_radius(50.0)
+        .saturation(1.0)
+        .lightness(-2.0)
+        .rim_width(1.0)
+        .style(|_theme| iced::widget::container::Style {
+            shadow: iced::Shadow {
+                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+                offset: iced::Vector::new(0.0, 12.0),
+                blur_radius: 40.0,
+            },
+            border: iced::Border {
+                radius: 20.0.into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .into()
+    }
+
     fn text_input(&self) -> iced::Element<'_, Message> {
         iced_glass::widget::container(
             iced::widget::column![
@@ -248,6 +332,7 @@ impl Ui {
 
     #[allow(dead_code)]
     fn styled_text<'a>(&self, s: &'a str) -> iced::Element<'a, Message> {
+        let family = self.font_selection.map(|f| iced::Font::with_name(f.name()));
         iced::widget::container(
             iced_glass::widget::text(s)
                 .width(Length::Fill)
@@ -261,6 +346,7 @@ impl Ui {
                 .saturation(self.saturation)
                 .lightness(self.lightness)
                 .size(self.font_size)
+                .font_maybe(family)
                 .line_height(self.line_height),
         )
         .width(self.container_size)

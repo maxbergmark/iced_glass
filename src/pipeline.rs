@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use cosmic_text::fontdb;
 use etagere::{AtlasAllocator, size2};
 use ttf_parser::GlyphId;
 
@@ -41,7 +42,7 @@ pub struct SharedBindGroupData {
 
 pub struct AtlasData {
     pub texture_atlas: wgpu::Texture,
-    pub atlas_position: HashMap<GlyphId, AtlasPosition>,
+    pub atlas_position: HashMap<(fontdb::ID, GlyphId), AtlasPosition>,
     pub allocator: AtlasAllocator,
 }
 
