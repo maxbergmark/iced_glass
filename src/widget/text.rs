@@ -484,8 +484,8 @@ where
             LineHeight::Absolute(pixels) => pixels,
         };
 
-        if (state.font_data.metrics.font_size - fs.0).abs() < f32::EPSILON
-            || (state.font_data.metrics.line_height - lh.0).abs() < f32::EPSILON
+        if (state.font_data.metrics.font_size - fs.0).abs() > f32::EPSILON
+            || (state.font_data.metrics.line_height - lh.0).abs() > f32::EPSILON
         {
             let new_metrics = Metrics::new(fs.0, lh.0);
             state.font_data.metrics = new_metrics;
