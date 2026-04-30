@@ -11,13 +11,13 @@
 
 A Rust library and demo app that implements Apple-style **liquid / frosted glass** UI effects using [Iced](https://github.com/iced-rs/iced) and custom WGPU shader pipelines.
 
-![iced_glass example](examples/iced_glass_example.png)
+![iced_glass example](docs/iced_glass_example.png)
 
 https://github.com/user-attachments/assets/eb63dcc4-f406-4a2a-9990-b35bba1ec828
 
 ## Text
 
-![iced_glass example](examples/text_rendering.png)
+![iced_glass example](docs/text_rendering.png)
 
 With the rewrite of the refraction math using signed distance functions, it is now possible to render text with refraction. This is still a work in progress, as characters are rendered one at a time.
 

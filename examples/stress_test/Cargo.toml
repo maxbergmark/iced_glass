@@ -1,0 +1,10 @@
+[package]
+name = "stress_test"
+version = "0.1.0"
+authors = ["Max Bergmark <max.bergmark@gmail.com>"]
+edition = "2024"
+publish = false
+
+[dependencies]
+iced_glass.workspace = true
+iced.workspace = true

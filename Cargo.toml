@@ -26,3 +26,16 @@ notosans = "0.1.0"
 etagere = "0.3.0"
 # freetype-rs = "0.38.0"
 freetype-rs = "0.32.0"
+
+[workspace]
+members = [".", "examples/*"]
+
+[workspace.dependencies]
+iced_glass = { path = "." }
+iced = { git = "https://github.com/maxbergmark/iced", features = [
+    "wgpu",
+    "image",
+    "advanced",
+    "svg",
+    "tokio",
+], branch = "latest" }

@@ -1,9 +1,8 @@
 use std::ops::RangeInclusive;
 
-use iced::{Alignment, Length, Task, color};
+use iced::{Alignment, Length, Size, Task, color};
 
-#[allow(unused_imports)]
-use crate::scenes::declaration;
+mod declaration;
 
 #[derive(Debug, Clone)]
 pub struct Ui {
@@ -64,6 +63,15 @@ impl FontSelection {
     }
 }
 
+fn main() -> iced::Result {
+    iced::application(Ui::boot, Ui::update, Ui::view)
+        .subscription(Ui::subscription)
+        .antialiasing(true)
+        .window_size(Size::new(2560.0, 1440.0))
+        .title("Liquid Glass Demo")
+        .run()
+}
+
 impl Default for Ui {
     fn default() -> Self {
         Self {
@@ -88,6 +96,14 @@ impl Default for Ui {
 }
 
 impl Ui {
+    pub fn boot() -> (Ui, Task<Message>) {
+        (Self::default(), Task::none())
+    }
+
+    pub fn subscription(&self) -> iced::Subscription<Message> {
+        iced::Subscription::none()
+    }
+
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::ContainerSize(size) => {

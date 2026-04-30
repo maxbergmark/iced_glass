@@ -1,6 +1,8 @@
 use std::time::Instant;
 
-use iced::{Alignment, Animation, Background, Border, Color, Font, Length, Task, font::Weight};
+use iced::{
+    Alignment, Animation, Background, Border, Color, Font, Length, Size, Task, font::Weight,
+};
 use itertools::Itertools;
 use serde::Deserialize;
 
@@ -40,9 +42,18 @@ pub struct AlbumCard {
     year: i32,
 }
 
+fn main() -> iced::Result {
+    iced::application(Ui::boot, Ui::update, Ui::view)
+        .subscription(Ui::subscription)
+        .antialiasing(true)
+        .window_size(Size::new(2560.0, 1440.0))
+        .title("Liquid Glass Demo")
+        .run()
+}
+
 impl Default for Ui {
     fn default() -> Self {
-        let album_cards = include_str!("../../assets/album_covers/albums.json");
+        let album_cards = include_str!("../../../assets/album_covers/albums.json");
         let album_cards: Vec<AlbumCard> =
             serde_json::from_str(album_cards).expect("Failed to parse album cards");
         Self {
@@ -61,9 +72,9 @@ impl Default for Ui {
 }
 
 impl Ui {
-    // pub fn boot() -> (Ui, Task<Message>) {
-    //     (Self::default(), Task::none())
-    // }
+    pub fn boot() -> (Ui, Task<Message>) {
+        (Self::default(), Task::none())
+    }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {

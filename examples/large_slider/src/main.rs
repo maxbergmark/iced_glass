@@ -1,4 +1,4 @@
-use iced::{Alignment, Background, Gradient, Length, Radians, Task, gradient::Linear};
+use iced::{Alignment, Background, Gradient, Length, Radians, Size, Task, gradient::Linear};
 
 #[derive(Debug, Clone)]
 pub struct Ui {
@@ -27,7 +27,24 @@ impl Default for Ui {
     }
 }
 
+fn main() -> iced::Result {
+    iced::application(Ui::boot, Ui::update, Ui::view)
+        .subscription(Ui::subscription)
+        .antialiasing(true)
+        .window_size(Size::new(2560.0, 1440.0))
+        .title("Liquid Glass Demo")
+        .run()
+}
+
 impl Ui {
+    pub fn boot() -> (Ui, Task<Message>) {
+        (Self::default(), Task::none())
+    }
+
+    pub fn subscription(&self) -> iced::Subscription<Message> {
+        iced::Subscription::none()
+    }
+
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Value(value) => {
