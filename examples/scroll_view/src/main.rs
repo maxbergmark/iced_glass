@@ -198,7 +198,7 @@ impl Ui {
     fn search_bar(&self) -> iced::Element<'_, Message> {
         iced_glass::widget::container(
             iced::widget::row![
-                iced::widget::svg("assets/search.svg")
+                iced::widget::svg("examples/scroll_view/assets/search.svg")
                     .width(Length::from(30.0))
                     .height(Length::from(30.0))
                     .style(|theme, _status| self.icon_style(theme)),
