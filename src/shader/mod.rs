@@ -3,7 +3,7 @@ pub mod fragment;
 pub mod gaussian;
 pub mod text;
 
-pub const MIP_LEVEL_COUNT: u32 = 5;
+pub const MIP_LEVEL_COUNT: u32 = 4;
 
 // #[derive(Debug)]
 // pub struct RenderShaderData {
