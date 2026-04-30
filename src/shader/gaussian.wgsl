@@ -50,8 +50,6 @@ fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
     let pos = positions[vertex_index];
     var out: VertexOutput;
     out.position = vec4<f32>(pos, 0.0, 1.0);
-    // out.uv = pos * 0.5 + vec2<f32>(0.5, 0.5); // Map from [-1,1] to [0,1]
-    // out.uv.y = 1.0 - out.uv.y; // Flip Y for texture coordinates
     out.uv = pos * 0.5 + vec2<f32>(0.5, 0.5);
     out.uv.y = 1.0 - out.uv.y; // Flip Y for texture coordinates
     return out;
@@ -72,14 +70,12 @@ fn gaussian_blur(input: FragInput) -> @location(0) vec4<f32> {
     var total_weight = 0.0;
     for (var x = -radius; x <= radius; x += round(step)) {
         let offset = direction * x * texel_size;
-        // let sample_uv = uv + offset;
         let sample_uv = clamp(uv + offset, vec2(0.0), uniforms.content_scale);
         let dist = x * x;
         let weight = exp(-dist / (2.0 * radius));
         total_weight += weight;
         step = 1.0 + 0.05 * abs(x);
         color += srgb_to_linear(textureSample(image, image_sampler, sample_uv)) * weight;
-        // step = 1.0;
     }
     return linear_to_srgb(color / total_weight);
 }
