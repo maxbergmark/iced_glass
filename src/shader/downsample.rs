@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+#[derive(Debug, Clone, Copy)]
 pub struct DownsampleShader;
 
 impl DownsampleShader {

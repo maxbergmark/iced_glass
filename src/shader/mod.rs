@@ -5,6 +5,7 @@ pub mod text;
 
 pub const MIP_LEVEL_COUNT: u32 = 5;
 
+#[derive(Debug)]
 pub struct RenderShaderData {
     pub pipeline: wgpu::RenderPipeline,
     pub bind_group: wgpu::BindGroup,

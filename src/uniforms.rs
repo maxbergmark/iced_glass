@@ -69,6 +69,6 @@ pub struct Raw {
     pub rim_width: f32,
 
     pub opacity: f32,
-    pub _pad: f32,
-    pub _pad2: [f32; 2],
+    _pad: f32,
+    _pad2: [f32; 2],
 }

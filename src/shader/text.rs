@@ -9,6 +9,8 @@ use crate::{
 // TODO: make these dynamic based on the texture atlas size and the number of glyphs
 pub const TEXT_ATLAS_SIZE: u32 = 2048;
 pub const MAX_GLYPHS: u32 = 80000;
+
+#[derive(Debug, Clone, Copy)]
 pub struct TextShader;
 
 impl TextShader {
@@ -157,8 +159,8 @@ impl TextShader {
             label: Some("text.vertex_buffer"),
             size: std::mem::size_of::<f32>() as u64
                 * std::mem::size_of::<VertexData>() as u64
-                * VERTICES_PER_GLYPH as u64
-                * MAX_GLYPHS as u64,
+                * u64::from(VERTICES_PER_GLYPH)
+                * u64::from(MAX_GLYPHS),
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         })

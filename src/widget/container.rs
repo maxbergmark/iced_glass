@@ -13,6 +13,7 @@ use iced::{
 };
 use iced_wgpu::primitive::Renderer as _;
 
+#[must_use]
 pub struct GlassContainer<'a, Message, Theme = iced::Theme>
 where
     Theme: Catalog,
@@ -39,6 +40,19 @@ where
     refractive_index: f32,
     rim_width: f32,
     opacity: f32,
+}
+
+impl<Message, Theme> std::fmt::Debug for GlassContainer<'_, Message, Theme>
+where
+    Theme: Catalog,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GlassContainer")
+            .field("width", &self.width)
+            .field("height", &self.height)
+            .field("blur_radius", &self.blur_radius)
+            .finish_non_exhaustive()
+    }
 }
 
 pub fn glass_container<'a, Message, Theme>(
@@ -177,13 +191,12 @@ where
 
     /// Sets whether the contents of the [`Container`] should be clipped on
     /// overflow.
-    pub fn clip(mut self, clip: bool) -> Self {
+    pub const fn clip(mut self, clip: bool) -> Self {
         self.clip = clip;
         self
     }
 
     /// Sets the style of the [`Container`].
-    #[must_use]
     pub fn style(mut self, style: impl Fn(&Theme) -> Style + 'a) -> Self
     where
         Theme::Class<'a>: From<StyleFn<'a, Theme>>,
@@ -193,48 +206,47 @@ where
     }
 
     /// Sets the style class of the [`Container`].
-    #[must_use]
     pub fn class(mut self, class: impl Into<Theme::Class<'a>>) -> Self {
         self.class = class.into();
         self
     }
 
-    pub fn blur_radius(mut self, radius: f32) -> Self {
+    pub const fn blur_radius(mut self, radius: f32) -> Self {
         self.blur_radius = radius;
         self
     }
 
-    pub fn saturation(mut self, saturation: f32) -> Self {
+    pub const fn saturation(mut self, saturation: f32) -> Self {
         self.saturation = saturation;
         self
     }
 
-    pub fn lightness(mut self, lightness: f32) -> Self {
+    pub const fn lightness(mut self, lightness: f32) -> Self {
         self.lightness = lightness;
         self
     }
 
-    pub fn edge_radius(mut self, edge_radius: f32) -> Self {
+    pub const fn edge_radius(mut self, edge_radius: f32) -> Self {
         self.edge_radius = edge_radius;
         self
     }
 
-    pub fn edge_height(mut self, edge_height: f32) -> Self {
+    pub const fn edge_height(mut self, edge_height: f32) -> Self {
         self.edge_height = edge_height;
         self
     }
 
-    pub fn refractive_index(mut self, refractive_index: f32) -> Self {
+    pub const fn refractive_index(mut self, refractive_index: f32) -> Self {
         self.refractive_index = refractive_index;
         self
     }
 
-    pub fn rim_width(mut self, rim_width: f32) -> Self {
+    pub const fn rim_width(mut self, rim_width: f32) -> Self {
         self.rim_width = rim_width;
         self
     }
 
-    pub fn opacity(mut self, opacity: f32) -> Self {
+    pub const fn opacity(mut self, opacity: f32) -> Self {
         self.opacity = opacity;
         self
     }
@@ -310,12 +322,12 @@ where
         operation: &mut dyn Operation,
     ) {
         operation.container(self.id.as_ref(), layout.bounds());
-        operation.traverse(&mut |operation| {
+        operation.traverse(&mut |op| {
             self.content.as_widget_mut().operate(
                 &mut tree.children[0],
                 layout.children().next().unwrap(),
                 renderer,
-                operation,
+                op,
             );
         });
     }
@@ -373,13 +385,13 @@ where
         let state = tree.state.downcast_ref::<State>();
         let bounds = layout.bounds();
         let style = theme.style(&self.class);
-        let tint = style
-            .background
-            .map(|background| match background {
+        let tint = style.background.map_or_else(
+            || Color::WHITE,
+            |background| match background {
                 Background::Color(color) => color,
-                _ => Color::WHITE,
-            })
-            .unwrap_or(Color::WHITE);
+                Background::Gradient(_) => Color::WHITE,
+            },
+        );
 
         renderer.draw_primitive(
             bounds,
@@ -451,7 +463,7 @@ where
     Message: 'a,
     Theme: Catalog + 'a,
 {
-    fn from(container: GlassContainer<'a, Message, Theme>) -> Element<'a, Message, Theme> {
+    fn from(container: GlassContainer<'a, Message, Theme>) -> Self {
         Element::new(container)
     }
 }

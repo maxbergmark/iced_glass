@@ -2,6 +2,7 @@ use std::borrow::Cow;
 
 use crate::shader::uniforms_bind_group_layout;
 
+#[derive(Debug, Clone, Copy)]
 pub struct FragmentShader;
 
 impl FragmentShader {

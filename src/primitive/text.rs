@@ -51,9 +51,7 @@ impl iced::widget::shader::Primitive for TextPrimitive {
         let instance = pipeline.text_instances.get_mut(&self.id).unwrap();
         let atlas_data = &mut pipeline.atlas_data;
 
-        let vertices = self
-            .create_vertex_buffer(atlas_data, queue, bounds)
-            .unwrap_or_default();
+        let vertices = self.create_vertex_buffer(atlas_data, queue, bounds);
         instance.num_glyphs = vertices.len() as u32 / VERTICES_PER_GLYPH;
         queue.write_buffer(&instance.vertex_buffer, 0, bytemuck::cast_slice(&vertices));
     }
@@ -143,11 +141,11 @@ impl TextPrimitive {
         atlas_data: &mut AtlasData,
         queue: &wgpu::Queue,
         bounds: &iced::Rectangle<f32>,
-    ) -> Option<Vec<VertexData>> {
+    ) -> Vec<VertexData> {
         let mut vertices = Vec::new();
         let mut font_cache = HashMap::new();
 
-        for glyph in self.glyphs.iter() {
+        for glyph in &self.glyphs {
             let font = font_cache.entry(glyph.font_id).or_insert_with(|| {
                 let font_bytes = self.fonts.get(&glyph.font_id).unwrap();
                 let library = freetype::Library::init().unwrap();
@@ -166,16 +164,16 @@ impl TextPrimitive {
                 vertices.extend(add_vertices(bounds, &ap, glyph, self.font_size));
             }
         }
-        Some(vertices)
+        vertices
     }
 }
 
 fn get_sdf_data(font: &Face, glyph: GlyphId) -> Option<(Vec<u8>, iced::Size<u32>, Framing<f64>)> {
-    let mut shape = font.glyph_shape(glyph.0 as u32)?;
+    let mut shape = font.glyph_shape(u32::from(glyph.0))?;
     let size = get_glyph_size(font, glyph);
 
     let bound = shape.get_bound();
-    let range = Range::Px(MSDF_PADDING as f64);
+    let range = Range::Px(f64::from(MSDF_PADDING));
     let framing = bound.autoframe(size.width, size.height, range, None)?;
 
     let fill_rule = FillRule::default();
@@ -203,7 +201,7 @@ fn to_rgbau8(bitmap: &Bitmap<Rgb<f32>>) -> Vec<u8> {
                 (p.g.clamp(0.0, 1.0) * 255.0) as u8,
                 (p.b.clamp(0.0, 1.0) * 255.0) as u8,
                 // (p.a.clamp(0.0, 1.0) * 255.0) as u8,
-                255u8,
+                255_u8,
             ]
         })
         .collect()
@@ -211,13 +209,13 @@ fn to_rgbau8(bitmap: &Bitmap<Rgb<f32>>) -> Vec<u8> {
 
 fn get_glyph_size(font: &Face, glyph: GlyphId) -> iced::Size<u32> {
     let bbox = get_glyph_bounding_box(font, glyph).unwrap();
-    let units_per_em = font.em_size() as f32;
+    let units_per_em = f32::from(font.em_size());
     let scale = MSDF_FONT_SIZE / units_per_em;
 
-    let x_min = bbox.x_min as f32 * scale;
-    let y_min = bbox.y_min as f32 * scale;
-    let x_max = bbox.x_max as f32 * scale;
-    let y_max = bbox.y_max as f32 * scale;
+    let x_min = f32::from(bbox.x_min) * scale;
+    let y_min = f32::from(bbox.y_min) * scale;
+    let x_max = f32::from(bbox.x_max) * scale;
+    let y_max = f32::from(bbox.y_max) * scale;
     let width = x_max - x_min;
     let height = y_max - y_min;
 
@@ -233,15 +231,12 @@ fn add_to_atlas(
     font: &Face,
     glyph: &GlyphData,
 ) -> Option<AtlasPosition> {
-    let (data, size, framing) = match get_sdf_data(font, glyph.glyph_id) {
-        Some(d) => d,
-        None => {
-            println!(
-                "Failed to get sdf data for glyph: {:?} (font: {:?})",
-                glyph.glyph_id, glyph.font_id
-            );
-            return None;
-        }
+    let Some((data, size, framing)) = get_sdf_data(font, glyph.glyph_id) else {
+        // eprintln!(
+        //     "Failed to get sdf data for glyph: {:?} (font: {:?})",
+        //     glyph.glyph_id, glyph.font_id
+        // );
+        return None;
     };
     // println!("size: {:?}", size);
     let allocation = atlas_data
@@ -254,7 +249,7 @@ fn add_to_atlas(
 
     // TODO: do I need to do this twice?
     let bbox = get_glyph_bounding_box(font, glyph.glyph_id).unwrap();
-    let units_per_em = font.em_size() as f32;
+    let units_per_em = f32::from(font.em_size());
 
     let ap = AtlasPosition {
         position,
@@ -305,7 +300,8 @@ fn copy_to_texture(
 
 fn get_glyph_bounding_box(face: &Face, glyph: GlyphId) -> Option<Rect> {
     use freetype::face::LoadFlag;
-    face.load_glyph(glyph.0 as u32, LoadFlag::NO_SCALE).unwrap();
+    face.load_glyph(u32::from(glyph.0), LoadFlag::NO_SCALE)
+        .ok()?;
     let metrics = face.glyph().metrics();
     let x_min = metrics.horiBearingX as i16;
     let y_min = (metrics.horiBearingY - metrics.height) as i16;
@@ -339,8 +335,8 @@ fn compute_quad(ap: &AtlasPosition, glyph: &GlyphData, bmp_to_screen: f32) -> Qu
     let quad_h = ap.size.height as f32 * bmp_to_screen;
 
     // Anchor the quad so the font origin maps to (glyph.x, run_line_y)
-    let quad_x = glyph.x - origin_bmp_x * bmp_to_screen;
-    let quad_y = glyph.run_line_y - origin_bmp_y_flipped * bmp_to_screen;
+    let quad_x = origin_bmp_x.mul_add(-bmp_to_screen, glyph.x);
+    let quad_y = origin_bmp_y_flipped.mul_add(-bmp_to_screen, glyph.run_line_y);
 
     Quad {
         x: quad_x,
@@ -358,8 +354,8 @@ fn compute_clip(
 ) -> Bounds {
     let quad = compute_quad(ap, glyph, bmp_to_screen);
 
-    let clip_x = (quad.x / bounds.width) * 2.0 - 1.0;
-    let clip_y = 1.0 - (quad.y / bounds.height) * 2.0;
+    let clip_x = (quad.x / bounds.width).mul_add(2.0, -1.0);
+    let clip_y = (quad.y / bounds.height).mul_add(-2.0, 1.0);
     let clip_w = (quad.w / bounds.width) * 2.0;
     let clip_h = -(quad.h / bounds.height) * 2.0; // negative because Y is flipped
 

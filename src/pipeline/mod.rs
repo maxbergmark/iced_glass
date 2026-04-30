@@ -35,6 +35,16 @@ pub struct Pipeline {
     pub atlas_data: AtlasData,
 }
 
+impl std::fmt::Debug for Pipeline {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Pipeline")
+            .field("instances", &self.instances.len())
+            .field("text_instances", &self.text_instances.len())
+            .finish_non_exhaustive()
+    }
+}
+
+#[derive(Debug)]
 pub struct SharedBindGroupData {
     pub device_format: wgpu::TextureFormat,
     pub sampler: wgpu::Sampler,
@@ -58,6 +68,15 @@ pub struct AtlasData {
     pub texture_atlas: wgpu::Texture,
     pub atlas_position: HashMap<(fontdb::ID, GlyphId), AtlasPosition>,
     pub allocator: AtlasAllocator,
+}
+
+impl std::fmt::Debug for AtlasData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AtlasData")
+            .field("texture_atlas", &self.texture_atlas)
+            .field("atlas_position", &self.atlas_position)
+            .finish_non_exhaustive()
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -201,10 +220,10 @@ impl Pipeline {
         scale: f32,
         uniforms: &Uniforms,
     ) {
-        let needs_new = match self.instances.get(&id) {
-            Some(inst) => inst.size.width != width || inst.size.height != height,
-            None => true,
-        };
+        let needs_new = self
+            .instances
+            .get(&id)
+            .is_none_or(|inst| inst.size.width != width || inst.size.height != height);
         if needs_new {
             self.instances.insert(
                 id,
@@ -295,7 +314,7 @@ impl Pipeline {
     }
 }
 
-pub fn round_up(size: u32, granularity: u32) -> u32 {
+pub const fn round_up(size: u32, granularity: u32) -> u32 {
     size.div_ceil(granularity) * granularity
 }
 

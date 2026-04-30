@@ -37,9 +37,8 @@ impl iced::widget::shader::Primitive for Primitive {
     ) {
         let texture = target.texture();
         let instance = pipeline.instance(self.id);
-        let copy_size = match calculate_copy_size(texture, instance, bounds) {
-            Some(size) => size,
-            None => return,
+        let Some(copy_size) = calculate_copy_size(texture, instance, bounds) else {
+            return;
         };
 
         let mip_level = self.uniforms.mip_level();

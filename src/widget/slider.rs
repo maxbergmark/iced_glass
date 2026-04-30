@@ -31,6 +31,7 @@ where
     GlassSlider::new(range, value, on_change)
 }
 
+#[must_use]
 pub struct GlassSlider<'a, T, Message, Theme = iced::Theme>
 where
     Theme: Catalog,
@@ -50,6 +51,20 @@ where
     edge_radius: f32,
     edge_height: f32,
     refractive_index: f32,
+}
+
+impl<T, Message, Theme> std::fmt::Debug for GlassSlider<'_, T, Message, Theme>
+where
+    T: std::fmt::Debug,
+    Theme: Catalog,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GlassSlider")
+            .field("range", &self.range)
+            .field("value", &self.value)
+            .field("width", &self.width)
+            .finish_non_exhaustive()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -126,7 +141,7 @@ where
     ///
     /// Typically, the user's interaction with the slider is finished when this message is produced.
     /// This is useful if you need to spawn a long-running task from the slider's result, where
-    /// the default on_change message could create too many events.
+    /// the default [`on_change`] message could create too many events.
     pub fn on_release(mut self, on_release: Message) -> Self {
         self.on_release = Some(on_release);
         self
@@ -159,7 +174,6 @@ where
     }
 
     /// Sets the style of the [`Slider`].
-    #[must_use]
     pub fn style(mut self, style: impl Fn(&Theme, Status) -> Style + 'a) -> Self
     where
         Theme::Class<'a>: From<StyleFn<'a, Theme>>,
@@ -176,17 +190,17 @@ where
     //     self
     // }
 
-    pub fn edge_radius(mut self, edge_radius: f32) -> Self {
+    pub const fn edge_radius(mut self, edge_radius: f32) -> Self {
         self.edge_radius = edge_radius;
         self
     }
 
-    pub fn edge_height(mut self, edge_height: f32) -> Self {
+    pub const fn edge_height(mut self, edge_height: f32) -> Self {
         self.edge_height = edge_height;
         self
     }
 
-    pub fn refractive_index(mut self, refractive_index: f32) -> Self {
+    pub const fn refractive_index(mut self, refractive_index: f32) -> Self {
         self.refractive_index = refractive_index;
         self
     }
@@ -228,6 +242,7 @@ where
         layout::atomic(limits, self.width, self.height)
     }
 
+    #[allow(clippy::too_many_lines)]
     fn update(
         &mut self,
         tree: &mut Tree,
@@ -265,7 +280,7 @@ where
                     let percent = f64::from(cursor_position.x - bounds.x) / f64::from(bounds.width);
 
                     let steps = (percent * (end - start) / step).round();
-                    let value = steps * step + start;
+                    let value = steps.mul_add(step, start);
 
                     T::from_f64(value.min(end))
                 }
@@ -331,8 +346,9 @@ where
                     }
                 }
                 Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
-                | Event::Touch(touch::Event::FingerLifted { .. })
-                | Event::Touch(touch::Event::FingerLost { .. }) => {
+                | Event::Touch(
+                    touch::Event::FingerLifted { .. } | touch::Event::FingerLost { .. },
+                ) => {
                     if state.is_dragging {
                         if let Some(on_release) = self.on_release.clone() {
                             shell.publish(on_release);
@@ -353,8 +369,8 @@ where
                 {
                     if cursor.is_over(layout.bounds()) {
                         let delta = match delta {
-                            mouse::ScrollDelta::Lines { x: _, y } => y,
-                            mouse::ScrollDelta::Pixels { x: _, y } => y,
+                            mouse::ScrollDelta::Lines { x: _, y }
+                            | mouse::ScrollDelta::Pixels { x: _, y } => y,
                         };
 
                         if *delta < 0.0 {
@@ -567,7 +583,7 @@ where
     Theme: Catalog + 'a,
     // Renderer: iced::Renderer + 'a,
 {
-    fn from(slider: GlassSlider<'a, T, Message, Theme>) -> Element<'a, Message, Theme> {
+    fn from(slider: GlassSlider<'a, T, Message, Theme>) -> Self {
         Element::new(slider)
     }
 }
