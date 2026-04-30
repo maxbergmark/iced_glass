@@ -63,9 +63,11 @@ const TRANSPARENT: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 0.0);
 
 @fragment
 fn fs_main(input: FragInput) -> @location(0) vec4<f32> {
-    return mix(TRANSPARENT, physical_sampling(input), uniforms.opacity);
+    let color = mix(TRANSPARENT, physical_sampling(input), uniforms.opacity);
+    return linear_to_srgb(color);
 }
 
+// returns linear color
 fn physical_sampling(input: FragInput) -> vec4<f32> {
     let ixy = input.uv - vec2<f32>(0.5);
     let dimensions = vec2<f32>(textureDimensions(image));
@@ -92,7 +94,8 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
     color = edge_highlight(color, sdf, gradient);
 
     let aa = fwidth(sdf);
-    let outside_factor = smoothstep(-aa, 0.0, sdf);
+    let outside_factor = smoothstep(-aa, aa, sdf);
+    color = srgb_to_linear(color);
     return mix(color, TRANSPARENT, outside_factor);
 }
 
@@ -103,7 +106,7 @@ fn edge_highlight(color: vec4<f32>, sdf: f32, sdf_gradient: vec2<f32>) -> vec4<f
     let highlight_width = uniforms.rim_width;
     let sun_direction = normalize(vec2<f32>(1.0, 2.0));
     let f = pow(dot(sdf_gradient, sun_direction), 2.0);
-    let t = smoothstep(-highlight_width - aa, -highlight_width, sdf);
+    let t = smoothstep(-highlight_width - aa, -highlight_width + aa, sdf);
     return mix(color, highlight_color, f * t);
 }
 

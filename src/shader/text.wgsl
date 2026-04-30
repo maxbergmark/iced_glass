@@ -71,7 +71,8 @@ const TRANSPARENT: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 0.0);
 
 @fragment
 fn fs_main(input: FragInput) -> @location(0) vec4<f32> {
-    return mix(TRANSPARENT, physical_sampling(input), uniforms.opacity);
+    let color = mix(TRANSPARENT, physical_sampling(input), uniforms.opacity);
+    return linear_to_srgb(color);
 }
 
 fn msdf(uv: vec2<f32>, scale: f32) -> f32 {
@@ -144,6 +145,7 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
 
     let aa = fwidth(sdf);
     let outside_factor = smoothstep(-aa, aa, sdf);
+    color = srgb_to_linear(color);
     return mix(color, TRANSPARENT, outside_factor);
 }
 
