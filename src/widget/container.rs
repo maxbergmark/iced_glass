@@ -1,8 +1,7 @@
 use iced::{
-    Alignment, Background, Color, Element, Event, Length, Padding, Pixels, Rectangle, Renderer,
-    Size, Vector,
+    Alignment, Background, Color, Element, Event, Length, Padding, Pixels, Rectangle, Size, Vector,
     advanced::{
-        Clipboard, Layout, Renderer as _, Shell, layout, mouse, overlay, renderer,
+        Clipboard, Layout, Shell, layout, mouse, overlay, renderer,
         widget::{Operation, Tree, tree},
     },
     alignment,
@@ -11,13 +10,12 @@ use iced::{
         container::{self, Catalog, Style, StyleFn},
     },
 };
-use iced_wgpu::primitive::Renderer as _;
 
 #[must_use]
-pub struct GlassContainer<'a, Message, Theme = iced::Theme>
+pub struct GlassContainer<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
 where
     Theme: Catalog,
-    // Renderer: iced::advanced::Renderer,
+    Renderer: iced::advanced::Renderer,
 {
     id: Option<iced::widget::Id>,
     padding: Padding,
@@ -28,7 +26,7 @@ where
     horizontal_alignment: iced::alignment::Horizontal,
     vertical_alignment: iced::alignment::Vertical,
     clip: bool,
-    content: Element<'a, Message, Theme>,
+    content: Element<'a, Message, Theme, Renderer>,
     class: Theme::Class<'a>,
 
     // GlassContainer specific properties
@@ -42,9 +40,10 @@ where
     opacity: f32,
 }
 
-impl<Message, Theme> std::fmt::Debug for GlassContainer<'_, Message, Theme>
+impl<Message, Theme, Renderer> std::fmt::Debug for GlassContainer<'_, Message, Theme, Renderer>
 where
     Theme: Catalog,
+    Renderer: iced::advanced::Renderer,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GlassContainer")
@@ -56,22 +55,23 @@ where
 }
 
 /// Creates a new [`GlassContainer`] with the given content.
-pub fn glass_container<'a, Message, Theme>(
-    content: impl Into<Element<'a, Message, Theme>>,
-) -> GlassContainer<'a, Message, Theme>
+pub fn glass_container<'a, Message, Theme, Renderer>(
+    content: impl Into<Element<'a, Message, Theme, Renderer>>,
+) -> GlassContainer<'a, Message, Theme, Renderer>
 where
     Theme: container::Catalog + 'a,
-    // Renderer: ::Renderer,
+    Renderer: iced::advanced::Renderer,
 {
     GlassContainer::new(content)
 }
 
-impl<'a, Message, Theme> GlassContainer<'a, Message, Theme>
+impl<'a, Message, Theme, Renderer> GlassContainer<'a, Message, Theme, Renderer>
 where
     Theme: Catalog,
+    Renderer: iced::advanced::Renderer,
 {
     /// Creates a [`Container`] with the given content.
-    pub fn new(content: impl Into<Element<'a, Message, Theme>>) -> Self {
+    pub fn new(content: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
         let content = content.into();
         let size = content.as_widget().size_hint();
 
@@ -258,10 +258,11 @@ struct State {
 }
 static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
-impl<Message, Theme> iced::advanced::Widget<Message, Theme, Renderer>
-    for GlassContainer<'_, Message, Theme>
+impl<Message, Theme, Renderer> iced::advanced::Widget<Message, Theme, Renderer>
+    for GlassContainer<'_, Message, Theme, Renderer>
 where
     Theme: Catalog,
+    Renderer: iced::advanced::Renderer + iced_wgpu::primitive::Renderer,
 {
     fn tag(&self) -> tree::Tag {
         // self.content.as_widget().tag()
@@ -464,12 +465,14 @@ where
     }
 }
 
-impl<'a, Message, Theme> From<GlassContainer<'a, Message, Theme>> for Element<'a, Message, Theme>
+impl<'a, Message, Theme, Renderer> From<GlassContainer<'a, Message, Theme, Renderer>>
+    for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
     Theme: Catalog + 'a,
+    Renderer: iced::advanced::Renderer + iced_wgpu::primitive::Renderer + 'a,
 {
-    fn from(container: GlassContainer<'a, Message, Theme>) -> Self {
+    fn from(container: GlassContainer<'a, Message, Theme, Renderer>) -> Self {
         Element::new(container)
     }
 }
@@ -502,23 +505,3 @@ pub fn layout(
         },
     )
 }
-
-// Draws the background of a [`Container`] given its [`Style`] and its `bounds`.
-// pub fn draw_background<Renderer>(renderer: &mut Renderer, style: &Style, bounds: Rectangle)
-// where
-//     Renderer: iced::advanced::Renderer,
-// {
-//     if style.background.is_some() || style.border.width > 0.0 || style.shadow.color.a > 0.0 {
-//         renderer.fill_quad(
-//             renderer::Quad {
-//                 bounds,
-//                 border: style.border,
-//                 shadow: style.shadow,
-//                 snap: style.snap,
-//             },
-//             style
-//                 .background
-//                 .unwrap_or(Background::Color(Color::TRANSPARENT)),
-//         );
-//     }
-// }

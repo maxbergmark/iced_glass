@@ -71,7 +71,7 @@ impl Ui {
             iced_glass::widget::container(
                 iced::widget::column![
                     iced_glass::widget::slider(0.0..=1.0, self.value, Message::Value)
-                        .step(0.01)
+                        .step(0.01_f32)
                         .width(1000.0)
                         .height(100.0)
                         .style(slider_style)
@@ -86,7 +86,7 @@ impl Ui {
                                 self.edge_radius,
                                 Message::EdgeRadius
                             )
-                            .step(1.0)
+                            .step(1.0_f32)
                             .width(100.0)
                             .height(100.0)
                         ])
@@ -102,7 +102,7 @@ impl Ui {
                                 self.edge_height,
                                 Message::EdgeHeight
                             )
-                            .step(1.0)
+                            .step(1.0_f32)
                             .width(100.0)
                             .height(100.0)
                         ])
@@ -118,7 +118,7 @@ impl Ui {
                                 self.refractive_index,
                                 Message::RefractiveIndex
                             )
-                            .step(0.01)
+                            .step(0.01_f32)
                             .width(100.0)
                             .height(100.0)
                         ])

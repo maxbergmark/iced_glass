@@ -73,14 +73,14 @@ impl Ui {
                 iced::widget::row![
                     iced::widget::slider(0.0..=1000.0, self.blur_radius, Message::BlurRadius)
                         .width(200.0),
-                    iced::widget::text(format!("{:.0}", self.blur_radius)),
+                    iced::widget::text(format!("{:.0}", self.blur_radius)).width(50.0),
                 ],
                 iced::widget::row![
                     iced::widget::slider(0.0..=1000.0, self.num_containers as f32, |v| {
                         Message::NumContainers(v as usize)
                     })
                     .width(200.0),
-                    iced::widget::text(format!("{}", self.num_containers)),
+                    iced::widget::text(format!("{}", self.num_containers)).width(50.0),
                 ],
                 iced::widget::text(format!(
                     "Frame time: {:.1}ms",
@@ -92,8 +92,8 @@ impl Ui {
                         .blur_radius(self.blur_radius)
                         .edge_height(200.0)
                         .refractive_index(2.5)
-                        .edge_radius(10.0)
-                        .lightness(-1.0)
+                        .edge_radius(5.0)
+                        .lightness(-0.0)
                         .style(border_radius(10.0))
                         .into()
                 }))

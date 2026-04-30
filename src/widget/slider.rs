@@ -1,7 +1,7 @@
 use std::ops::RangeInclusive;
 
 use iced::{
-    Border, Color, Element, Event, Length, Pixels, Point, Rectangle, Renderer, Size,
+    Border, Color, Element, Event, Length, Pixels, Point, Rectangle, Size,
     advanced::{
         Clipboard, Layout, Shell, Widget, layout, mouse, renderer,
         widget::{
@@ -14,9 +14,6 @@ use iced::{
     widget::slider::{self, Catalog, HandleShape, Status, Style, StyleFn},
     window,
 };
-
-use iced::advanced::Renderer as _;
-use iced_wgpu::primitive::Renderer as _;
 
 /// Creates a new [`GlassSlider`] with the given range, value, and `on_change` function.
 pub fn glass_slider<'a, T, Message, Theme>(
@@ -207,12 +204,13 @@ where
     }
 }
 
-impl<T, Message, Theme> Widget<Message, Theme, Renderer> for GlassSlider<'_, T, Message, Theme>
+impl<T, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
+    for GlassSlider<'_, T, Message, Theme>
 where
     T: Copy + Into<f64> + num_traits::FromPrimitive,
     Message: Clone,
     Theme: Catalog,
-    // Renderer: iced::Renderer,
+    Renderer: iced::advanced::Renderer + iced_wgpu::primitive::Renderer,
 {
     fn tag(&self) -> tree::Tag {
         tree::Tag::of::<State>()
@@ -349,53 +347,49 @@ where
                 Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
                 | Event::Touch(
                     touch::Event::FingerLifted { .. } | touch::Event::FingerLost { .. },
-                ) => {
-                    if state.is_dragging {
-                        if let Some(on_release) = self.on_release.clone() {
-                            shell.publish(on_release);
-                        }
-                        state.is_dragging = false;
+                ) if state.is_dragging => {
+                    if let Some(on_release) = self.on_release.clone() {
+                        shell.publish(on_release);
                     }
+                    state.is_dragging = false;
                 }
                 Event::Mouse(mouse::Event::CursorMoved { .. })
-                | Event::Touch(touch::Event::FingerMoved { .. }) => {
-                    if state.is_dragging {
-                        let _ = cursor.land().position().and_then(locate).map(change);
+                | Event::Touch(touch::Event::FingerMoved { .. })
+                    if state.is_dragging =>
+                {
+                    let _ = cursor.land().position().and_then(locate).map(change);
 
-                        shell.capture_event();
-                    }
+                    shell.capture_event();
                 }
                 Event::Mouse(mouse::Event::WheelScrolled { delta })
-                    if state.keyboard_modifiers.control() =>
+                    if state.keyboard_modifiers.control() && cursor.is_over(layout.bounds()) =>
                 {
-                    if cursor.is_over(layout.bounds()) {
-                        let delta = match delta {
-                            mouse::ScrollDelta::Lines { x: _, y }
-                            | mouse::ScrollDelta::Pixels { x: _, y } => y,
-                        };
+                    let delta = match delta {
+                        mouse::ScrollDelta::Lines { x: _, y }
+                        | mouse::ScrollDelta::Pixels { x: _, y } => y,
+                    };
 
-                        if *delta < 0.0 {
-                            let _ = decrement(current_value).map(change);
-                        } else {
-                            let _ = increment(current_value).map(change);
-                        }
-
-                        shell.capture_event();
+                    if *delta < 0.0 {
+                        let _ = decrement(current_value).map(change);
+                    } else {
+                        let _ = increment(current_value).map(change);
                     }
+
+                    shell.capture_event();
                 }
-                Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) => {
-                    if cursor.is_over(layout.bounds()) {
-                        match key {
-                            Key::Named(key::Named::ArrowUp) => {
-                                let _ = increment(current_value).map(change);
-                                shell.capture_event();
-                            }
-                            Key::Named(key::Named::ArrowDown) => {
-                                let _ = decrement(current_value).map(change);
-                                shell.capture_event();
-                            }
-                            _ => (),
+                Event::Keyboard(keyboard::Event::KeyPressed { key, .. })
+                    if cursor.is_over(layout.bounds()) =>
+                {
+                    match key {
+                        Key::Named(key::Named::ArrowUp) => {
+                            let _ = increment(current_value).map(change);
+                            shell.capture_event();
                         }
+                        Key::Named(key::Named::ArrowDown) => {
+                            let _ = decrement(current_value).map(change);
+                            shell.capture_event();
+                        }
+                        _ => (),
                     }
                 }
                 Event::Keyboard(keyboard::Event::ModifiersChanged(modifiers)) => {
@@ -577,12 +571,13 @@ where
     }
 }
 
-impl<'a, T, Message, Theme> From<GlassSlider<'a, T, Message, Theme>> for Element<'a, Message, Theme>
+impl<'a, T, Message, Theme, Renderer> From<GlassSlider<'a, T, Message, Theme>>
+    for Element<'a, Message, Theme, Renderer>
 where
     T: Copy + Into<f64> + num_traits::FromPrimitive + 'a,
     Message: Clone + 'a,
     Theme: Catalog + 'a,
-    // Renderer: iced::Renderer + 'a,
+    Renderer: iced::advanced::Renderer + iced_wgpu::primitive::Renderer + 'a,
 {
     fn from(slider: GlassSlider<'a, T, Message, Theme>) -> Self {
         Element::new(slider)

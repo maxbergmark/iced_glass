@@ -449,7 +449,7 @@ impl AlbumCard {
                     ]
                     .spacing(5.0),
                     iced_glass::widget::slider(0.0..=1.0, playback_time, Message::SetPlaybackTime)
-                        .step(0.01)
+                        .step(0.01_f32)
                         .style(|theme, status| self.slider_style(theme, status))
                         .edge_radius(5.0)
                         .edge_height(10.0)

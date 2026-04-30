@@ -635,12 +635,12 @@ impl Ui {
             iced::widget::column![
                 iced::widget::row![
                     iced::widget::text(text).size(15.0).center(),
-                    iced::widget::text(format!("{:.2}", value))
+                    iced::widget::text(format!("{value:.2}"))
                         .size(15.0)
                         .center(),
                 ],
                 iced_glass::widget::slider(range, value, message)
-                    .step(0.01)
+                    .step(0.01_f32)
                     .style(|theme, status| self.slider_style(theme, status)),
             ]
             .align_x(Alignment::Center)
