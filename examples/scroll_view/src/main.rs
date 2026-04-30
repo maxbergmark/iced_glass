@@ -53,7 +53,7 @@ fn main() -> iced::Result {
 
 impl Default for Ui {
     fn default() -> Self {
-        let album_cards = include_str!("../../../assets/album_covers/albums.json");
+        let album_cards = include_str!("../assets/album_covers/albums.json");
         let album_cards: Vec<AlbumCard> =
             serde_json::from_str(album_cards).expect("Failed to parse album cards");
         Self {
@@ -230,16 +230,16 @@ impl Ui {
 
     fn playback_bar(&self) -> iced::Element<'_, Message> {
         let play_icon = if self.playing {
-            "assets/pause.svg"
+            "examples/scroll_view/assets/pause.svg"
         } else {
-            "assets/play.svg"
+            "examples/scroll_view/assets/play.svg"
         };
         iced_glass::widget::container(
             iced::widget::button(
                 iced::widget::container(
                     iced::widget::row![
                         iced::widget::row![
-                            iced::widget::svg("assets/back.svg")
+                            iced::widget::svg("examples/scroll_view/assets/back.svg")
                                 .width(Length::from(20.0))
                                 .height(Length::from(20.0))
                                 .style(|theme, _status| self.icon_style(theme)),
@@ -251,7 +251,7 @@ impl Ui {
                             )
                             .on_press(Message::TogglePlayback)
                             .style(|theme, _status| button_style(theme)),
-                            iced::widget::svg("assets/forward.svg")
+                            iced::widget::svg("examples/scroll_view/assets/forward.svg")
                                 .width(Length::from(20.0))
                                 .height(Length::from(20.0))
                                 .style(|theme, _status| self.icon_style(theme))
@@ -353,7 +353,7 @@ impl AlbumCard {
 
             iced::widget::container(
                 iced_glass::widget::container(
-                    iced::widget::svg("assets/play.svg")
+                    iced::widget::svg("examples/scroll_view/assets/play.svg")
                         .width(Length::from(15.0))
                         .height(Length::from(15.0))
                         .style(|theme, _status| self.icon_style(theme))
@@ -379,9 +379,12 @@ impl AlbumCard {
         iced::widget::container(
             iced::widget::mouse_area(iced::widget::column![
                 iced::widget::stack![
-                    iced::widget::image(format!("assets/album_covers/{}", self.file.clone()))
-                        .width(200.0)
-                        .height(200.0),
+                    iced::widget::image(format!(
+                        "examples/scroll_view/assets/album_covers/{}",
+                        self.file.clone()
+                    ))
+                    .width(200.0)
+                    .height(200.0),
                     overlay,
                 ],
                 iced::widget::container(iced::widget::column![
@@ -425,9 +428,12 @@ impl AlbumCard {
         };
         iced::widget::container(
             iced::widget::row![
-                iced::widget::image(format!("assets/album_covers/{}", self.file.clone()))
-                    .width(Length::from(60.0))
-                    .height(Length::from(60.0)),
+                iced::widget::image(format!(
+                    "examples/scroll_view/assets/album_covers/{}",
+                    self.file.clone()
+                ))
+                .width(Length::from(60.0))
+                .height(Length::from(60.0)),
                 iced::widget::column![
                     iced::widget::text(title).size(15.0).font(BOLD),
                     iced::widget::row![

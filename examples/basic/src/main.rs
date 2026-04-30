@@ -158,18 +158,18 @@ impl Ui {
     fn image(&self) -> iced::Element<'_, Message> {
         iced::widget::container(iced::widget::column![
             iced::widget::row![
-                iced::widget::image("assets/waterfall.jpg")
+                iced::widget::image("examples/basic/assets/ship.jpg")
                     .width(Length::FillPortion(1))
                     .height(Length::FillPortion(1)),
-                iced::widget::image("assets/eclipse.jpg")
+                iced::widget::image("examples/basic/assets/black_white.jpg")
                     .width(Length::FillPortion(1))
                     .height(Length::FillPortion(1))
             ],
             iced::widget::row![
-                iced::widget::image("assets/tree.jpg")
+                iced::widget::image("examples/basic/assets/nature.jpg")
                     .width(Length::FillPortion(1))
                     .height(Length::FillPortion(1)),
-                iced::widget::image("assets/tulips.jpg")
+                iced::widget::image("examples/basic/assets/flowers.jpg")
                     .width(Length::FillPortion(1))
                     .height(Length::FillPortion(1))
             ]
