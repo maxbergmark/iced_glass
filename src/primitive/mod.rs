@@ -130,7 +130,7 @@ fn downsample(
             })],
             ..Default::default()
         });
-        pass.set_pipeline(&pipeline.downsample_pipeline);
+        pass.set_pipeline(&pipeline.downsample);
         pass.set_bind_group(0, &tex_a_bg[(level - 1) as usize], &[]);
         pass.draw(0..6, 0..1);
     }
@@ -165,7 +165,7 @@ fn upsample(
             })],
             ..Default::default()
         });
-        pass.set_pipeline(&pipeline.downsample_pipeline);
+        pass.set_pipeline(&pipeline.downsample);
         pass.set_bind_group(0, &tex_a_bg[level as usize], &[]);
         pass.draw(0..6, 0..1);
     }
@@ -197,7 +197,7 @@ fn horizontal_blur(
         occlusion_query_set: None,
     });
 
-    horizontal_pass.set_pipeline(&pipeline.blur_pipeline);
+    horizontal_pass.set_pipeline(&pipeline.blur);
     horizontal_pass.set_bind_group(0, &instance.tex_a_bg[mip_level as usize], &[]);
     horizontal_pass.set_bind_group(1, &instance.uniform_bg_h, &[]);
     horizontal_pass.draw(0..6, 0..1);
@@ -229,7 +229,7 @@ fn vertical_blur(
         occlusion_query_set: None,
     });
 
-    vertical_pass.set_pipeline(&pipeline.blur_pipeline);
+    vertical_pass.set_pipeline(&pipeline.blur);
     vertical_pass.set_bind_group(0, &instance.tex_b_bg[mip_level as usize], &[]);
     vertical_pass.set_bind_group(1, &instance.uniform_bg_v, &[]);
     vertical_pass.draw(0..6, 0..1);
@@ -267,7 +267,7 @@ fn fragment_pass(
         1.0,
     );
 
-    pass.set_pipeline(&pipeline.fragment_pipeline);
+    pass.set_pipeline(&pipeline.fragment);
     pass.set_bind_group(0, &instance.tex_a_bg[0], &[]);
     pass.set_bind_group(1, &instance.uniform_bg_h, &[]);
     pass.draw(0..6, 0..1);

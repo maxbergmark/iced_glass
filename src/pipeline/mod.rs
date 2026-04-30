@@ -21,10 +21,10 @@ use crate::{
 
 pub struct Pipeline {
     pub shared_bind_group_data: SharedBindGroupData,
-    pub downsample_pipeline: wgpu::RenderPipeline,
-    pub blur_pipeline: wgpu::RenderPipeline,
-    pub fragment_pipeline: wgpu::RenderPipeline,
-    pub text_pipeline: wgpu::RenderPipeline,
+    pub downsample: wgpu::RenderPipeline,
+    pub blur: wgpu::RenderPipeline,
+    pub fragment: wgpu::RenderPipeline,
+    pub text: wgpu::RenderPipeline,
 
     instances: HashMap<u64, Instance>,
     live_this_frame: HashSet<u64>,
@@ -83,7 +83,7 @@ impl std::fmt::Debug for AtlasData {
 pub struct AtlasPosition {
     pub position: iced::Point<u32>,
     pub size: iced::Size<u32>,
-    pub bbox: Rect,
+    // pub bbox: Rect,
     pub units_per_em: f32,
     pub framing: msdfgen::Framing<f64>,
 }
@@ -123,10 +123,10 @@ impl iced::widget::shader::Pipeline for Pipeline {
                 bgl_uniforms: uniforms_bind_group_layout(device),
                 bgl_text: TextShader::create_bind_group_layout(device),
             },
-            downsample_pipeline,
-            blur_pipeline,
-            fragment_pipeline,
-            text_pipeline,
+            downsample: downsample_pipeline,
+            blur: blur_pipeline,
+            fragment: fragment_pipeline,
+            text: text_pipeline,
             instances: HashMap::new(),
             live_this_frame: HashSet::new(),
             text_instances: HashMap::new(),
@@ -308,14 +308,15 @@ impl Pipeline {
         &self.text_instances[&id]
     }
 
-    #[allow(clippy::expect_used)]
-    pub fn text_instance_mut(&mut self, id: u64) -> &mut TextInstance {
-        self.text_instances
-            .get_mut(&id)
-            .expect("Text instance not found")
-    }
+    // #[allow(clippy::expect_used)]
+    // pub fn text_instance_mut(&mut self, id: u64) -> &mut TextInstance {
+    //     self.text_instances
+    //         .get_mut(&id)
+    //         .expect("Text instance not found")
+    // }
 
     /// Call at the end of rendering each frame.
+    #[allow(unused)] // TODO: use this function to clean up instances and text instances
     pub fn gc(&mut self) {
         self.instances
             .retain(|id, _| self.live_this_frame.contains(id));

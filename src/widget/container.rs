@@ -55,6 +55,7 @@ where
     }
 }
 
+/// Creates a new [`GlassContainer`] with the given content.
 pub fn glass_container<'a, Message, Theme>(
     content: impl Into<Element<'a, Message, Theme>>,
 ) -> GlassContainer<'a, Message, Theme>
@@ -502,22 +503,22 @@ pub fn layout(
     )
 }
 
-/// Draws the background of a [`Container`] given its [`Style`] and its `bounds`.
-pub fn draw_background<Renderer>(renderer: &mut Renderer, style: &Style, bounds: Rectangle)
-where
-    Renderer: iced::advanced::Renderer,
-{
-    if style.background.is_some() || style.border.width > 0.0 || style.shadow.color.a > 0.0 {
-        renderer.fill_quad(
-            renderer::Quad {
-                bounds,
-                border: style.border,
-                shadow: style.shadow,
-                snap: style.snap,
-            },
-            style
-                .background
-                .unwrap_or(Background::Color(Color::TRANSPARENT)),
-        );
-    }
-}
+// Draws the background of a [`Container`] given its [`Style`] and its `bounds`.
+// pub fn draw_background<Renderer>(renderer: &mut Renderer, style: &Style, bounds: Rectangle)
+// where
+//     Renderer: iced::advanced::Renderer,
+// {
+//     if style.background.is_some() || style.border.width > 0.0 || style.shadow.color.a > 0.0 {
+//         renderer.fill_quad(
+//             renderer::Quad {
+//                 bounds,
+//                 border: style.border,
+//                 shadow: style.shadow,
+//                 snap: style.snap,
+//             },
+//             style
+//                 .background
+//                 .unwrap_or(Background::Color(Color::TRANSPARENT)),
+//         );
+//     }
+// }

@@ -13,6 +13,7 @@ use iced::{
     },
 };
 
+/// A widget that renders text with a glass effect.
 #[must_use]
 pub struct GlassText<'a, Renderer, Theme = iced::Theme>
 where
@@ -83,6 +84,7 @@ impl<Font> Default for Format<Font> {
     }
 }
 
+/// Creates a new [`GlassText`] with the given content.
 pub fn glass_text<'a, Renderer, Theme>(
     content: impl text::IntoFragment<'a>,
 ) -> GlassText<'a, Renderer, Theme>
@@ -125,22 +127,22 @@ impl FontData {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct FontKey {
-    pub font_id: cosmic_text::fontdb::ID,
-    pub style: cosmic_text::fontdb::Style,
-    pub weight: cosmic_text::fontdb::Weight,
-}
+// #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
+// pub struct FontKey {
+//     pub font_id: cosmic_text::fontdb::ID,
+//     pub style: cosmic_text::fontdb::Style,
+//     pub weight: cosmic_text::fontdb::Weight,
+// }
 
 #[derive(Debug, Clone, Copy)]
-pub struct GlyphData {
+pub(crate) struct GlyphData {
     pub glyph_id: GlyphId,
     pub font_id: cosmic_text::fontdb::ID,
     pub x: f32,
-    pub y: f32,
+    // pub y: f32,
     pub run_line_y: f32,
-    pub w: f32,
-    pub y_offset: f32,
+    // pub w: f32,
+    // pub y_offset: f32,
 }
 
 impl GlyphData {
@@ -150,10 +152,10 @@ impl GlyphData {
             glyph_id: GlyphId(glyph.glyph_id),
             font_id: glyph.font_id,
             x: glyph.x,
-            y: glyph.y,
+            // y: glyph.y,
             run_line_y,
-            w: glyph.w,
-            y_offset: glyph.y_offset,
+            // w: glyph.w,
+            // y_offset: glyph.y_offset,
         }
     }
 }
@@ -392,41 +394,49 @@ where
     //     self
     // }
 
+    /// Sets the blur radius of the [`Text`].
     pub const fn blur_radius(mut self, radius: f32) -> Self {
         self.blur_radius = radius;
         self
     }
 
+    /// Sets the saturation of the [`Text`].
     pub const fn saturation(mut self, saturation: f32) -> Self {
         self.saturation = saturation;
         self
     }
 
+    /// Sets the lightness of the [`Text`].
     pub const fn lightness(mut self, lightness: f32) -> Self {
         self.lightness = lightness;
         self
     }
 
+    /// Sets the edge radius of the [`Text`].
     pub const fn edge_radius(mut self, edge_radius: f32) -> Self {
         self.edge_radius = edge_radius;
         self
     }
 
+    /// Sets the edge height of the [`Text`].
     pub const fn edge_height(mut self, edge_height: f32) -> Self {
         self.edge_height = edge_height;
         self
     }
 
+    /// Sets the refractive index of the [`Text`].
     pub const fn refractive_index(mut self, refractive_index: f32) -> Self {
         self.refractive_index = refractive_index;
         self
     }
 
+    /// Sets the rim width of the [`Text`].
     pub const fn rim_width(mut self, rim_width: f32) -> Self {
         self.rim_width = rim_width;
         self
     }
 
+    /// Sets the opacity of the [`Text`].
     pub const fn opacity(mut self, opacity: f32) -> Self {
         self.opacity = opacity;
         self
@@ -543,7 +553,7 @@ where
             bounds,
             crate::primitive::text::TextPrimitive {
                 id: state.id,
-                text: self.fragment.to_string(),
+                // text: self.fragment.to_string(),
                 fonts,
                 glyphs,
                 font_size: self.format.size.unwrap_or_else(|| 16.0.into()).0,

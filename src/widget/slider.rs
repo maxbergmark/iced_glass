@@ -18,6 +18,7 @@ use iced::{
 use iced::advanced::Renderer as _;
 use iced_wgpu::primitive::Renderer as _;
 
+/// Creates a new [`GlassSlider`] with the given range, value, and `on_change` function.
 pub fn glass_slider<'a, T, Message, Theme>(
     range: RangeInclusive<T>,
     value: T,

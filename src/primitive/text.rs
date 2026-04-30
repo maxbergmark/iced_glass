@@ -17,7 +17,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct TextPrimitive {
     pub id: u64,
-    pub text: String,
+    // pub text: String,
     pub font_size: f32,
     pub fonts: HashMap<cosmic_text::fontdb::ID, Arc<(Vec<u8>, u32)>>,
     // pub fonts: HashMap<FontKey, (Vec<u8>, u32)>,
@@ -122,7 +122,7 @@ fn text_pass(
         1.0,
     );
 
-    pass.set_pipeline(&pipeline.text_pipeline);
+    pass.set_pipeline(&pipeline.text);
     pass.set_bind_group(0, &instance.texture_atlas_bg, &[]);
     pass.set_bind_group(1, &instance.instance.uniform_bg_h, &[]);
     pass.set_vertex_buffer(0, instance.vertex_buffer.slice(..));
@@ -253,13 +253,13 @@ fn add_to_atlas(
     let position = iced::Point::new(offset.x as u32, offset.y as u32);
 
     // TODO: do I need to do this twice?
-    let bbox = get_glyph_bounding_box(font, glyph.glyph_id)?;
+    // let bbox = get_glyph_bounding_box(font, glyph.glyph_id)?;
     let units_per_em = f32::from(font.em_size());
 
     let ap = AtlasPosition {
         position,
         size,
-        bbox,
+        // bbox,
         units_per_em,
         framing,
     };

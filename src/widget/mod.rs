@@ -1,5 +1,6 @@
-pub mod container;
-pub mod slider;
+mod container;
+mod slider;
+/// Public text widget
 pub mod text;
 
 pub use container::glass_container as container;

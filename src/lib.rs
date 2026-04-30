@@ -1,6 +1,6 @@
 #![warn(
-    // missing_docs,
-    unreachable_pub,
+    missing_docs,
+    // unreachable_pub,
     keyword_idents,
     unexpected_cfgs,
     missing_copy_implementations,
@@ -61,8 +61,9 @@
 //! }
 //! ```
 
-pub mod pipeline;
-pub mod primitive;
-pub mod shader;
-pub mod uniforms;
+pub(crate) mod pipeline;
+pub(crate) mod primitive;
+pub(crate) mod shader;
+pub(crate) mod uniforms;
+/// Public widgets
 pub mod widget;

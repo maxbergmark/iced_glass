@@ -5,12 +5,12 @@ pub mod text;
 
 pub const MIP_LEVEL_COUNT: u32 = 5;
 
-#[derive(Debug)]
-pub struct RenderShaderData {
-    pub pipeline: wgpu::RenderPipeline,
-    pub bind_group: wgpu::BindGroup,
-    pub uniform_bind_group: wgpu::BindGroup,
-}
+// #[derive(Debug)]
+// pub struct RenderShaderData {
+//     pub pipeline: wgpu::RenderPipeline,
+//     pub bind_group: wgpu::BindGroup,
+//     pub uniform_bind_group: wgpu::BindGroup,
+// }
 
 #[must_use]
 pub fn uniforms_bind_group(
@@ -59,20 +59,20 @@ pub fn create_sampler(device: &wgpu::Device) -> wgpu::Sampler {
     })
 }
 
-#[must_use]
-pub fn to_texture_view(texture: &wgpu::Texture, level: u32) -> wgpu::TextureView {
-    texture.create_view(&wgpu::TextureViewDescriptor {
-        label: Some("fragment.texture_view"),
-        format: None,
-        dimension: Some(wgpu::TextureViewDimension::D2),
-        aspect: wgpu::TextureAspect::All,
-        base_mip_level: level,
-        mip_level_count: Some(1),
-        base_array_layer: 0,
-        array_layer_count: None,
-        usage: None,
-    })
-}
+// #[must_use]
+// pub fn to_texture_view(texture: &wgpu::Texture, level: u32) -> wgpu::TextureView {
+//     texture.create_view(&wgpu::TextureViewDescriptor {
+//         label: Some("fragment.texture_view"),
+//         format: None,
+//         dimension: Some(wgpu::TextureViewDimension::D2),
+//         aspect: wgpu::TextureAspect::All,
+//         base_mip_level: level,
+//         mip_level_count: Some(1),
+//         base_array_layer: 0,
+//         array_layer_count: None,
+//         usage: None,
+//     })
+// }
 
 #[must_use]
 pub fn texture_bind_groups(
