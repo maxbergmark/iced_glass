@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   check:
@@ -18,6 +19,9 @@ jobs:
       with:
         packages: pkg-config libfreetype-dev
     - uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: workspace
+        save-if: false
     - run: cargo check --workspace --all-targets
 
   clippy:
@@ -28,6 +32,9 @@ jobs:
       with:
         packages: pkg-config libfreetype-dev
     - uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: workspace
+        save-if: false
     - run: cargo clippy --workspace --all-targets -- -D warnings
 
   test:
@@ -38,6 +45,9 @@ jobs:
       with:
         packages: pkg-config libfreetype-dev
     - uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: workspace
+        save-if: false
     - run: cargo test --workspace
 
   build:
@@ -48,4 +58,6 @@ jobs:
       with:
         packages: pkg-config libfreetype-dev
     - uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: workspace
     - run: cargo build --workspace
