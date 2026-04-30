@@ -236,7 +236,8 @@ impl Pipeline {
                 ),
             );
         }
-        let inst = self.instances.get_mut(&id).unwrap();
+        #[allow(clippy::expect_used)]
+        let inst = self.instances.get_mut(&id).expect("Instance not found");
         inst.copy_uniforms_to_device(queue, uniforms, scale);
         self.live_this_frame.insert(id);
     }
@@ -278,7 +279,11 @@ impl Pipeline {
                 }
             }
         }
-        let inst = self.text_instances.get_mut(&id).unwrap();
+        #[allow(clippy::expect_used)]
+        let inst = self
+            .text_instances
+            .get_mut(&id)
+            .expect("Text instance not found");
 
         // TODO: find a cleaner way to do this
         let mut uniforms = *uniforms;
@@ -299,8 +304,11 @@ impl Pipeline {
         &self.text_instances[&id]
     }
 
+    #[allow(clippy::expect_used)]
     pub fn text_instance_mut(&mut self, id: u64) -> &mut TextInstance {
-        self.text_instances.get_mut(&id).unwrap()
+        self.text_instances
+            .get_mut(&id)
+            .expect("Text instance not found")
     }
 
     /// Call at the end of rendering each frame.

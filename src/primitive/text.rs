@@ -48,7 +48,11 @@ impl iced::widget::shader::Primitive for TextPrimitive {
         );
         pipeline.prepare_text_instance(device, queue, self.id, size, scale, &self.uniforms);
 
-        let instance = pipeline.text_instances.get_mut(&self.id).unwrap();
+        #[allow(clippy::expect_used)]
+        let instance = pipeline
+            .text_instances
+            .get_mut(&self.id)
+            .expect("Text instance not found");
         let atlas_data = &mut pipeline.atlas_data;
 
         let vertices = self.create_vertex_buffer(atlas_data, queue, bounds);
@@ -146,12 +150,13 @@ impl TextPrimitive {
         let mut font_cache = HashMap::new();
 
         for glyph in &self.glyphs {
+            #[allow(clippy::expect_used)]
             let font = font_cache.entry(glyph.font_id).or_insert_with(|| {
-                let font_bytes = self.fonts.get(&glyph.font_id).unwrap();
-                let library = freetype::Library::init().unwrap();
+                let font_bytes = self.fonts.get(&glyph.font_id).expect("Font not found");
+                let library = freetype::Library::init().expect("Failed to initialize library");
                 library
                     .new_memory_face(font_bytes.0.clone(), font_bytes.1 as isize)
-                    .unwrap()
+                    .expect("Failed to create face")
             });
 
             let ap = atlas_data
@@ -208,7 +213,8 @@ fn to_rgbau8(bitmap: &Bitmap<Rgb<f32>>) -> Vec<u8> {
 }
 
 fn get_glyph_size(font: &Face, glyph: GlyphId) -> iced::Size<u32> {
-    let bbox = get_glyph_bounding_box(font, glyph).unwrap();
+    #[allow(clippy::expect_used)]
+    let bbox = get_glyph_bounding_box(font, glyph).expect("Failed to get glyph bounding box");
     let units_per_em = f32::from(font.em_size());
     let scale = MSDF_FONT_SIZE / units_per_em;
 
@@ -241,14 +247,13 @@ fn add_to_atlas(
     // println!("size: {:?}", size);
     let allocation = atlas_data
         .allocator
-        .allocate(size2(size.width as i32, size.height as i32))
-        .unwrap();
+        .allocate(size2(size.width as i32, size.height as i32))?;
 
     let offset = allocation.rectangle.min;
     let position = iced::Point::new(offset.x as u32, offset.y as u32);
 
     // TODO: do I need to do this twice?
-    let bbox = get_glyph_bounding_box(font, glyph.glyph_id).unwrap();
+    let bbox = get_glyph_bounding_box(font, glyph.glyph_id)?;
     let units_per_em = f32::from(font.em_size());
 
     let ap = AtlasPosition {

@@ -223,7 +223,13 @@ where
 
     fn parse_text(font_data: &FontData, s: &str, bounds: &Rectangle) -> Vec<GlyphData> {
         if !font_data.needs_reshape(s, bounds) {
-            return font_data.last_glyphs.borrow().as_ref().unwrap().clone();
+            #[allow(clippy::expect_used)]
+            return font_data
+                .last_glyphs
+                .borrow()
+                .as_ref()
+                .expect("No glyphs found")
+                .clone();
         }
 
         let mut font_system = font_data.font_system.borrow_mut();
@@ -265,11 +271,11 @@ where
                 .borrow_mut()
                 .entry(font_id)
                 .or_insert_with(|| {
-                    let mut data = None;
-                    font_system.db().with_face_data(font_id, |bytes, index| {
-                        data = Some((bytes.to_vec(), index));
-                    });
-                    Arc::new(data.unwrap())
+                    let data = font_system
+                        .db()
+                        .with_face_data(font_id, |bytes, index| (bytes.to_vec(), index));
+                    #[allow(clippy::expect_used)]
+                    Arc::new(data.expect("Failed to get face data"))
                 });
         }
         glyphs

@@ -322,10 +322,12 @@ where
         operation: &mut dyn Operation,
     ) {
         operation.container(self.id.as_ref(), layout.bounds());
+
+        #[allow(clippy::expect_used)]
         operation.traverse(&mut |op| {
             self.content.as_widget_mut().operate(
                 &mut tree.children[0],
-                layout.children().next().unwrap(),
+                layout.children().next().expect("No child found"),
                 renderer,
                 op,
             );
@@ -343,10 +345,11 @@ where
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
+        #[allow(clippy::expect_used)]
         self.content.as_widget_mut().update(
             &mut tree.children[0],
             event,
-            layout.children().next().unwrap(),
+            layout.children().next().expect("No child found"),
             cursor,
             renderer,
             clipboard,
@@ -363,9 +366,10 @@ where
         viewport: &Rectangle,
         renderer: &Renderer,
     ) -> mouse::Interaction {
+        #[allow(clippy::expect_used)]
         self.content.as_widget().mouse_interaction(
             &tree.children[0],
-            layout.children().next().unwrap(),
+            layout.children().next().expect("No child found"),
             cursor,
             viewport,
             renderer,
@@ -415,7 +419,7 @@ where
         );
 
         if let Some(clipped_viewport) = bounds.intersection(viewport) {
-            // draw_background(renderer, &style, bounds);
+            #[allow(clippy::expect_used)]
             renderer.with_layer(bounds, |renderer| {
                 self.content.as_widget().draw(
                     &tree.children[0],
@@ -424,7 +428,7 @@ where
                     &renderer::Style {
                         text_color: style.text_color.unwrap_or(renderer_style.text_color),
                     },
-                    layout.children().next().unwrap(),
+                    layout.children().next().expect("No child found"),
                     cursor,
                     if self.clip {
                         &clipped_viewport
@@ -444,9 +448,10 @@ where
         viewport: &Rectangle,
         translation: Vector,
     ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
+        #[allow(clippy::expect_used)]
         self.content.as_widget_mut().overlay(
             &mut tree.children[0],
-            layout.children().next().unwrap(),
+            layout.children().next().expect("No child found"),
             renderer,
             viewport,
             translation,
