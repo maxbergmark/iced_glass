@@ -21,10 +21,10 @@ use crate::{
 
 pub struct Pipeline {
     pub shared_bind_group_data: SharedBindGroupData,
-    pub downsample_pipeline: wgpu::RenderPipeline,
-    pub blur_pipeline: wgpu::RenderPipeline,
-    pub fragment_pipeline: wgpu::RenderPipeline,
-    pub text_pipeline: wgpu::RenderPipeline,
+    pub downsample: wgpu::RenderPipeline,
+    pub blur: wgpu::RenderPipeline,
+    pub fragment: wgpu::RenderPipeline,
+    pub text: wgpu::RenderPipeline,
 
     instances: HashMap<u64, Instance>,
     live_this_frame: HashSet<u64>,
@@ -35,6 +35,16 @@ pub struct Pipeline {
     pub atlas_data: AtlasData,
 }
 
+impl std::fmt::Debug for Pipeline {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Pipeline")
+            .field("instances", &self.instances.len())
+            .field("text_instances", &self.text_instances.len())
+            .finish_non_exhaustive()
+    }
+}
+
+#[derive(Debug)]
 pub struct SharedBindGroupData {
     pub device_format: wgpu::TextureFormat,
     pub sampler: wgpu::Sampler,
@@ -60,11 +70,20 @@ pub struct AtlasData {
     pub allocator: AtlasAllocator,
 }
 
+impl std::fmt::Debug for AtlasData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AtlasData")
+            .field("texture_atlas", &self.texture_atlas)
+            .field("atlas_position", &self.atlas_position)
+            .finish_non_exhaustive()
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct AtlasPosition {
     pub position: iced::Point<u32>,
     pub size: iced::Size<u32>,
-    pub bbox: Rect,
+    // pub bbox: Rect,
     pub units_per_em: f32,
     pub framing: msdfgen::Framing<f64>,
 }
@@ -104,10 +123,10 @@ impl iced::widget::shader::Pipeline for Pipeline {
                 bgl_uniforms: uniforms_bind_group_layout(device),
                 bgl_text: TextShader::create_bind_group_layout(device),
             },
-            downsample_pipeline,
-            blur_pipeline,
-            fragment_pipeline,
-            text_pipeline,
+            downsample: downsample_pipeline,
+            blur: blur_pipeline,
+            fragment: fragment_pipeline,
+            text: text_pipeline,
             instances: HashMap::new(),
             live_this_frame: HashSet::new(),
             text_instances: HashMap::new(),
@@ -125,6 +144,7 @@ impl iced::widget::shader::Pipeline for Pipeline {
     }
 }
 
+#[must_use]
 pub fn create_bgl_texture_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("gaussian.bind_group_layout"),
@@ -149,6 +169,7 @@ pub fn create_bgl_texture_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout
     })
 }
 
+#[must_use]
 pub fn create_textures(
     device: &wgpu::Device,
     format: wgpu::TextureFormat,
@@ -201,10 +222,10 @@ impl Pipeline {
         scale: f32,
         uniforms: &Uniforms,
     ) {
-        let needs_new = match self.instances.get(&id) {
-            Some(inst) => inst.size.width != width || inst.size.height != height,
-            None => true,
-        };
+        let needs_new = self
+            .instances
+            .get(&id)
+            .is_none_or(|inst| inst.size.width != width || inst.size.height != height);
         if needs_new {
             self.instances.insert(
                 id,
@@ -217,7 +238,8 @@ impl Pipeline {
                 ),
             );
         }
-        let inst = self.instances.get_mut(&id).unwrap();
+        #[allow(clippy::expect_used)]
+        let inst = self.instances.get_mut(&id).expect("Instance not found");
         inst.copy_uniforms_to_device(queue, uniforms, scale);
         self.live_this_frame.insert(id);
     }
@@ -259,7 +281,11 @@ impl Pipeline {
                 }
             }
         }
-        let inst = self.text_instances.get_mut(&id).unwrap();
+        #[allow(clippy::expect_used)]
+        let inst = self
+            .text_instances
+            .get_mut(&id)
+            .expect("Text instance not found");
 
         // TODO: find a cleaner way to do this
         let mut uniforms = *uniforms;
@@ -272,19 +298,25 @@ impl Pipeline {
         self.live_text_this_frame.insert(id);
     }
 
+    #[must_use]
     pub fn instance(&self, id: u64) -> &Instance {
         &self.instances[&id]
     }
 
+    #[must_use]
     pub fn text_instance(&self, id: u64) -> &TextInstance {
         &self.text_instances[&id]
     }
 
-    pub fn text_instance_mut(&mut self, id: u64) -> &mut TextInstance {
-        self.text_instances.get_mut(&id).unwrap()
-    }
+    // #[allow(clippy::expect_used)]
+    // pub fn text_instance_mut(&mut self, id: u64) -> &mut TextInstance {
+    //     self.text_instances
+    //         .get_mut(&id)
+    //         .expect("Text instance not found")
+    // }
 
     /// Call at the end of rendering each frame.
+    #[allow(unused)] // TODO: use this function to clean up instances and text instances
     pub fn gc(&mut self) {
         self.instances
             .retain(|id, _| self.live_this_frame.contains(id));
@@ -295,10 +327,12 @@ impl Pipeline {
     }
 }
 
-pub fn round_up(size: u32, granularity: u32) -> u32 {
+#[must_use]
+pub const fn round_up(size: u32, granularity: u32) -> u32 {
     size.div_ceil(granularity) * granularity
 }
 
+#[must_use]
 pub fn content_scale(size: iced::Size<f32>) -> (f32, f32) {
     (
         size.width / round_up(size.width as u32, 256) as f32,

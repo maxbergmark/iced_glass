@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/icon.svg" width="140px" />
+<img src="docs/icon.svg" width="140px" />
 
 # Iced Glass
 ![Rust](https://img.shields.io/badge/Rust-2024_edition-orange)
@@ -19,7 +19,7 @@ https://github.com/user-attachments/assets/eb63dcc4-f406-4a2a-9990-b35bba1ec828
 
 ![iced_glass example](docs/text_rendering.png)
 
-With the rewrite of the refraction math using signed distance functions, it is now possible to render text with refraction. This is still a work in progress, as characters are rendered one at a time.
+With the rewrite of the refraction math using signed distance functions, it is now possible to render text with refraction. This is still a work in progress, as characters are rendered one at a time. Each glyph is rasterized into an MSDF atlas on first use and cached for subsequent frames. The SDF is then used in the fragment shader both for inside/outside testing and to drive the refraction and rim-light effects, giving text the same glass appearance as iced_glass::widget::container.
 
 ### Limitations
 
@@ -81,6 +81,8 @@ The library exposes two custom Iced widgets:
 |--------|-------------|
 | `iced_glass::widget::container` | A drop-in container with glass effect. Supports all standard container properties (padding, alignment, clipping) plus glass parameters: `blur_radius`, `saturation`, `lightness`, `edge_radius`, `edge_height`, `refractive_index`, `rim_width`, `opacity`. |
 | `iced_glass::widget::slider` | An Iced-compatible slider whose handle renders with the glass primitive while dragging. Exposes `edge_radius`, `edge_height`, and `refractive_index` for the handle effect. |
+| `iced_glass::widget::text` | A drop-in text widget that renders glyphs using MSDF (Multi-channel Signed Distance Field) textures and the same glass shader pipeline as the container. Supports all standard text properties (`size`, `font`, `line_height`, `shaping`, `wrapping`, alignment) plus glass parameters: `blur_radius`, `saturation`, `lightness`, `edge_radius`, `edge_height`, `refractive_index`, `rim_width`, `opacity`. |
+
 
 More widgets are planned to be added.
 

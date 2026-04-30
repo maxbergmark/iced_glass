@@ -13,6 +13,8 @@ use iced::{
     },
 };
 
+/// A widget that renders text with a glass effect.
+#[must_use]
 pub struct GlassText<'a, Renderer, Theme = iced::Theme>
 where
     Theme: Catalog,
@@ -32,6 +34,20 @@ where
     refractive_index: f32,
     rim_width: f32,
     opacity: f32,
+}
+
+impl<Renderer, Theme> std::fmt::Debug for GlassText<'_, Renderer, Theme>
+where
+    Theme: Catalog,
+    Renderer: iced::advanced::text::Renderer,
+    Renderer::Font: std::fmt::Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GlassText")
+            .field("format", &self.format)
+            .field("blur_radius", &self.blur_radius)
+            .finish_non_exhaustive()
+    }
 }
 
 /// The format of some [`Text`].
@@ -68,6 +84,7 @@ impl<Font> Default for Format<Font> {
     }
 }
 
+/// Creates a new [`GlassText`] with the given content.
 pub fn glass_text<'a, Renderer, Theme>(
     content: impl text::IntoFragment<'a>,
 ) -> GlassText<'a, Renderer, Theme>
@@ -110,34 +127,35 @@ impl FontData {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct FontKey {
-    pub font_id: cosmic_text::fontdb::ID,
-    pub style: cosmic_text::fontdb::Style,
-    pub weight: cosmic_text::fontdb::Weight,
-}
+// #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
+// pub struct FontKey {
+//     pub font_id: cosmic_text::fontdb::ID,
+//     pub style: cosmic_text::fontdb::Style,
+//     pub weight: cosmic_text::fontdb::Weight,
+// }
 
 #[derive(Debug, Clone, Copy)]
-pub struct GlyphData {
+pub(crate) struct GlyphData {
     pub glyph_id: GlyphId,
     pub font_id: cosmic_text::fontdb::ID,
     pub x: f32,
-    pub y: f32,
+    // pub y: f32,
     pub run_line_y: f32,
-    pub w: f32,
-    pub y_offset: f32,
+    // pub w: f32,
+    // pub y_offset: f32,
 }
 
 impl GlyphData {
-    pub fn new(glyph: &LayoutGlyph, run_line_y: f32) -> Self {
+    #[must_use]
+    pub const fn new(glyph: &LayoutGlyph, run_line_y: f32) -> Self {
         Self {
             glyph_id: GlyphId(glyph.glyph_id),
             font_id: glyph.font_id,
             x: glyph.x,
-            y: glyph.y,
+            // y: glyph.y,
             run_line_y,
-            w: glyph.w,
-            y_offset: glyph.y_offset,
+            // w: glyph.w,
+            // y_offset: glyph.y_offset,
         }
     }
 }
@@ -208,7 +226,13 @@ where
 
     fn parse_text(font_data: &FontData, s: &str, bounds: &Rectangle) -> Vec<GlyphData> {
         if !font_data.needs_reshape(s, bounds) {
-            return font_data.last_glyphs.borrow().as_ref().unwrap().clone();
+            #[allow(clippy::expect_used)]
+            return font_data
+                .last_glyphs
+                .borrow()
+                .as_ref()
+                .expect("No glyphs found")
+                .clone();
         }
 
         let mut font_system = font_data.font_system.borrow_mut();
@@ -250,11 +274,11 @@ where
                 .borrow_mut()
                 .entry(font_id)
                 .or_insert_with(|| {
-                    let mut data = None;
-                    font_system.db().with_face_data(font_id, |bytes, index| {
-                        data = Some((bytes.to_vec(), index));
-                    });
-                    Arc::new(data.unwrap())
+                    let data = font_system
+                        .db()
+                        .with_face_data(font_id, |bytes, index| (bytes.to_vec(), index));
+                    #[allow(clippy::expect_used)]
+                    Arc::new(data.expect("Failed to get face data"))
                 });
         }
         glyphs
@@ -325,19 +349,18 @@ where
     }
 
     /// Sets the [`Shaping`] strategy of the [`Text`].
-    pub fn shaping(mut self, shaping: Shaping) -> Self {
+    pub const fn shaping(mut self, shaping: Shaping) -> Self {
         self.format.shaping = shaping;
         self
     }
 
     /// Sets the [`Wrapping`] strategy of the [`Text`].
-    pub fn wrapping(mut self, wrapping: Wrapping) -> Self {
+    pub const fn wrapping(mut self, wrapping: Wrapping) -> Self {
         self.format.wrapping = wrapping;
         self
     }
 
     /// Sets the style of the [`Text`].
-    #[must_use]
     pub fn style(mut self, style: impl Fn(&Theme) -> Style + 'a) -> Self
     where
         Theme::Class<'a>: From<StyleFn<'a, Theme>>,
@@ -371,42 +394,50 @@ where
     //     self
     // }
 
-    pub fn blur_radius(mut self, radius: f32) -> Self {
+    /// Sets the blur radius of the [`Text`].
+    pub const fn blur_radius(mut self, radius: f32) -> Self {
         self.blur_radius = radius;
         self
     }
 
-    pub fn saturation(mut self, saturation: f32) -> Self {
+    /// Sets the saturation of the [`Text`].
+    pub const fn saturation(mut self, saturation: f32) -> Self {
         self.saturation = saturation;
         self
     }
 
-    pub fn lightness(mut self, lightness: f32) -> Self {
+    /// Sets the lightness of the [`Text`].
+    pub const fn lightness(mut self, lightness: f32) -> Self {
         self.lightness = lightness;
         self
     }
 
-    pub fn edge_radius(mut self, edge_radius: f32) -> Self {
+    /// Sets the edge radius of the [`Text`].
+    pub const fn edge_radius(mut self, edge_radius: f32) -> Self {
         self.edge_radius = edge_radius;
         self
     }
 
-    pub fn edge_height(mut self, edge_height: f32) -> Self {
+    /// Sets the edge height of the [`Text`].
+    pub const fn edge_height(mut self, edge_height: f32) -> Self {
         self.edge_height = edge_height;
         self
     }
 
-    pub fn refractive_index(mut self, refractive_index: f32) -> Self {
+    /// Sets the refractive index of the [`Text`].
+    pub const fn refractive_index(mut self, refractive_index: f32) -> Self {
         self.refractive_index = refractive_index;
         self
     }
 
-    pub fn rim_width(mut self, rim_width: f32) -> Self {
+    /// Sets the rim width of the [`Text`].
+    pub const fn rim_width(mut self, rim_width: f32) -> Self {
         self.rim_width = rim_width;
         self
     }
 
-    pub fn opacity(mut self, opacity: f32) -> Self {
+    /// Sets the opacity of the [`Text`].
+    pub const fn opacity(mut self, opacity: f32) -> Self {
         self.opacity = opacity;
         self
     }
@@ -434,7 +465,7 @@ where
             id: NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             font_data: FontData::new(
                 self.format.font,
-                self.format.size.unwrap_or(16.0.into()),
+                self.format.size.unwrap_or_else(|| 16.0.into()),
                 self.format.line_height,
             ),
             paragraph: paragraph::Plain::<Renderer::Paragraph>::default(),
@@ -447,13 +478,14 @@ where
 
     fn diff(&self, tree: &mut Tree) {
         let state = tree.state.downcast_mut::<State<Renderer::Paragraph>>();
-        let fs = self.format.size.unwrap_or(16.0.into());
+        let fs = self.format.size.unwrap_or_else(|| 16.0.into());
         let lh = match self.format.line_height {
             LineHeight::Relative(factor) => Pixels(factor * fs.0),
             LineHeight::Absolute(pixels) => pixels,
         };
 
-        if state.font_data.metrics.font_size != fs.0 || state.font_data.metrics.line_height != lh.0
+        if (state.font_data.metrics.font_size - fs.0).abs() > f32::EPSILON
+            || (state.font_data.metrics.line_height - lh.0).abs() > f32::EPSILON
         {
             let new_metrics = Metrics::new(fs.0, lh.0);
             state.font_data.metrics = new_metrics;
@@ -521,10 +553,10 @@ where
             bounds,
             crate::primitive::text::TextPrimitive {
                 id: state.id,
-                text: self.fragment.to_string(),
+                // text: self.fragment.to_string(),
                 fonts,
                 glyphs,
-                font_size: self.format.size.unwrap_or(16.0.into()).0,
+                font_size: self.format.size.unwrap_or_else(|| 16.0.into()).0,
                 uniforms: crate::uniforms::Uniforms {
                     blur_radius: self.blur_radius,
                     // TODO: implement corner radius for text
@@ -551,7 +583,7 @@ where
     Renderer:
         iced::advanced::text::Renderer<Font = iced::Font> + iced_wgpu::primitive::Renderer + 'a,
 {
-    fn from(text: GlassText<'a, Renderer, Theme>) -> Element<'a, Message, Theme, Renderer> {
+    fn from(text: GlassText<'a, Renderer, Theme>) -> Self {
         Element::new(text)
     }
 }
@@ -590,10 +622,7 @@ where
 }
 
 fn iced_font_to_family(font: Option<iced::Font>) -> cosmic_text::Family<'static> {
-    match font
-        .map(|f| f.family)
-        .unwrap_or(iced::font::Family::SansSerif)
-    {
+    match font.map_or(iced::font::Family::SansSerif, |f| f.family) {
         iced::font::Family::Name(name) => cosmic_text::Family::Name(name),
         iced::font::Family::SansSerif => cosmic_text::Family::SansSerif,
         iced::font::Family::Serif => cosmic_text::Family::Serif,
@@ -605,7 +634,7 @@ fn iced_font_to_family(font: Option<iced::Font>) -> cosmic_text::Family<'static>
 
 fn iced_weight(font: Option<iced::Font>) -> cosmic_text::Weight {
     cosmic_text::Weight(
-        match font.map(|f| f.weight).unwrap_or(iced::font::Weight::Normal) {
+        match font.map_or(iced::font::Weight::Normal, |f| f.weight) {
             iced::font::Weight::Thin => 100,
             iced::font::Weight::ExtraLight => 200,
             iced::font::Weight::Light => 300,
@@ -620,7 +649,7 @@ fn iced_weight(font: Option<iced::Font>) -> cosmic_text::Weight {
 }
 
 fn iced_style(font: Option<iced::Font>) -> cosmic_text::Style {
-    match font.map(|f| f.style).unwrap_or(iced::font::Style::Normal) {
+    match font.map_or(iced::font::Style::Normal, |f| f.style) {
         iced::font::Style::Normal => cosmic_text::Style::Normal,
         iced::font::Style::Italic => cosmic_text::Style::Italic,
         iced::font::Style::Oblique => cosmic_text::Style::Oblique,
@@ -628,10 +657,7 @@ fn iced_style(font: Option<iced::Font>) -> cosmic_text::Style {
 }
 
 fn iced_stretch(font: Option<iced::Font>) -> cosmic_text::Stretch {
-    match font
-        .map(|f| f.stretch)
-        .unwrap_or(iced::font::Stretch::Normal)
-    {
+    match font.map_or(iced::font::Stretch::Normal, |f| f.stretch) {
         iced::font::Stretch::UltraCondensed => cosmic_text::Stretch::UltraCondensed,
         iced::font::Stretch::ExtraCondensed => cosmic_text::Stretch::ExtraCondensed,
         iced::font::Stretch::Condensed => cosmic_text::Stretch::Condensed,

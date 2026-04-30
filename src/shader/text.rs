@@ -9,9 +9,12 @@ use crate::{
 // TODO: make these dynamic based on the texture atlas size and the number of glyphs
 pub const TEXT_ATLAS_SIZE: u32 = 2048;
 pub const MAX_GLYPHS: u32 = 80000;
+
+#[derive(Debug, Clone, Copy)]
 pub struct TextShader;
 
 impl TextShader {
+    #[must_use]
     pub fn create_pipeline(
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
@@ -77,6 +80,7 @@ impl TextShader {
         })
     }
 
+    #[must_use]
     pub fn create_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("text.bind_group_layout"),
@@ -111,6 +115,7 @@ impl TextShader {
         })
     }
 
+    #[must_use]
     pub fn create_bind_group(
         device: &wgpu::Device,
         shared_bind_group_data: &SharedBindGroupData,
@@ -152,13 +157,14 @@ impl TextShader {
     }
 
     // TODO: make this dynamic based on the number of glyphs
+    #[must_use]
     pub fn create_vertex_buffer(device: &wgpu::Device) -> wgpu::Buffer {
         device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("text.vertex_buffer"),
             size: std::mem::size_of::<f32>() as u64
                 * std::mem::size_of::<VertexData>() as u64
-                * VERTICES_PER_GLYPH as u64
-                * MAX_GLYPHS as u64,
+                * u64::from(VERTICES_PER_GLYPH)
+                * u64::from(MAX_GLYPHS),
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         })

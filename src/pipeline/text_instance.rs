@@ -3,6 +3,7 @@ use crate::{
     shader::{text::TextShader, texture_bind_groups},
     uniforms::Uniforms,
 };
+#[derive(Debug)]
 pub struct TextInstance {
     pub instance: Instance,
     pub vertex_buffer: wgpu::Buffer,
@@ -11,6 +12,7 @@ pub struct TextInstance {
 }
 
 impl TextInstance {
+    #[must_use]
     pub fn new(
         pipeline: &Pipeline,
         device: &wgpu::Device,

@@ -13,6 +13,7 @@ use iced::{
 };
 use iced_wgpu::primitive::Renderer as _;
 
+#[must_use]
 pub struct GlassContainer<'a, Message, Theme = iced::Theme>
 where
     Theme: Catalog,
@@ -41,6 +42,20 @@ where
     opacity: f32,
 }
 
+impl<Message, Theme> std::fmt::Debug for GlassContainer<'_, Message, Theme>
+where
+    Theme: Catalog,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GlassContainer")
+            .field("width", &self.width)
+            .field("height", &self.height)
+            .field("blur_radius", &self.blur_radius)
+            .finish_non_exhaustive()
+    }
+}
+
+/// Creates a new [`GlassContainer`] with the given content.
 pub fn glass_container<'a, Message, Theme>(
     content: impl Into<Element<'a, Message, Theme>>,
 ) -> GlassContainer<'a, Message, Theme>
@@ -177,13 +192,12 @@ where
 
     /// Sets whether the contents of the [`Container`] should be clipped on
     /// overflow.
-    pub fn clip(mut self, clip: bool) -> Self {
+    pub const fn clip(mut self, clip: bool) -> Self {
         self.clip = clip;
         self
     }
 
     /// Sets the style of the [`Container`].
-    #[must_use]
     pub fn style(mut self, style: impl Fn(&Theme) -> Style + 'a) -> Self
     where
         Theme::Class<'a>: From<StyleFn<'a, Theme>>,
@@ -193,48 +207,47 @@ where
     }
 
     /// Sets the style class of the [`Container`].
-    #[must_use]
     pub fn class(mut self, class: impl Into<Theme::Class<'a>>) -> Self {
         self.class = class.into();
         self
     }
 
-    pub fn blur_radius(mut self, radius: f32) -> Self {
+    pub const fn blur_radius(mut self, radius: f32) -> Self {
         self.blur_radius = radius;
         self
     }
 
-    pub fn saturation(mut self, saturation: f32) -> Self {
+    pub const fn saturation(mut self, saturation: f32) -> Self {
         self.saturation = saturation;
         self
     }
 
-    pub fn lightness(mut self, lightness: f32) -> Self {
+    pub const fn lightness(mut self, lightness: f32) -> Self {
         self.lightness = lightness;
         self
     }
 
-    pub fn edge_radius(mut self, edge_radius: f32) -> Self {
+    pub const fn edge_radius(mut self, edge_radius: f32) -> Self {
         self.edge_radius = edge_radius;
         self
     }
 
-    pub fn edge_height(mut self, edge_height: f32) -> Self {
+    pub const fn edge_height(mut self, edge_height: f32) -> Self {
         self.edge_height = edge_height;
         self
     }
 
-    pub fn refractive_index(mut self, refractive_index: f32) -> Self {
+    pub const fn refractive_index(mut self, refractive_index: f32) -> Self {
         self.refractive_index = refractive_index;
         self
     }
 
-    pub fn rim_width(mut self, rim_width: f32) -> Self {
+    pub const fn rim_width(mut self, rim_width: f32) -> Self {
         self.rim_width = rim_width;
         self
     }
 
-    pub fn opacity(mut self, opacity: f32) -> Self {
+    pub const fn opacity(mut self, opacity: f32) -> Self {
         self.opacity = opacity;
         self
     }
@@ -310,12 +323,14 @@ where
         operation: &mut dyn Operation,
     ) {
         operation.container(self.id.as_ref(), layout.bounds());
-        operation.traverse(&mut |operation| {
+
+        #[allow(clippy::expect_used)]
+        operation.traverse(&mut |op| {
             self.content.as_widget_mut().operate(
                 &mut tree.children[0],
-                layout.children().next().unwrap(),
+                layout.children().next().expect("No child found"),
                 renderer,
-                operation,
+                op,
             );
         });
     }
@@ -331,10 +346,11 @@ where
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
+        #[allow(clippy::expect_used)]
         self.content.as_widget_mut().update(
             &mut tree.children[0],
             event,
-            layout.children().next().unwrap(),
+            layout.children().next().expect("No child found"),
             cursor,
             renderer,
             clipboard,
@@ -351,9 +367,10 @@ where
         viewport: &Rectangle,
         renderer: &Renderer,
     ) -> mouse::Interaction {
+        #[allow(clippy::expect_used)]
         self.content.as_widget().mouse_interaction(
             &tree.children[0],
-            layout.children().next().unwrap(),
+            layout.children().next().expect("No child found"),
             cursor,
             viewport,
             renderer,
@@ -373,13 +390,13 @@ where
         let state = tree.state.downcast_ref::<State>();
         let bounds = layout.bounds();
         let style = theme.style(&self.class);
-        let tint = style
-            .background
-            .map(|background| match background {
+        let tint = style.background.map_or_else(
+            || Color::WHITE,
+            |background| match background {
                 Background::Color(color) => color,
-                _ => Color::WHITE,
-            })
-            .unwrap_or(Color::WHITE);
+                Background::Gradient(_) => Color::WHITE,
+            },
+        );
 
         renderer.draw_primitive(
             bounds,
@@ -403,7 +420,7 @@ where
         );
 
         if let Some(clipped_viewport) = bounds.intersection(viewport) {
-            // draw_background(renderer, &style, bounds);
+            #[allow(clippy::expect_used)]
             renderer.with_layer(bounds, |renderer| {
                 self.content.as_widget().draw(
                     &tree.children[0],
@@ -412,7 +429,7 @@ where
                     &renderer::Style {
                         text_color: style.text_color.unwrap_or(renderer_style.text_color),
                     },
-                    layout.children().next().unwrap(),
+                    layout.children().next().expect("No child found"),
                     cursor,
                     if self.clip {
                         &clipped_viewport
@@ -432,9 +449,10 @@ where
         viewport: &Rectangle,
         translation: Vector,
     ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
+        #[allow(clippy::expect_used)]
         self.content.as_widget_mut().overlay(
             &mut tree.children[0],
-            layout.children().next().unwrap(),
+            layout.children().next().expect("No child found"),
             renderer,
             viewport,
             translation,
@@ -451,7 +469,7 @@ where
     Message: 'a,
     Theme: Catalog + 'a,
 {
-    fn from(container: GlassContainer<'a, Message, Theme>) -> Element<'a, Message, Theme> {
+    fn from(container: GlassContainer<'a, Message, Theme>) -> Self {
         Element::new(container)
     }
 }
@@ -485,22 +503,22 @@ pub fn layout(
     )
 }
 
-/// Draws the background of a [`Container`] given its [`Style`] and its `bounds`.
-pub fn draw_background<Renderer>(renderer: &mut Renderer, style: &Style, bounds: Rectangle)
-where
-    Renderer: iced::advanced::Renderer,
-{
-    if style.background.is_some() || style.border.width > 0.0 || style.shadow.color.a > 0.0 {
-        renderer.fill_quad(
-            renderer::Quad {
-                bounds,
-                border: style.border,
-                shadow: style.shadow,
-                snap: style.snap,
-            },
-            style
-                .background
-                .unwrap_or(Background::Color(Color::TRANSPARENT)),
-        );
-    }
-}
+// Draws the background of a [`Container`] given its [`Style`] and its `bounds`.
+// pub fn draw_background<Renderer>(renderer: &mut Renderer, style: &Style, bounds: Rectangle)
+// where
+//     Renderer: iced::advanced::Renderer,
+// {
+//     if style.background.is_some() || style.border.width > 0.0 || style.shadow.color.a > 0.0 {
+//         renderer.fill_quad(
+//             renderer::Quad {
+//                 bounds,
+//                 border: style.border,
+//                 shadow: style.shadow,
+//                 snap: style.snap,
+//             },
+//             style
+//                 .background
+//                 .unwrap_or(Background::Color(Color::TRANSPARENT)),
+//         );
+//     }
+// }

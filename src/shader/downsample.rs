@@ -1,8 +1,10 @@
 use std::borrow::Cow;
 
+#[derive(Debug, Clone, Copy)]
 pub struct DownsampleShader;
 
 impl DownsampleShader {
+    #[must_use]
     pub fn create_pipeline(
         device: &wgpu::Device,
         format: wgpu::TextureFormat,

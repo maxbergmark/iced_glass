@@ -179,7 +179,7 @@ impl Ui {
 
     pub fn view(&self) -> iced::Element<'_, Message> {
         iced::widget::stack![
-            iced::widget::image("assets/tulips.jpg")
+            iced::widget::image("examples/text/assets/flowers.jpg")
                 .width(Length::Fill)
                 .height(Length::Fill),
             iced::widget::column![

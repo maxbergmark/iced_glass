@@ -4,6 +4,7 @@ use crate::{
     uniforms::Uniforms,
 };
 
+#[derive(Debug)]
 pub struct Instance {
     pub tex_a: wgpu::Texture,
     pub tex_b: wgpu::Texture,
@@ -17,6 +18,7 @@ pub struct Instance {
 }
 
 impl Instance {
+    #[must_use]
     pub fn new(
         pipeline: &Pipeline,
         device: &wgpu::Device,
