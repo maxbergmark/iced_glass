@@ -69,107 +69,77 @@ fn fs_main(input: FragInput) -> @location(0) vec4<f32> {
 fn physical_sampling(input: FragInput) -> vec4<f32> {
     let ixy = input.uv - vec2<f32>(0.5);
     let dimensions = vec2<f32>(textureDimensions(image));
-    let pxy = ixy * dimensions;
+    let p = ixy * dimensions;
 
-    let angle = atan2(pxy.y, pxy.x);
-    let sign = sign(pxy);
-    let xy = pxy * sign;
+    // let angle = atan2(p.y, p.x);
 
     let r = clamp_radius(uniforms.corner_radius, dimensions);
-    let sdf = sd_rounded_box(xy, dimensions / 2.0, r);
-    let aa = fwidth(sdf);
-    let outside_factor = smoothstep(-aa, 0.0, sdf);
-    let offset = compute_offset(xy.x, xy.y, dimensions);
-    let sample_uv = (xy + offset) * sign / dimensions + vec2<f32>(0.5);
+    let sdf_gradient = sdg_rounded_box(p, dimensions / 2.0, r);
+    let gradient = sdf_gradient.yz;
+    let sdf = sdf_gradient.x;
+
+    let h = uniforms.height;
+    let n = uniforms.refractive_index;
+    let r_edge = clamp_radius(uniforms.edge_radius, dimensions);
+    let dx = select(0.0, refract(sdf, r_edge, n, h), sdf > -r_edge);
+    let offset = gradient * dx;
+
+    let sample_uv = (p + offset) / dimensions + vec2<f32>(0.5);
 
     var color = textureSample(image, image_sampler, sample_uv);
     color = saturate(color);
     color *= uniforms.tint;
-    color = edge_highlight(color, xy, dimensions, angle);
+    color = edge_highlight(color, sdf, gradient);
 
+    let aa = fwidth(sdf);
+    let outside_factor = smoothstep(-aa, 0.0, sdf);
     return mix(color, TRANSPARENT, outside_factor);
 }
 
-fn edge_highlight(color: vec4<f32>, xy: vec2<f32>, dimensions: vec2<f32>, angle: f32) -> vec4<f32> {
-    let r = clamp_radius(uniforms.corner_radius, dimensions);
-    let sdf = sd_rounded_box(xy, dimensions / 2.0, r);
+fn edge_highlight(color: vec4<f32>, sdf: f32, sdf_gradient: vec2<f32>) -> vec4<f32> {
     let aa = fwidth(sdf);
 
     let highlight_color = apply_glass_exposure(color, vec4<f32>(1.0), 3.0);
     let highlight_width = uniforms.rim_width;
-    let highlight_angle = 2.0 * angle - 1.0;
-    let f = 0.5 + 0.5 * cos(highlight_angle);
+    let sun_direction = normalize(vec2<f32>(1.0, 2.0));
+    let f = pow(dot(sdf_gradient, sun_direction), 2.0);
     let t = smoothstep(-highlight_width - aa, -highlight_width, sdf);
     return mix(color, highlight_color, f * t);
 }
 
-fn sd_rounded_box(p: vec2<f32>, b: vec2<f32>, r: f32) -> f32 {
-    let q = abs(p) - b + r;
-    return min(max(q.x, q.y), 0.0) + length(max(q, vec2<f32>(0.0))) - r;
+
+fn sdg_rounded_box(p: vec2<f32>, b: vec2<f32>, r: f32) -> vec3<f32> {
+    let dis_gra = sdg_box(p, b - r);
+    return vec3<f32>( dis_gra.x - r, dis_gra.y, dis_gra.z );
+}
+
+fn sdg_box( p: vec2<f32>, b: vec2<f32> ) -> vec3<f32> {
+    let w = abs(p)-b;
+    let s = vec2<f32>(
+        select(1.0, -1.0, p.x < 0.0),
+        select(1.0, -1.0, p.y < 0.0));
+    let g = max(w.x,w.y);
+    let  q = max(w,vec2<f32>(0.0));
+    let l = length(q);
+
+
+    return vec3<f32>(   
+        select(g, l, g > 0.0),
+        s * select(
+            select(vec2<f32>(0,1), vec2<f32>(1,0), w.x>w.y),
+            q/l,
+            g>0.0
+        ),
+    
+    );
 }
 
 fn clamp_radius(radius: f32, dimensions: vec2<f32>) -> f32 {
     return min(radius, min(dimensions.x, dimensions.y) / 2.0);
 }
 
-fn compute_offset(x: f32, y: f32, dimensions: vec2<f32>) -> vec2<f32> {
-    let r = clamp_radius(uniforms.edge_radius, dimensions);
-    let corner_radius = clamp_radius(uniforms.corner_radius, dimensions);
-    let h = uniforms.height;
-    let n = uniforms.refractive_index;
-    let r_other = corner_radius - r;
-    let max_radius = max(r, corner_radius);
-    if x > dimensions.x / 2.0 - max_radius && y > dimensions.y / 2.0 - max_radius {
-        if r_other > 0.0 {
-            let x2 = x - dimensions.x / 2.0 + corner_radius;
-            let y2 = y - dimensions.y / 2.0 + corner_radius;
-            let d2 = x2 * x2 + y2 * y2;
-            if d2 <= r_other * r_other {
-                return vec2<f32>(0.0);
-            }
-            let alpha = atan(y2 / x2);
-            let p2 = sqrt(d2) - r_other;
-            let z = sqrt(r * r - p2 * p2);
-            let theta = atan(p2 / z);
-            let gamma = asin(sin(theta) / n);
-            let beta = theta - gamma;
-            let dx = -(z + h) * tan(beta);
-            return vec2<f32>(dx * cos(alpha), dx * sin(alpha));
-        } else {
-            // Avoid this case if possible, doesn't look great.
-            let x2 = x - dimensions.x / 2.0 + corner_radius;
-            let y2 = y - dimensions.y / 2.0 + corner_radius;
-            if x2 < 0.0 || y2 < 0.0 {
-                let dx = refract_edge(x, dimensions.x, r, n, h);
-                let dy = refract_edge(y, dimensions.y, r, n, h);
-                let t = smoothstep(0.0, 1.0, (abs(dy) - abs(dx) + 0.0) / 2.0 + 0.5);
-                return mix(vec2<f32>(dx, 0.0), vec2<f32>(0.0, dy), t);
-            } else {
-                let d2 = x2 * x2 + y2 * y2;
-                let alpha = atan(y2 / x2);
-                let p2 = sqrt(d2) - r_other;
-                let z = sqrt(r * r - p2 * p2);
-                let theta = atan(p2 / z);
-                let gamma = asin(sin(theta) / n);
-                let beta = theta - gamma;
-                let dx = -(z + h) * tan(beta);
-                return vec2<f32>(dx * cos(alpha), dx * sin(alpha));
-            }
-
-        }
-    } else if x > dimensions.x / 2.0 - r {
-        let dx = refract_edge(x, dimensions.x, r, n, h);
-        return vec2<f32>(dx, 0.0);
-    } else if y > dimensions.y / 2.0 - r {
-        let dy = refract_edge(y, dimensions.y, r, n, h);
-        return vec2<f32>(0.0, dy);
-    } else {
-        return vec2<f32>(0.0);
-    }
-}
-
-fn refract_edge(x: f32, dim: f32, r: f32, n: f32, h: f32) -> f32 {
-    let x2 = x - dim / 2.0 + r;
+fn refract(x: f32, r: f32, n: f32, h: f32) -> f32 {
+    let x2 = x + r;
     let z = sqrt(r * r - x2 * x2);
     let theta = atan(x2 / z);
     let gamma = asin(sin(theta) / n);
