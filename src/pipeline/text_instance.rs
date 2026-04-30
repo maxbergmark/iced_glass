@@ -12,6 +12,7 @@ pub struct TextInstance {
 }
 
 impl TextInstance {
+    #[must_use]
     pub fn new(
         pipeline: &Pipeline,
         device: &wgpu::Device,

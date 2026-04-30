@@ -1,6 +1,6 @@
 #![warn(
     // missing_docs,
-    // unreachable_pub,
+    unreachable_pub,
     keyword_idents,
     unexpected_cfgs,
     missing_copy_implementations,
@@ -25,7 +25,7 @@
     unused_allocation,
     unused_comparisons,
     unused_parens,
-    while_true,
+    while_true
 )]
 
 //! ```standalone_crate

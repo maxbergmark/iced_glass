@@ -16,6 +16,7 @@ pub struct Uniforms {
 }
 
 impl Uniforms {
+    #[must_use]
     pub fn to_raw(self, direction: [f32; 2], scale: f32) -> Raw {
         Raw {
             blur_radius: self.blur_radius * scale / self.mip_factor(),
@@ -35,6 +36,7 @@ impl Uniforms {
         }
     }
 
+    #[must_use]
     pub fn mip_level(self) -> u32 {
         match self.blur_radius {
             r if r < 50.0 => 0,

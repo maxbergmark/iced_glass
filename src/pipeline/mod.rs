@@ -144,6 +144,7 @@ impl iced::widget::shader::Pipeline for Pipeline {
     }
 }
 
+#[must_use]
 pub fn create_bgl_texture_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("gaussian.bind_group_layout"),
@@ -168,6 +169,7 @@ pub fn create_bgl_texture_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout
     })
 }
 
+#[must_use]
 pub fn create_textures(
     device: &wgpu::Device,
     format: wgpu::TextureFormat,
@@ -296,10 +298,12 @@ impl Pipeline {
         self.live_text_this_frame.insert(id);
     }
 
+    #[must_use]
     pub fn instance(&self, id: u64) -> &Instance {
         &self.instances[&id]
     }
 
+    #[must_use]
     pub fn text_instance(&self, id: u64) -> &TextInstance {
         &self.text_instances[&id]
     }
@@ -322,10 +326,12 @@ impl Pipeline {
     }
 }
 
+#[must_use]
 pub const fn round_up(size: u32, granularity: u32) -> u32 {
     size.div_ceil(granularity) * granularity
 }
 
+#[must_use]
 pub fn content_scale(size: iced::Size<f32>) -> (f32, f32) {
     (
         size.width / round_up(size.width as u32, 256) as f32,

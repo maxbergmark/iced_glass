@@ -12,6 +12,7 @@ pub struct RenderShaderData {
     pub uniform_bind_group: wgpu::BindGroup,
 }
 
+#[must_use]
 pub fn uniforms_bind_group(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
@@ -27,6 +28,7 @@ pub fn uniforms_bind_group(
     })
 }
 
+#[must_use]
 pub fn uniforms_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("uniforms_bind_group_layout"),
@@ -43,6 +45,7 @@ pub fn uniforms_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayou
     })
 }
 
+#[must_use]
 pub fn create_sampler(device: &wgpu::Device) -> wgpu::Sampler {
     device.create_sampler(&wgpu::SamplerDescriptor {
         label: Some("fragment.sampler"),
@@ -56,6 +59,7 @@ pub fn create_sampler(device: &wgpu::Device) -> wgpu::Sampler {
     })
 }
 
+#[must_use]
 pub fn to_texture_view(texture: &wgpu::Texture, level: u32) -> wgpu::TextureView {
     texture.create_view(&wgpu::TextureViewDescriptor {
         label: Some("fragment.texture_view"),
@@ -70,6 +74,7 @@ pub fn to_texture_view(texture: &wgpu::Texture, level: u32) -> wgpu::TextureView
     })
 }
 
+#[must_use]
 pub fn texture_bind_groups(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,

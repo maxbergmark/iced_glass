@@ -4,6 +4,7 @@ use std::borrow::Cow;
 pub struct DownsampleShader;
 
 impl DownsampleShader {
+    #[must_use]
     pub fn create_pipeline(
         device: &wgpu::Device,
         format: wgpu::TextureFormat,

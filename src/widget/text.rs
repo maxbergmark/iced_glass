@@ -144,6 +144,7 @@ pub struct GlyphData {
 }
 
 impl GlyphData {
+    #[must_use]
     pub const fn new(glyph: &LayoutGlyph, run_line_y: f32) -> Self {
         Self {
             glyph_id: GlyphId(glyph.glyph_id),

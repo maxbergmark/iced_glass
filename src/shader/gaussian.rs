@@ -6,6 +6,7 @@ use crate::shader::uniforms_bind_group_layout;
 pub struct GaussianShader;
 
 impl GaussianShader {
+    #[must_use]
     pub fn create_pipeline(
         device: &wgpu::Device,
         format: wgpu::TextureFormat,

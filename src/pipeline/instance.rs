@@ -18,6 +18,7 @@ pub struct Instance {
 }
 
 impl Instance {
+    #[must_use]
     pub fn new(
         pipeline: &Pipeline,
         device: &wgpu::Device,
