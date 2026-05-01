@@ -127,8 +127,15 @@ impl Ui {
     }
 
     pub fn subscription(&self) -> iced::Subscription<Message> {
-        // Only request frames while the animation is running
-        iced::time::every(std::time::Duration::from_millis(16)).map(|_| Message::Noop)
+        let now = Instant::now();
+        if self.opacity.is_animating(now)
+            || self.edge_radius.is_animating(now)
+            || self.lightness.animation.is_animating(now)
+        {
+            iced::time::every(std::time::Duration::from_millis(16)).map(|_| Message::Noop)
+        } else {
+            iced::Subscription::none()
+        }
     }
 
     pub fn view(&self) -> Element<'_, Message> {
