@@ -4,9 +4,11 @@ This example showcases the handling of sRGB colors while blurring. In `gaussian.
 
 ## Example
 
+<div align="center">
 <table>
 <tr>
 <td align="center"><img src="docs/incorrect_blur.png" width="400" /><br /><em>Incorrectly applied blur</em></td>
 <td align="center"><img src="docs/correct_blur.png" width="400" /><br /><em>Correctly applied blur</em></td>
 </tr>
 </table>
+</div>

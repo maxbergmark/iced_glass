@@ -1,19 +1,21 @@
 use std::time::{Duration, Instant};
 
 use iced::{
-    Alignment, Animation, Background, Border, Color, Element, Font, Gradient, Length, Padding,
-    Size, Task,
+    Alignment, Animation, Background, Border, Color, ContentFit, Element, Font, Gradient, Length,
+    Padding, Size, Task,
     animation::Easing,
     font::{self, Family, Stretch},
     gradient::Linear,
     widget::{
         Row, column, container, image, mouse_area, row,
         slider::{self, Handle, Rail},
-        space, svg, text,
+        space, stack, svg, text,
     },
 };
 
-use iced_glass::widget::{container as glass_container, slider as glass_slider};
+use iced_glass::widget::{
+    container as glass_container, slider as glass_slider, text as glass_text,
+};
 
 const FONT_BOLD: Font = Font {
     family: Family::SansSerif,
@@ -72,7 +74,7 @@ impl Default for Ui {
             lightness: HoverInfo {
                 index: 0,
                 is_hovered: false,
-                animation: Animation::new(false).very_quick(),
+                animation: Animation::new(false).duration(Duration::from_millis(150)),
             },
             opacity: Animation::new(false).slow(),
             edge_radius: Animation::new(false)
@@ -97,7 +99,8 @@ impl Ui {
                 self.hovered = Some(index);
                 let now = Instant::now();
                 if self.lightness.animation.is_animating(now) && old_index != index {
-                    self.lightness.animation = Animation::new(false).very_quick();
+                    self.lightness.animation =
+                        Animation::new(false).duration(Duration::from_millis(150));
                 }
                 self.lightness.animation.go_mut(true, now);
                 Task::none()
@@ -139,23 +142,64 @@ impl Ui {
     }
 
     pub fn view(&self) -> Element<'_, Message> {
-        iced::widget::container(iced::widget::stack![
-            iced::widget::image("examples/desktop/assets/ship.jpg")
-                .width(Length::Fill)
-                .height(Length::Fill),
-            iced::widget::column![
-                self.top_bar(),
-                self.settings(),
-                iced::widget::space().height(Length::FillPortion(1)),
-                self.dock(),
-            ]
-            .align_x(Alignment::Center)
-            .padding(Padding {
-                bottom: 10.0,
-                ..Default::default()
-            })
-            .width(Length::Fill)
+        container(stack![
+            self.wallpaper(),
+            self.desktop_elements(),
+            self.clock()
         ])
+        .center(Length::Fill)
+        .into()
+    }
+
+    fn wallpaper(&self) -> Element<'_, Message> {
+        image("examples/desktop/assets/ship.jpg")
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .content_fit(ContentFit::Cover)
+            .into()
+    }
+
+    fn desktop_elements(&self) -> Element<'_, Message> {
+        column![
+            self.top_bar(),
+            self.settings(),
+            space().height(Length::FillPortion(1)),
+            self.dock(),
+        ]
+        .align_x(Alignment::Center)
+        .padding(Padding {
+            bottom: 10.0,
+            ..Default::default()
+        })
+        .width(Length::Fill)
+        .into()
+    }
+
+    fn clock(&self) -> Element<'_, Message> {
+        container(
+            column![
+                space().height(Length::FillPortion(1)),
+                glass_text("12:45")
+                    .size(200.0)
+                    .font(FONT_BOLD)
+                    .blur_radius(500.0)
+                    .lightness(1.5)
+                    .edge_radius(8.0)
+                    .edge_height(100.0)
+                    .line_height(1.0)
+                    .rim_width(1.0),
+                glass_text("Fri May 1")
+                    .size(50.0)
+                    .font(FONT_BOLD)
+                    .blur_radius(500.0)
+                    .lightness(1.5)
+                    .edge_radius(3.0)
+                    .edge_height(100.0)
+                    .rim_width(1.0),
+                space().height(Length::FillPortion(3)),
+            ]
+            .align_x(Alignment::Center),
+        )
         .center(Length::Fill)
         .into()
     }
@@ -259,12 +303,13 @@ impl Ui {
                 .spacing(10.0),
             )
             .padding(15.0)
-            .blur_radius(50.0)
+            .blur_radius(self.get_blur_radius(index))
             .edge_radius(self.get_edge_radius())
             .edge_height(100.0)
             .lightness(self.get_lightness(index))
             .opacity(self.get_opacity())
             .saturation(1.1)
+            .rim_width(1.0)
             .center_y(70.0)
             .width(160.0)
             .style(border_radius(50.0)),
@@ -309,12 +354,13 @@ impl Ui {
                 .spacing(10.0),
             )
             .padding(15.0)
-            .blur_radius(50.0)
+            .blur_radius(self.get_blur_radius(index))
             .edge_radius(self.get_edge_radius())
             .edge_height(100.0)
             .lightness(self.get_lightness(index))
             .opacity(self.get_opacity())
             .saturation(1.1)
+            .rim_width(1.0)
             .center_y(70.0)
             .width(160.0)
             .style(border_radius(50.0)),
@@ -330,9 +376,21 @@ impl Ui {
         {
             self.lightness
                 .animation
-                .interpolate(-0.5, 0.0, Instant::now())
+                .interpolate(-0.5, -0.25, Instant::now())
         } else {
             -0.5
+        }
+    }
+
+    fn get_blur_radius(&self, index: usize) -> f32 {
+        if let Some(idx) = self.hovered
+            && idx == index
+        {
+            self.lightness
+                .animation
+                .interpolate(50.0, 99.0, Instant::now())
+        } else {
+            50.0
         }
     }
 
@@ -380,12 +438,13 @@ impl Ui {
                 .spacing(10.0),
             )
             .padding(15.0)
-            .blur_radius(50.0)
+            .blur_radius(self.get_blur_radius(index))
             .edge_radius(self.get_edge_radius())
             .edge_height(100.0)
             .lightness(self.get_lightness(index))
             .opacity(self.get_opacity())
             .saturation(1.1)
+            .rim_width(1.0)
             .center_y(160.0)
             .width(160.0)
             .style(border_radius(35.0)),
@@ -403,12 +462,13 @@ impl Ui {
                     .opacity(self.get_opacity()),
             )
             .padding(20.0)
-            .blur_radius(50.0)
+            .blur_radius(self.get_blur_radius(index))
             .edge_radius(self.get_edge_radius())
             .edge_height(100.0)
             .lightness(self.get_lightness(index))
             .opacity(self.get_opacity())
             .saturation(1.1)
+            .rim_width(1.0)
             .center(70.0)
             .style(border_radius(50.0)),
         )
@@ -452,12 +512,13 @@ impl Ui {
                 .spacing(10.0),
             )
             .padding(12.5)
-            .blur_radius(50.0)
+            .blur_radius(self.get_blur_radius(index))
             .edge_radius(self.get_edge_radius())
             .edge_height(100.0)
             .lightness(self.get_lightness(index))
             .opacity(self.get_opacity())
             .saturation(1.1)
+            .rim_width(1.0)
             .height(75.0)
             .width(340.0)
             .style(border_radius(25.0)),
