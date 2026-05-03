@@ -162,7 +162,11 @@ impl Ui {
     fn desktop_elements(&self) -> Element<'_, Message> {
         column![
             self.top_bar(),
-            self.settings(),
+            if self.get_opacity() > 0.0 {
+                self.settings()
+            } else {
+                space().into()
+            },
             space().height(Length::FillPortion(1)),
             self.dock(),
         ]
@@ -231,8 +235,7 @@ impl Ui {
     }
 
     fn settings(&self) -> Element<'_, Message> {
-        row![
-            space().width(Length::Fill),
+        container(
             glass_container(
                 column![
                     row![
@@ -281,8 +284,9 @@ impl Ui {
                 opacity: self.get_opacity(),
                 edge_type: EdgeType::SoftEdge,
                 ..Default::default()
-            })
-        ]
+            }),
+        )
+        .align_right(Length::Fill)
         .padding(20.0)
         .into()
     }
