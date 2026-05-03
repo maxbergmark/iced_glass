@@ -182,20 +182,25 @@ impl Ui {
                 glass_text("12:45")
                     .size(200.0)
                     .font(FONT_BOLD)
-                    .blur_radius(500.0)
-                    .lightness(1.5)
-                    .edge_radius(8.0)
-                    .edge_height(100.0)
-                    .line_height(1.0)
-                    .rim_width(1.0),
+                    .glass_style(|_theme| iced_glass::Style {
+                        blur_radius: 500.0,
+                        lightness: 1.5,
+                        edge_radius: 8.0,
+                        edge_height: 100.0,
+                        rim_width: 1.0,
+                        ..Default::default()
+                    }),
                 glass_text("Fri May 1")
                     .size(50.0)
                     .font(FONT_BOLD)
-                    .blur_radius(500.0)
-                    .lightness(1.5)
-                    .edge_radius(3.0)
-                    .edge_height(100.0)
-                    .rim_width(1.0),
+                    .glass_style(|_theme| iced_glass::Style {
+                        blur_radius: 500.0,
+                        lightness: 1.5,
+                        edge_radius: 3.0,
+                        edge_height: 100.0,
+                        rim_width: 1.0,
+                        ..Default::default()
+                    }),
                 space().height(Length::FillPortion(3)),
             ]
             .align_x(Alignment::Center),

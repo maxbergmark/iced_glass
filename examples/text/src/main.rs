@@ -497,7 +497,7 @@ impl Ui {
     }
 
     #[allow(dead_code)]
-    fn styled_text<'a>(&self, s: &'a str) -> iced::Element<'a, Message> {
+    fn styled_text<'a>(&'a self, s: &'a str) -> iced::Element<'a, Message> {
         let font = self.font_selection.map(|f| iced::Font {
             family: iced::font::Family::Name(f.name()),
             weight: self.weight,
@@ -508,15 +508,7 @@ impl Ui {
             iced_glass::widget::text(s)
                 .width(Length::Fill)
                 .height(Length::Fill)
-                .blur_radius(self.blur_radius)
-                .edge_radius(self.edge_radius)
-                .edge_height(self.edge_height)
-                .edge_type(EdgeType::GlassEdge)
-                .refractive_index(self.refractive_index)
-                .rim_width(self.rim_width)
-                .opacity(self.opacity)
-                .saturation(self.saturation)
-                .lightness(self.lightness)
+                .glass_style(|theme| self.glass_style(theme))
                 .size(self.font_size)
                 .font_maybe(font)
                 .line_height(self.line_height),
@@ -618,6 +610,20 @@ impl Ui {
                 border_width: 1.0,
                 border_color: iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0),
             },
+        }
+    }
+
+    fn glass_style(&self, _theme: &iced::Theme) -> iced_glass::Style {
+        iced_glass::Style {
+            blur_radius: self.blur_radius,
+            saturation: self.saturation,
+            lightness: self.lightness,
+            edge_radius: self.edge_radius,
+            edge_height: self.edge_height,
+            refractive_index: self.refractive_index,
+            rim_width: self.rim_width,
+            opacity: self.opacity,
+            edge_type: EdgeType::GlassEdge,
         }
     }
 }

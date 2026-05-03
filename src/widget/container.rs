@@ -194,11 +194,8 @@ where
         self
     }
 
-    /// Sets the style of the [`Container`].
-    pub fn glass_style(mut self, style: impl Fn(&Theme) -> crate::Style + 'a) -> Self
-// where
-        // Theme::Class<'a>: From<crate::StyleFn<'a, Theme>>,
-    {
+    /// Sets the glass style of the [`Container`].
+    pub fn glass_style(mut self, style: impl Fn(&Theme) -> crate::Style + 'a) -> Self {
         self.glass_style = Box::new(style) as crate::StyleFn<'a, Theme>;
         self
     }
@@ -342,7 +339,7 @@ where
         let state = tree.state.downcast_ref::<State>();
         let bounds = layout.bounds();
         let style = theme.style(&self.class);
-        let glass_style = self.glass_style.as_ref()(theme);
+        let glass_style = (self.glass_style)(theme);
         let tint = style.background.map_or_else(
             || Color::WHITE,
             |background| match background {

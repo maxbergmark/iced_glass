@@ -75,9 +75,12 @@ impl Ui {
                         .width(1000.0)
                         .height(100.0)
                         .style(slider_style)
-                        .edge_radius(self.edge_radius)
-                        .edge_height(self.edge_height)
-                        .refractive_index(self.refractive_index),
+                        .glass_style(|_theme| iced_glass::Style {
+                            edge_radius: self.edge_radius,
+                            edge_height: self.edge_height,
+                            refractive_index: self.refractive_index,
+                            ..Default::default()
+                        }),
                     iced::widget::row![
                         iced_glass::widget::container(iced::widget::column![
                             iced::widget::text("Edge Radius: "),
