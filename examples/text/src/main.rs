@@ -581,7 +581,7 @@ impl Ui {
                 .blur_radius(self.blur_radius)
                 .edge_radius(self.edge_radius)
                 .edge_height(self.edge_height)
-                .edge_type(EdgeType::SoftEdge)
+                .edge_type(EdgeType::GlassEdge)
                 .refractive_index(self.refractive_index)
                 .rim_width(self.rim_width)
                 .opacity(self.opacity)
