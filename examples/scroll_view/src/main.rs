@@ -1,7 +1,9 @@
 use std::time::Instant;
 
 use iced::{
-    Alignment, Animation, Background, Border, Color, Font, Length, Size, Task, font::Weight,
+    Alignment, Animation, Background, Border, Color, Font, Length, Size, Task,
+    font::Weight,
+    widget::slider::{self, Handle, Rail},
 };
 use itertools::Itertools;
 use serde::Deserialize;
@@ -218,12 +220,14 @@ impl Ui {
         )
         .width(Length::from(600.0))
         .center_y(Length::from(60.0))
-        .blur_radius(50.0)
-        // .saturation(1.0)
-        .lightness(-1.5)
-        .edge_radius(10.0)
-        .edge_height(100.0)
-        .refractive_index(1.5)
+        .glass_style(|_theme| iced_glass::Style {
+            blur_radius: 50.0,
+            lightness: -1.5,
+            edge_radius: 10.0,
+            edge_height: 100.0,
+            refractive_index: 1.5,
+            ..Default::default()
+        })
         .style(|theme| self.style(theme))
         .into()
     }
@@ -284,13 +288,15 @@ impl Ui {
         )
         .width(Length::from(600.0))
         .center_y(Length::from(100.0))
-        .blur_radius(50.0)
-        // .saturation(1.0)
-        .edge_radius(10.0)
-        .edge_height(100.0)
-        .refractive_index(1.5)
-        .rim_width(2.0)
-        .lightness(-1.5)
+        .glass_style(|_theme| iced_glass::Style {
+            blur_radius: 50.0,
+            lightness: -1.5,
+            edge_radius: 10.0,
+            edge_height: 100.0,
+            refractive_index: 1.5,
+            rim_width: 2.0,
+            ..Default::default()
+        })
         .style(|theme| self.style(theme))
         .into()
     }
@@ -360,12 +366,15 @@ impl AlbumCard {
                         .opacity(opacity),
                 )
                 .center(Length::from(40.0))
-                .blur_radius(25.0)
-                .edge_radius(10.0)
-                .edge_height(30.0)
-                .refractive_index(1.5)
-                .lightness(-1.5)
-                .opacity(opacity)
+                .glass_style(move |_theme| iced_glass::Style {
+                    blur_radius: 25.0,
+                    lightness: -1.5,
+                    edge_radius: 10.0,
+                    edge_height: 30.0,
+                    refractive_index: 1.5,
+                    opacity,
+                    ..Default::default()
+                })
                 .style(move |theme| self.style(theme, opacity)),
             )
             .align_right(Length::from(200.0))
@@ -432,6 +441,7 @@ impl AlbumCard {
                     "examples/scroll_view/assets/album_covers/{}",
                     self.file.clone()
                 ))
+                .border_radius(10.0)
                 .width(Length::from(60.0))
                 .height(Length::from(60.0)),
                 iced::widget::column![
@@ -450,13 +460,10 @@ impl AlbumCard {
                     .spacing(5.0),
                     iced_glass::widget::slider(0.0..=1.0, playback_time, Message::SetPlaybackTime)
                         .step(0.01_f32)
-                        .style(|theme, status| self.slider_style(theme, status))
-                        .edge_radius(5.0)
-                        .edge_height(10.0)
-                        .refractive_index(1.5),
+                        .style(self.slider_style()),
                 ],
             ]
-            .spacing(10.0),
+            .spacing(15.0),
         )
         .into()
     }
@@ -488,33 +495,34 @@ impl AlbumCard {
         }
     }
 
-    fn slider_style(
-        &self,
-        _theme: &iced::Theme,
-        _status: iced::widget::slider::Status,
-    ) -> iced::widget::slider::Style {
-        let fill_color = iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0);
-        iced::widget::slider::Style {
-            rail: iced::widget::slider::Rail {
-                backgrounds: (
-                    iced::Background::Color(fill_color),
-                    iced::Background::Color(iced::Color::WHITE),
-                ),
-                width: 5.0,
-                border: iced::Border {
-                    radius: 100.0.into(),
-                    ..Default::default()
+    fn slider_style(&self) -> impl Fn(&iced::Theme, slider::Status) -> slider::Style {
+        let color = Color::WHITE;
+        let background_color = Color::from_rgb(0.3, 0.3, 0.3);
+        move |_, status| {
+            let handle_color = match status {
+                slider::Status::Active => color_opacity(color, 0.0),
+                _ => color,
+            };
+            slider::Style {
+                rail: Rail {
+                    backgrounds: (
+                        Background::Color(color),
+                        Background::Color(background_color),
+                    ),
+                    width: 3.0,
+                    border: Border {
+                        color,
+                        width: 0.0,
+                        radius: 5.0.into(),
+                    },
                 },
-            },
-            handle: iced::widget::slider::Handle {
-                shape: iced::widget::slider::HandleShape::Rectangle {
-                    width: 30,
-                    border_radius: 10.0.into(),
+                handle: Handle {
+                    shape: slider::HandleShape::Circle { radius: 5.0 },
+                    background: Background::Color(handle_color),
+                    border_width: 0.0,
+                    border_color: Color::WHITE,
                 },
-                background: iced::Background::Color(iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0)),
-                border_width: 1.0,
-                border_color: iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0),
-            },
+            }
         }
     }
 
@@ -532,4 +540,8 @@ fn button_style(_theme: &iced::Theme) -> iced::widget::button::Style {
         border: Border::default(),
         ..Default::default()
     }
+}
+
+fn color_opacity(base: Color, opacity: f32) -> Color {
+    Color::from_rgba(base.r, base.g, base.b, opacity)
 }

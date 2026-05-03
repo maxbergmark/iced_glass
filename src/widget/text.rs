@@ -16,10 +16,7 @@ use iced::{
 use itertools::Itertools;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
-use crate::{
-    pipeline::{GlyphId, content_scale},
-    widget::EdgeType,
-};
+use crate::pipeline::{GlyphId, content_scale};
 
 /// A widget that renders text with a glass effect.
 #[must_use]
@@ -32,17 +29,7 @@ where
     format: Format<Renderer::Font>,
     fragment: text::Fragment<'a>,
     class: Theme::Class<'a>,
-
-    // GlassText specific properties
-    blur_radius: f32,
-    saturation: f32,
-    lightness: f32,
-    edge_radius: f32,
-    edge_height: f32,
-    refractive_index: f32,
-    rim_width: f32,
-    opacity: f32,
-    edge_type: EdgeType,
+    glass_style: crate::StyleFn<'a, Theme>,
 }
 
 impl<Renderer, Theme> std::fmt::Debug for GlassText<'_, Renderer, Theme>
@@ -54,7 +41,6 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GlassText")
             .field("format", &self.format)
-            .field("blur_radius", &self.blur_radius)
             .finish_non_exhaustive()
     }
 }
@@ -216,16 +202,7 @@ where
             fragment: fragment.into_fragment(),
             format: Format::default(),
             class: Theme::default(),
-
-            blur_radius: 0.0,
-            saturation: 1.0,
-            lightness: 0.0,
-            edge_radius: 0.0,
-            edge_height: 0.0,
-            refractive_index: 1.5,
-            rim_width: 1.0,
-            opacity: 1.0,
-            edge_type: EdgeType::GlassEdge,
+            glass_style: Box::new(|_| crate::Style::default()),
         }
     }
 
@@ -399,57 +376,9 @@ where
     //     self
     // }
 
-    /// Sets the blur radius of the [`Text`].
-    pub const fn blur_radius(mut self, radius: f32) -> Self {
-        self.blur_radius = radius;
-        self
-    }
-
-    /// Sets the saturation of the [`Text`].
-    pub const fn saturation(mut self, saturation: f32) -> Self {
-        self.saturation = saturation;
-        self
-    }
-
-    /// Sets the lightness of the [`Text`].
-    pub const fn lightness(mut self, lightness: f32) -> Self {
-        self.lightness = lightness;
-        self
-    }
-
-    /// Sets the edge radius of the [`Text`].
-    pub const fn edge_radius(mut self, edge_radius: f32) -> Self {
-        self.edge_radius = edge_radius;
-        self
-    }
-
-    /// Sets the edge height of the [`Text`].
-    pub const fn edge_height(mut self, edge_height: f32) -> Self {
-        self.edge_height = edge_height;
-        self
-    }
-
-    /// Sets the refractive index of the [`Text`].
-    pub const fn refractive_index(mut self, refractive_index: f32) -> Self {
-        self.refractive_index = refractive_index;
-        self
-    }
-
-    /// Sets the rim width of the [`Text`].
-    pub const fn rim_width(mut self, rim_width: f32) -> Self {
-        self.rim_width = rim_width;
-        self
-    }
-
-    /// Sets the opacity of the [`Text`].
-    pub const fn opacity(mut self, opacity: f32) -> Self {
-        self.opacity = opacity;
-        self
-    }
-
-    /// Sets the edge type of the [`Text`].
-    pub const fn edge_type(mut self, edge_type: EdgeType) -> Self {
-        self.edge_type = edge_type;
+    /// Sets the glass style of the [`Text`].
+    pub fn glass_style(mut self, style: impl Fn(&Theme) -> crate::Style + 'a) -> Self {
+        self.glass_style = Box::new(style) as crate::StyleFn<'a, Theme>;
         self
     }
 }
@@ -550,6 +479,7 @@ where
         let state = tree.state.downcast_ref::<State<Renderer::Paragraph>>();
         let bounds = layout.bounds();
         let style = theme.style(&self.class);
+        let glass_style = (self.glass_style)(theme);
         let tint = style.color.unwrap_or(Color::WHITE);
 
         let glyphs = Self::parse_text(&state.font_data, &self.fragment, &bounds);
@@ -569,19 +499,19 @@ where
                 glyphs,
                 font_size: self.format.size.unwrap_or_else(|| 16.0.into()).0,
                 uniforms: crate::uniforms::Uniforms {
-                    blur_radius: self.blur_radius,
+                    blur_radius: glass_style.blur_radius,
                     // TODO: implement corner radius for text
                     corner_radius: 0.0,
-                    saturation: self.saturation,
-                    lightness: self.lightness,
-                    edge_radius: self.edge_radius,
-                    height: self.edge_height,
-                    refractive_index: self.refractive_index,
-                    rim_width: self.rim_width,
-                    opacity: self.opacity,
+                    saturation: glass_style.saturation,
+                    lightness: glass_style.lightness,
+                    edge_radius: glass_style.edge_radius,
+                    height: glass_style.edge_height,
+                    refractive_index: glass_style.refractive_index,
+                    rim_width: glass_style.rim_width,
+                    opacity: glass_style.opacity,
                     tint,
                     content_scale: content_scale(bounds.size()),
-                    edge_type: self.edge_type,
+                    edge_type: glass_style.edge_type,
                 },
             },
         );

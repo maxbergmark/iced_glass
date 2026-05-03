@@ -11,8 +11,6 @@ use iced::{
     },
 };
 
-use crate::widget::EdgeType;
-
 #[must_use]
 pub struct GlassContainer<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
 where
@@ -30,17 +28,7 @@ where
     clip: bool,
     content: Element<'a, Message, Theme, Renderer>,
     class: Theme::Class<'a>,
-
-    // GlassContainer specific properties
-    blur_radius: f32,
-    saturation: f32,
-    lightness: f32,
-    edge_radius: f32,
-    edge_height: f32,
-    refractive_index: f32,
-    rim_width: f32,
-    opacity: f32,
-    edge_type: EdgeType,
+    glass_style: crate::StyleFn<'a, Theme>,
 }
 
 impl<Message, Theme, Renderer> std::fmt::Debug for GlassContainer<'_, Message, Theme, Renderer>
@@ -52,7 +40,6 @@ where
         f.debug_struct("GlassContainer")
             .field("width", &self.width)
             .field("height", &self.height)
-            .field("blur_radius", &self.blur_radius)
             .finish_non_exhaustive()
     }
 }
@@ -89,17 +76,8 @@ where
             vertical_alignment: alignment::Vertical::Top,
             clip: false,
             class: Theme::default(),
+            glass_style: Box::new(|_| crate::Style::default()),
             content,
-
-            blur_radius: 0.0,
-            saturation: 1.0,
-            lightness: 0.0,
-            edge_radius: 0.0,
-            edge_height: 0.0,
-            refractive_index: 1.5,
-            rim_width: 1.0,
-            opacity: 1.0,
-            edge_type: EdgeType::GlassEdge,
         }
     }
 
@@ -216,48 +194,9 @@ where
         self
     }
 
-    pub const fn blur_radius(mut self, radius: f32) -> Self {
-        self.blur_radius = radius;
-        self
-    }
-
-    pub const fn saturation(mut self, saturation: f32) -> Self {
-        self.saturation = saturation;
-        self
-    }
-
-    pub const fn lightness(mut self, lightness: f32) -> Self {
-        self.lightness = lightness;
-        self
-    }
-
-    pub const fn edge_radius(mut self, edge_radius: f32) -> Self {
-        self.edge_radius = edge_radius;
-        self
-    }
-
-    pub const fn edge_height(mut self, edge_height: f32) -> Self {
-        self.edge_height = edge_height;
-        self
-    }
-
-    pub const fn refractive_index(mut self, refractive_index: f32) -> Self {
-        self.refractive_index = refractive_index;
-        self
-    }
-
-    pub const fn rim_width(mut self, rim_width: f32) -> Self {
-        self.rim_width = rim_width;
-        self
-    }
-
-    pub const fn opacity(mut self, opacity: f32) -> Self {
-        self.opacity = opacity;
-        self
-    }
-
-    pub const fn edge_type(mut self, edge_type: EdgeType) -> Self {
-        self.edge_type = edge_type;
+    /// Sets the glass style of the [`Container`].
+    pub fn glass_style(mut self, style: impl Fn(&Theme) -> crate::Style + 'a) -> Self {
+        self.glass_style = Box::new(style) as crate::StyleFn<'a, Theme>;
         self
     }
 }
@@ -400,6 +339,7 @@ where
         let state = tree.state.downcast_ref::<State>();
         let bounds = layout.bounds();
         let style = theme.style(&self.class);
+        let glass_style = (self.glass_style)(theme);
         let tint = style.background.map_or_else(
             || Color::WHITE,
             |background| match background {
@@ -413,19 +353,19 @@ where
             crate::primitive::Primitive {
                 id: state.id,
                 uniforms: crate::uniforms::Uniforms {
-                    blur_radius: self.blur_radius,
+                    blur_radius: glass_style.blur_radius,
                     // TODO: don't just use the bottom left corner radius
                     corner_radius: style.border.radius.bottom_left,
-                    saturation: self.saturation,
-                    lightness: self.lightness,
-                    edge_radius: self.edge_radius,
-                    height: self.edge_height,
-                    refractive_index: self.refractive_index,
-                    rim_width: self.rim_width,
-                    opacity: self.opacity,
+                    saturation: glass_style.saturation,
+                    lightness: glass_style.lightness,
+                    edge_radius: glass_style.edge_radius,
+                    height: glass_style.edge_height,
+                    refractive_index: glass_style.refractive_index,
+                    rim_width: glass_style.rim_width,
+                    opacity: glass_style.opacity,
                     tint,
                     content_scale: (1.0, 1.0),
-                    edge_type: self.edge_type,
+                    edge_type: glass_style.edge_type,
                 },
             },
         );

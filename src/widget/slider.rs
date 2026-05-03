@@ -15,8 +15,6 @@ use iced::{
     window,
 };
 
-use crate::widget::EdgeType;
-
 /// Creates a new [`GlassSlider`] with the given range, value, and `on_change` function.
 pub fn glass_slider<'a, T, Message, Theme>(
     range: RangeInclusive<T>,
@@ -47,10 +45,7 @@ where
     height: f32,
     class: Theme::Class<'a>,
     status: Option<Status>,
-
-    edge_radius: f32,
-    edge_height: f32,
-    refractive_index: f32,
+    glass_style: crate::StyleFn<'a, Theme>,
 }
 
 impl<T, Message, Theme> std::fmt::Debug for GlassSlider<'_, T, Message, Theme>
@@ -121,10 +116,7 @@ where
             height: Self::DEFAULT_HEIGHT,
             class: Theme::default(),
             status: None,
-
-            edge_radius: 0.0,
-            edge_height: 0.0,
-            refractive_index: 1.5,
+            glass_style: Box::new(|_| crate::Style::default()),
         }
     }
 
@@ -190,18 +182,9 @@ where
     //     self
     // }
 
-    pub const fn edge_radius(mut self, edge_radius: f32) -> Self {
-        self.edge_radius = edge_radius;
-        self
-    }
-
-    pub const fn edge_height(mut self, edge_height: f32) -> Self {
-        self.edge_height = edge_height;
-        self
-    }
-
-    pub const fn refractive_index(mut self, refractive_index: f32) -> Self {
-        self.refractive_index = refractive_index;
+    /// Sets the glass style of the [`Slider`].
+    pub fn glass_style(mut self, style: impl Fn(&Theme) -> crate::Style + 'a) -> Self {
+        self.glass_style = Box::new(style) as crate::StyleFn<'a, Theme>;
         self
     }
 }
@@ -431,6 +414,7 @@ where
         let bounds = layout.bounds();
 
         let style = theme.style(&self.class, self.status.unwrap_or(Status::Active));
+        let glass_style = (self.glass_style)(theme);
         // style.handle.background = iced::Background::Color(iced::Color::WHITE);
 
         let (handle_width, handle_height, handle_border_radius) = match style.handle.shape {
@@ -507,19 +491,19 @@ where
                 crate::primitive::Primitive {
                     id: state.id,
                     uniforms: crate::uniforms::Uniforms {
-                        blur_radius: 0.0,
+                        blur_radius: glass_style.blur_radius,
                         // TODO: don't just use the bottom left corner radius
                         corner_radius,
-                        saturation: 1.0,
-                        lightness: 0.0,
-                        edge_radius: self.edge_radius,
-                        height: self.edge_height,
-                        refractive_index: self.refractive_index,
-                        rim_width: 1.0,
-                        opacity: 1.0,
+                        saturation: glass_style.saturation,
+                        lightness: glass_style.lightness,
+                        edge_radius: glass_style.edge_radius,
+                        height: glass_style.edge_height,
+                        refractive_index: glass_style.refractive_index,
+                        rim_width: glass_style.rim_width,
+                        opacity: glass_style.opacity,
                         tint,
                         content_scale: (1.0, 1.0),
-                        edge_type: EdgeType::GlassEdge,
+                        edge_type: glass_style.edge_type,
                     },
                 },
             );

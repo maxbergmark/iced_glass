@@ -32,6 +32,7 @@
 //! # struct State;
 //! # enum Message {}
 //! use iced_glass::widget::container;
+//! use iced_glass::widget::EdgeType;
 //! use iced::widget::text;
 //! use iced::Element;
 //!
@@ -39,14 +40,17 @@
 //!     container(
 //!         text("Hello, world!")
 //!     )
-//!     .blur_radius(10.0)
-//!     .saturation(0.8)
-//!     .lightness(-2.0)
-//!     .edge_radius(20.0)
-//!     .edge_height(100.0)
-//!     .refractive_index(1.5)
-//!     .rim_width(2.0)
-//!     .opacity(1.0)
+//!     .glass_style(|_theme| iced_glass::Style {
+//!         blur_radius: 10.0,
+//!         saturation: 0.8,
+//!         lightness: -2.0,
+//!         edge_radius: 20.0,
+//!         edge_height: 100.0,
+//!         refractive_index: 1.5,
+//!         rim_width: 2.0,
+//!         opacity: 1.0,
+//!         edge_type: EdgeType::GlassEdge,
+//!     })
 //!     .style(|_theme| iced::widget::container::Style {
 //!         // set colored glass tint
 //!         background: Some(iced::Background::Color(iced::Color::from_rgb(0.8, 0.9, 1.0))),
@@ -67,3 +71,5 @@ pub(crate) mod shader;
 pub(crate) mod uniforms;
 /// Public widgets
 pub mod widget;
+
+pub use widget::{Style, StyleFn};
