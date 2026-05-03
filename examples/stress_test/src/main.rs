@@ -89,11 +89,13 @@ impl Ui {
                 iced::widget::Row::from_iter((0..self.num_containers).map(|_i| {
                     iced_glass::widget::container(iced::widget::space())
                         .center(50.0)
-                        .blur_radius(self.blur_radius)
-                        .edge_height(200.0)
-                        .refractive_index(2.5)
-                        .edge_radius(5.0)
-                        .lightness(-0.0)
+                        .glass_style(|_theme| iced_glass::Style {
+                            blur_radius: 50.0,
+                            edge_radius: 5.0,
+                            edge_height: 200.0,
+                            refractive_index: 2.5,
+                            ..Default::default()
+                        })
                         .style(border_radius(10.0))
                         .into()
                 }))

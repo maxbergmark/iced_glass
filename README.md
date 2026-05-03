@@ -47,14 +47,18 @@ impl Ui {
         iced_glass::widget::container(
             self.content()
         )
-        .blur_radius(10.0) // gaussian blur
-        .saturation(0.8) // add or remove saturation from background texture
-        .lightness(-2.0) // tint glass lighter or darker in exposure steps
-        .edge_radius(20.0) // bevel radius of container
-        .edge_height(100.0) // accentuate refraction by adding depth
-        .refractive_index(1.5) // amount of refraction
-        .rim_width(2.0) // rim highlight
-        .opacity(1.0) // select opacity, useful for fade-in effects
+        .glass_style(|_theme| {
+            blur_radius: 10.0, // gaussian blur
+            saturation: 0.8, // add or remove saturation from background texture
+            lightness: -2.0, // tint glass lighter or darker in exposure steps
+            edge_radius: 20.0, // bevel radius of container
+            edge_height: 100.0, // accentuate refraction by adding depth
+            refractive_index: 1.5, // amount of refraction
+            rim_width: 2.0, // rim highlight
+            opacity: 1.0, // select opacity, useful for fade-in effects
+            edge_type: EdgeType::GlassEdge // choose between refractive glass edges or smooth fade-in
+
+        })
         .into()
     }
 }

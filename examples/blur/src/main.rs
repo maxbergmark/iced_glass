@@ -96,7 +96,10 @@ impl Ui {
             .center_x(1000.00)
             .height(1000.0)
             .padding(20.0)
-            .blur_radius(self.blur_radius), // .style(|theme| self.style(theme)),
+            .glass_style(|_theme| iced_glass::Style {
+                blur_radius: self.blur_radius,
+                ..Default::default()
+            }),
         )
         .center(Length::Fill)
         .into()
@@ -136,10 +139,12 @@ impl Ui {
         .center_x(Length::from(200.0))
         .center_y(Length::from(100.0))
         .padding(10.0)
-        .blur_radius(50.0)
-        .saturation(1.0)
-        .lightness(-2.0)
-        .rim_width(1.0)
+        .glass_style(|_theme| iced_glass::Style {
+            blur_radius: 50.0,
+            lightness: -2.0,
+            rim_width: 1.0,
+            ..Default::default()
+        })
         .style(|_theme| iced::widget::container::Style {
             shadow: iced::Shadow {
                 color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),

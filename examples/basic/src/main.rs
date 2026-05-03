@@ -193,14 +193,6 @@ impl Ui {
         )
         .width(Length::Fill)
         .height(Length::Fill)
-        // .style(|_| iced::widget::container::Style {
-        //     border: iced::Border {
-        //         color: iced::Color::from_rgb(1.0, 1.0, 1.0),
-        //         width: 1.0,
-        //         ..Default::default()
-        //     },
-        //     ..Default::default()
-        // })
         .into()
     }
 
@@ -210,15 +202,7 @@ impl Ui {
                 .width(Length::from(self.width))
                 .height(Length::from(self.height))
                 .center_y(Length::from(self.height))
-                .blur_radius(self.blur_radius)
-                .saturation(self.saturation)
-                .lightness(self.lightness)
-                .edge_radius(self.edge_radius)
-                .edge_height(self.edge_height)
-                .refractive_index(self.refractive_index)
-                .rim_width(self.rim_width)
-                .opacity(self.opacity)
-                .edge_type(EdgeType::GlassEdge)
+                .glass_style(|theme| self.glass_style(theme))
                 .style(|theme| self.style(theme)),
         )
         .align_left(Length::Fill)
@@ -340,21 +324,17 @@ impl Ui {
             ]
             .align_x(Alignment::Center)
             .spacing(5.0)
-            .padding(iced::Padding {
-                top: 0.0,
-                right: 15.0,
-                bottom: 0.0,
-                left: 15.0,
-            }),
+            .padding(iced::Padding::default().horizontal(15.0)),
         )
-        // .style(|theme| self.style(theme))
         .center_x(Length::from(200.0))
         .center_y(Length::from(100.0))
         .padding(10.0)
-        .blur_radius(50.0)
-        .saturation(self.saturation)
-        .lightness(0.0)
-        .rim_width(1.0)
+        .glass_style(|_theme| iced_glass::Style {
+            blur_radius: 50.0,
+            saturation: self.saturation,
+            rim_width: 1.0,
+            ..Default::default()
+        })
         // .edge_radius(self.edge_radius)
         // .edge_height(self.edge_height)
         .style(|_theme| iced::widget::container::Style {
@@ -433,11 +413,11 @@ impl Ui {
         .center_x(Length::from(200.0))
         .center_y(Length::from(100.0))
         .padding(10.0)
-        .blur_radius(50.0)
-        .saturation(self.saturation)
-        .lightness(0.0)
-        // .edge_radius(self.edge_radius)
-        // .edge_height(self.edge_height)
+        .glass_style(|_theme| iced_glass::Style {
+            blur_radius: 50.0,
+            saturation: self.saturation,
+            ..Default::default()
+        })
         .style(|_theme| iced::widget::container::Style {
             shadow: iced::Shadow {
                 color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25 * 0.0),
@@ -466,6 +446,20 @@ impl Ui {
             },
             background: Some(iced::Background::Color(self.tint)),
             ..Default::default()
+        }
+    }
+
+    fn glass_style(&self, _theme: &iced::Theme) -> iced_glass::Style {
+        iced_glass::Style {
+            blur_radius: self.blur_radius,
+            saturation: self.saturation,
+            lightness: self.lightness,
+            edge_radius: self.edge_radius,
+            edge_height: self.edge_height,
+            refractive_index: self.refractive_index,
+            rim_width: self.rim_width,
+            opacity: self.opacity,
+            edge_type: EdgeType::GlassEdge,
         }
     }
 

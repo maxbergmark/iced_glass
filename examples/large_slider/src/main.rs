@@ -92,7 +92,7 @@ impl Ui {
                         ])
                         .padding(20.0)
                         .style(border_radius(20.0))
-                        .lightness(-1.0)
+                        .glass_style(|_theme| iced_glass::Style::default().lightness(-1.0))
                         .center_x(200.0)
                         .center_y(100.0),
                         iced_glass::widget::container(iced::widget::column![
@@ -108,7 +108,7 @@ impl Ui {
                         ])
                         .padding(20.0)
                         .style(border_radius(20.0))
-                        .lightness(-1.0)
+                        .glass_style(|_theme| iced_glass::Style::default().lightness(-1.0))
                         .center_x(200.0)
                         .center_y(100.0),
                         iced_glass::widget::container(iced::widget::column![
@@ -124,7 +124,7 @@ impl Ui {
                         ])
                         .padding(20.0)
                         .style(border_radius(20.0))
-                        .lightness(-1.0)
+                        .glass_style(|_theme| iced_glass::Style::default().lightness(-1.0))
                         .center_x(200.0)
                         .center_y(100.0)
                     ]
@@ -136,11 +136,14 @@ impl Ui {
             )
             .center_x(1500.0)
             .center_y(700.0)
-            .blur_radius(50.0)
-            .edge_height(200.0)
-            .refractive_index(2.5)
-            .edge_radius(30.0)
-            .lightness(-1.0)
+            .glass_style(|_theme| iced_glass::Style {
+                blur_radius: 50.0,
+                lightness: -1.0,
+                edge_radius: 30.0,
+                edge_height: 200.0,
+                refractive_index: 2.5,
+                ..Default::default()
+            })
             .style(|_theme| iced::widget::container::Style {
                 border: iced::Border {
                     radius: 50.0.into(),

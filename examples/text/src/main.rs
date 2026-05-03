@@ -1,6 +1,6 @@
 use std::ops::RangeInclusive;
 
-use iced::{Alignment, Length, Size, Task, color};
+use iced::{Alignment, Length, Size, Task, color, widget::container};
 use iced_glass::widget::EdgeType;
 
 mod declaration;
@@ -333,22 +333,8 @@ impl Ui {
         .center_x(200.0)
         .center_y(100.0)
         .padding(10.0)
-        .blur_radius(50.0)
-        .saturation(1.0)
-        .lightness(-2.0)
-        .rim_width(1.0)
-        .style(|_theme| iced::widget::container::Style {
-            shadow: iced::Shadow {
-                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
-                offset: iced::Vector::new(0.0, 12.0),
-                blur_radius: 40.0,
-            },
-            border: iced::Border {
-                radius: 20.0.into(),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
+        .glass_style(container_glass_style)
+        .style(container_style)
         .into()
     }
 
@@ -392,22 +378,8 @@ impl Ui {
         .center_x(200.0)
         .center_y(100.0)
         .padding(10.0)
-        .blur_radius(50.0)
-        .saturation(1.0)
-        .lightness(-2.0)
-        .rim_width(1.0)
-        .style(|_theme| iced::widget::container::Style {
-            shadow: iced::Shadow {
-                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
-                offset: iced::Vector::new(0.0, 12.0),
-                blur_radius: 40.0,
-            },
-            border: iced::Border {
-                radius: 20.0.into(),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
+        .glass_style(container_glass_style)
+        .style(container_style)
         .into()
     }
 
@@ -451,22 +423,8 @@ impl Ui {
         .center_x(200.0)
         .center_y(100.0)
         .padding(10.0)
-        .blur_radius(50.0)
-        .saturation(1.0)
-        .lightness(-2.0)
-        .rim_width(1.0)
-        .style(|_theme| iced::widget::container::Style {
-            shadow: iced::Shadow {
-                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
-                offset: iced::Vector::new(0.0, 12.0),
-                blur_radius: 40.0,
-            },
-            border: iced::Border {
-                radius: 20.0.into(),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
+        .glass_style(container_glass_style)
+        .style(container_style)
         .into()
     }
 
@@ -510,22 +468,8 @@ impl Ui {
         .center_x(200.0)
         .center_y(100.0)
         .padding(10.0)
-        .blur_radius(50.0)
-        .saturation(1.0)
-        .lightness(-2.0)
-        .rim_width(1.0)
-        .style(|_theme| iced::widget::container::Style {
-            shadow: iced::Shadow {
-                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
-                offset: iced::Vector::new(0.0, 12.0),
-                blur_radius: 40.0,
-            },
-            border: iced::Border {
-                radius: 20.0.into(),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
+        .glass_style(container_glass_style)
+        .style(container_style)
         .into()
     }
 
@@ -547,22 +491,8 @@ impl Ui {
         .center_x(3.0 * 200.0 + 2.0 * 20.0)
         .center_y(100.0)
         .padding(10.0)
-        .blur_radius(50.0)
-        .saturation(1.0)
-        .lightness(-2.0)
-        .rim_width(1.0)
-        .style(|_theme| iced::widget::container::Style {
-            shadow: iced::Shadow {
-                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
-                offset: iced::Vector::new(0.0, 12.0),
-                blur_radius: 40.0,
-            },
-            border: iced::Border {
-                radius: 20.0.into(),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
+        .glass_style(container_glass_style)
+        .style(container_style)
         .into()
     }
 
@@ -657,22 +587,8 @@ impl Ui {
         .center_x(Length::from(200.0))
         .center_y(Length::from(100.0))
         .padding(10.0)
-        .blur_radius(50.0)
-        .saturation(1.0)
-        .lightness(-2.0)
-        .rim_width(1.0)
-        .style(|_theme| iced::widget::container::Style {
-            shadow: iced::Shadow {
-                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
-                offset: iced::Vector::new(0.0, 12.0),
-                blur_radius: 40.0,
-            },
-            border: iced::Border {
-                radius: 20.0.into(),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
+        .glass_style(container_glass_style)
+        .style(container_style)
         .into()
     }
 
@@ -703,5 +619,32 @@ impl Ui {
                 border_color: iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0),
             },
         }
+    }
+}
+
+fn container_glass_style(_theme: &iced::Theme) -> iced_glass::Style {
+    iced_glass::Style {
+        blur_radius: 50.0,
+        lightness: -2.0,
+        edge_radius: 10.0,
+        edge_height: 100.0,
+        refractive_index: 1.5,
+        rim_width: 1.0,
+        ..Default::default()
+    }
+}
+
+fn container_style(_theme: &iced::Theme) -> container::Style {
+    container::Style {
+        shadow: iced::Shadow {
+            color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+            offset: iced::Vector::new(0.0, 12.0),
+            blur_radius: 40.0,
+        },
+        border: iced::Border {
+            radius: 20.0.into(),
+            ..Default::default()
+        },
+        ..Default::default()
     }
 }

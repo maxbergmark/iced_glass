@@ -270,10 +270,13 @@ impl Ui {
                 ]
                 .spacing(20.0),
             )
-            .blur_radius(50.0)
-            .edge_radius(20.0)
-            .opacity(self.get_opacity())
-            .edge_type(EdgeType::SoftEdge)
+            .glass_style(|_theme| iced_glass::Style {
+                blur_radius: 50.0,
+                edge_radius: 20.0,
+                opacity: self.get_opacity(),
+                edge_type: EdgeType::SoftEdge,
+                ..Default::default()
+            })
         ]
         .padding(20.0)
         .into()
@@ -307,13 +310,7 @@ impl Ui {
                 .spacing(10.0),
             )
             .padding(15.0)
-            .blur_radius(self.get_blur_radius(index))
-            .edge_radius(self.get_edge_radius())
-            .edge_height(self.get_edge_height(index))
-            .lightness(self.get_lightness(index))
-            .opacity(self.get_opacity())
-            .saturation(1.1)
-            .rim_width(1.0)
+            .glass_style(move |theme| self.settings_glass_style(theme, index))
             .center_y(70.0)
             .width(160.0)
             .style(border_radius(50.0)),
@@ -358,13 +355,7 @@ impl Ui {
                 .spacing(10.0),
             )
             .padding(15.0)
-            .blur_radius(self.get_blur_radius(index))
-            .edge_radius(self.get_edge_radius())
-            .edge_height(self.get_edge_height(index))
-            .lightness(self.get_lightness(index))
-            .opacity(self.get_opacity())
-            .saturation(1.1)
-            .rim_width(1.0)
+            .glass_style(move |theme| self.settings_glass_style(theme, index))
             .center_y(70.0)
             .width(160.0)
             .style(border_radius(50.0)),
@@ -418,6 +409,19 @@ impl Ui {
         self.edge_radius.interpolate(0.0, 8.0, Instant::now())
     }
 
+    fn settings_glass_style(&self, _theme: &iced::Theme, index: usize) -> iced_glass::Style {
+        iced_glass::Style {
+            blur_radius: self.get_blur_radius(index),
+            saturation: 1.1,
+            lightness: self.get_lightness(index),
+            edge_radius: self.get_edge_radius(),
+            edge_height: self.get_edge_height(index),
+            rim_width: 1.0,
+            opacity: self.get_opacity(),
+            ..Default::default()
+        }
+    }
+
     fn large_box(&self, index: usize) -> Element<'_, Message> {
         mouse_area(
             glass_container(
@@ -454,15 +458,9 @@ impl Ui {
                 .spacing(10.0),
             )
             .padding(15.0)
-            .blur_radius(self.get_blur_radius(index))
-            .edge_radius(self.get_edge_radius())
-            .edge_height(self.get_edge_height(index))
-            .lightness(self.get_lightness(index))
-            .opacity(self.get_opacity())
-            .saturation(1.1)
-            .rim_width(1.0)
             .center_y(160.0)
             .width(160.0)
+            .glass_style(move |theme| self.settings_glass_style(theme, index))
             .style(border_radius(35.0)),
         )
         .on_enter(Message::Hovered(index))
@@ -478,14 +476,8 @@ impl Ui {
                     .opacity(self.get_opacity()),
             )
             .padding(20.0)
-            .blur_radius(self.get_blur_radius(index))
-            .edge_radius(self.get_edge_radius())
-            .edge_height(self.get_edge_height(index))
-            .lightness(self.get_lightness(index))
-            .opacity(self.get_opacity())
-            .saturation(1.1)
-            .rim_width(1.0)
             .center(70.0)
+            .glass_style(move |theme| self.settings_glass_style(theme, index))
             .style(border_radius(50.0)),
         )
         .on_enter(Message::Hovered(index))
@@ -528,15 +520,9 @@ impl Ui {
                 .spacing(10.0),
             )
             .padding(12.5)
-            .blur_radius(self.get_blur_radius(index))
-            .edge_radius(self.get_edge_radius())
-            .edge_height(self.get_edge_height(index))
-            .lightness(self.get_lightness(index))
-            .opacity(self.get_opacity())
-            .saturation(1.1)
-            .rim_width(1.0)
             .height(75.0)
             .width(340.0)
+            .glass_style(move |theme| self.settings_glass_style(theme, index))
             .style(border_radius(25.0)),
         )
         .on_enter(Message::Hovered(index))
@@ -558,10 +544,13 @@ impl Ui {
         ];
         let icons = icons.into_iter().map(|(s, c)| self.icon(s, c)).collect();
         glass_container(Row::from_vec(icons).spacing(20.0))
-            .blur_radius(50.0)
-            .edge_radius(20.0)
-            .edge_height(100.0)
-            .rim_width(1.0)
+            .glass_style(|_theme| iced_glass::Style {
+                blur_radius: 50.0,
+                edge_radius: 20.0,
+                edge_height: 100.0,
+                rim_width: 1.0,
+                ..Default::default()
+            })
             .padding(20.0)
             .style(border_radius(40.0))
             .into()

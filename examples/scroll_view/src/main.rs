@@ -218,12 +218,14 @@ impl Ui {
         )
         .width(Length::from(600.0))
         .center_y(Length::from(60.0))
-        .blur_radius(50.0)
-        // .saturation(1.0)
-        .lightness(-1.5)
-        .edge_radius(10.0)
-        .edge_height(100.0)
-        .refractive_index(1.5)
+        .glass_style(|_theme| iced_glass::Style {
+            blur_radius: 50.0,
+            lightness: -1.5,
+            edge_radius: 10.0,
+            edge_height: 100.0,
+            refractive_index: 1.5,
+            ..Default::default()
+        })
         .style(|theme| self.style(theme))
         .into()
     }
@@ -284,13 +286,15 @@ impl Ui {
         )
         .width(Length::from(600.0))
         .center_y(Length::from(100.0))
-        .blur_radius(50.0)
-        // .saturation(1.0)
-        .edge_radius(10.0)
-        .edge_height(100.0)
-        .refractive_index(1.5)
-        .rim_width(2.0)
-        .lightness(-1.5)
+        .glass_style(|_theme| iced_glass::Style {
+            blur_radius: 50.0,
+            lightness: -1.5,
+            edge_radius: 10.0,
+            edge_height: 100.0,
+            refractive_index: 1.5,
+            rim_width: 2.0,
+            ..Default::default()
+        })
         .style(|theme| self.style(theme))
         .into()
     }
@@ -360,12 +364,15 @@ impl AlbumCard {
                         .opacity(opacity),
                 )
                 .center(Length::from(40.0))
-                .blur_radius(25.0)
-                .edge_radius(10.0)
-                .edge_height(30.0)
-                .refractive_index(1.5)
-                .lightness(-1.5)
-                .opacity(opacity)
+                .glass_style(move |_theme| iced_glass::Style {
+                    blur_radius: 25.0,
+                    lightness: -1.5,
+                    edge_radius: 10.0,
+                    edge_height: 30.0,
+                    refractive_index: 1.5,
+                    opacity,
+                    ..Default::default()
+                })
                 .style(move |theme| self.style(theme, opacity)),
             )
             .align_right(Length::from(200.0))
