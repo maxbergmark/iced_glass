@@ -14,7 +14,7 @@ use iced::{
 };
 
 use iced_glass::widget::{
-    container as glass_container, slider as glass_slider, text as glass_text,
+    EdgeType, container as glass_container, slider as glass_slider, text as glass_text,
 };
 
 const FONT_BOLD: Font = Font {
@@ -228,7 +228,7 @@ impl Ui {
     fn settings(&self) -> Element<'_, Message> {
         row![
             space().width(Length::Fill),
-            container(
+            glass_container(
                 column![
                     row![
                         column![
@@ -270,6 +270,10 @@ impl Ui {
                 ]
                 .spacing(20.0),
             )
+            .blur_radius(50.0)
+            .edge_radius(20.0)
+            .opacity(self.get_opacity())
+            .edge_type(EdgeType::SoftEdge)
         ]
         .padding(20.0)
         .into()
@@ -305,7 +309,7 @@ impl Ui {
             .padding(15.0)
             .blur_radius(self.get_blur_radius(index))
             .edge_radius(self.get_edge_radius())
-            .edge_height(100.0)
+            .edge_height(self.get_edge_height(index))
             .lightness(self.get_lightness(index))
             .opacity(self.get_opacity())
             .saturation(1.1)
@@ -356,7 +360,7 @@ impl Ui {
             .padding(15.0)
             .blur_radius(self.get_blur_radius(index))
             .edge_radius(self.get_edge_radius())
-            .edge_height(100.0)
+            .edge_height(self.get_edge_height(index))
             .lightness(self.get_lightness(index))
             .opacity(self.get_opacity())
             .saturation(1.1)
@@ -391,6 +395,18 @@ impl Ui {
                 .interpolate(50.0, 99.0, Instant::now())
         } else {
             50.0
+        }
+    }
+
+    fn get_edge_height(&self, index: usize) -> f32 {
+        if let Some(idx) = self.hovered
+            && idx == index
+        {
+            self.lightness
+                .animation
+                .interpolate(100.0, 150.0, Instant::now())
+        } else {
+            100.0
         }
     }
 
@@ -440,7 +456,7 @@ impl Ui {
             .padding(15.0)
             .blur_radius(self.get_blur_radius(index))
             .edge_radius(self.get_edge_radius())
-            .edge_height(100.0)
+            .edge_height(self.get_edge_height(index))
             .lightness(self.get_lightness(index))
             .opacity(self.get_opacity())
             .saturation(1.1)
@@ -464,7 +480,7 @@ impl Ui {
             .padding(20.0)
             .blur_radius(self.get_blur_radius(index))
             .edge_radius(self.get_edge_radius())
-            .edge_height(100.0)
+            .edge_height(self.get_edge_height(index))
             .lightness(self.get_lightness(index))
             .opacity(self.get_opacity())
             .saturation(1.1)
@@ -514,7 +530,7 @@ impl Ui {
             .padding(12.5)
             .blur_radius(self.get_blur_radius(index))
             .edge_radius(self.get_edge_radius())
-            .edge_height(100.0)
+            .edge_height(self.get_edge_height(index))
             .lightness(self.get_lightness(index))
             .opacity(self.get_opacity())
             .saturation(1.1)
