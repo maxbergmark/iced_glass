@@ -1,6 +1,7 @@
 use std::ops::RangeInclusive;
 
 use iced::{Alignment, Color, Length, Size, Task};
+use iced_glass::widget::EdgeType;
 
 #[derive(Debug, Clone)]
 pub struct Ui {
@@ -217,6 +218,7 @@ impl Ui {
                 .refractive_index(self.refractive_index)
                 .rim_width(self.rim_width)
                 .opacity(self.opacity)
+                .edge_type(EdgeType::GlassEdge)
                 .style(|theme| self.style(theme)),
         )
         .align_left(Length::Fill)
@@ -438,9 +440,9 @@ impl Ui {
         // .edge_height(self.edge_height)
         .style(|_theme| iced::widget::container::Style {
             shadow: iced::Shadow {
-                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25 * 0.0),
                 offset: iced::Vector::new(0.0, 12.0),
-                blur_radius: 40.0,
+                blur_radius: 40.0 * 0.0,
             },
             border: iced::Border {
                 radius: 20.0.into(),
@@ -454,9 +456,9 @@ impl Ui {
     fn style(&self, _theme: &iced::Theme) -> iced::widget::container::Style {
         iced::widget::container::Style {
             shadow: iced::Shadow {
-                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25 * 0.0),
                 offset: iced::Vector::new(0.0, 12.0),
-                blur_radius: 40.0,
+                blur_radius: 40.0 * 0.0,
             },
             border: iced::Border {
                 radius: self.corner_radius.into(),

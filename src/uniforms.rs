@@ -1,6 +1,6 @@
-use crate::shader::MIP_LEVEL_COUNT;
+use crate::{shader::MIP_LEVEL_COUNT, widget::EdgeType};
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Uniforms {
     pub blur_radius: f32,
     pub corner_radius: f32,
@@ -13,6 +13,7 @@ pub struct Uniforms {
     pub opacity: f32,
     pub tint: iced::Color,
     pub content_scale: (f32, f32),
+    pub edge_type: EdgeType,
 }
 
 impl Uniforms {
@@ -30,7 +31,10 @@ impl Uniforms {
             rim_width: self.rim_width * scale,
             opacity: self.opacity,
             tint: [self.tint.r, self.tint.g, self.tint.b, self.tint.a],
-            _pad: 0.0,
+            edge_type: match self.edge_type {
+                EdgeType::GlassEdge => 0,
+                EdgeType::SoftEdge => 1,
+            },
             _pad2: [0.0, 0.0],
             content_scale: [self.content_scale.0, self.content_scale.1],
         }
@@ -71,6 +75,6 @@ pub struct Raw {
     pub rim_width: f32,
 
     pub opacity: f32,
-    _pad: f32,
+    pub edge_type: i32,
     _pad2: [f32; 2],
 }

@@ -1,4 +1,5 @@
 // use iced::advanced::Renderer as _;
+use cosmic_text::{Attrs, Buffer, FontSystem, LayoutGlyph, Metrics};
 use iced::{
     Color, Element, Length, Pixels, Rectangle, Size,
     advanced::{
@@ -11,6 +12,13 @@ use iced::{
         self,
         text::{self, Catalog, LineHeight, Shaping, Style, StyleFn, Wrapping},
     },
+};
+use itertools::Itertools;
+use std::{cell::RefCell, collections::HashMap, sync::Arc};
+
+use crate::{
+    pipeline::{GlyphId, content_scale},
+    widget::EdgeType,
 };
 
 /// A widget that renders text with a glass effect.
@@ -34,6 +42,7 @@ where
     refractive_index: f32,
     rim_width: f32,
     opacity: f32,
+    edge_type: EdgeType,
 }
 
 impl<Renderer, Theme> std::fmt::Debug for GlassText<'_, Renderer, Theme>
@@ -95,11 +104,6 @@ where
     GlassText::new(content)
 }
 
-use cosmic_text::{Attrs, Buffer, FontSystem, LayoutGlyph, Metrics};
-use itertools::Itertools;
-use std::{cell::RefCell, collections::HashMap, sync::Arc};
-
-use crate::pipeline::{GlyphId, content_scale};
 struct FontData {
     font_system: RefCell<FontSystem>,
     metrics: Metrics,
@@ -221,6 +225,7 @@ where
             refractive_index: 1.5,
             rim_width: 1.0,
             opacity: 1.0,
+            edge_type: EdgeType::GlassEdge,
         }
     }
 
@@ -441,6 +446,12 @@ where
         self.opacity = opacity;
         self
     }
+
+    /// Sets the edge type of the [`Text`].
+    pub const fn edge_type(mut self, edge_type: EdgeType) -> Self {
+        self.edge_type = edge_type;
+        self
+    }
 }
 
 struct State<P: iced::advanced::text::Paragraph> {
@@ -570,6 +581,7 @@ where
                     opacity: self.opacity,
                     tint,
                     content_scale: content_scale(bounds.size()),
+                    edge_type: self.edge_type,
                 },
             },
         );

@@ -11,6 +11,8 @@ use iced::{
     },
 };
 
+use crate::widget::EdgeType;
+
 #[must_use]
 pub struct GlassContainer<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
 where
@@ -38,6 +40,7 @@ where
     refractive_index: f32,
     rim_width: f32,
     opacity: f32,
+    edge_type: EdgeType,
 }
 
 impl<Message, Theme, Renderer> std::fmt::Debug for GlassContainer<'_, Message, Theme, Renderer>
@@ -96,6 +99,7 @@ where
             refractive_index: 1.5,
             rim_width: 1.0,
             opacity: 1.0,
+            edge_type: EdgeType::GlassEdge,
         }
     }
 
@@ -249,6 +253,11 @@ where
 
     pub const fn opacity(mut self, opacity: f32) -> Self {
         self.opacity = opacity;
+        self
+    }
+
+    pub const fn edge_type(mut self, edge_type: EdgeType) -> Self {
+        self.edge_type = edge_type;
         self
     }
 }
@@ -416,6 +425,7 @@ where
                     opacity: self.opacity,
                     tint,
                     content_scale: (1.0, 1.0),
+                    edge_type: self.edge_type,
                 },
             },
         );

@@ -2,19 +2,16 @@ struct Uniforms {
     tint: vec4<f32>,
     blur_direction: vec2<f32>,
     content_scale: vec2<f32>,
-
     blur_radius: f32,
     corner_radius: f32,
     saturation: f32,
     lightness: f32,
-
     edge_radius: f32,
     height: f32,
     refractive_index: f32,
     rim_width: f32,
-
     opacity: f32,
-    _pad: f32,
+    edge_type: i32,
     _pad2: f32,
     _pad3: f32,
 };
@@ -59,12 +56,43 @@ struct FragInput {
     @location(0) uv: vec2<f32>,
 };
 
-const TRANSPARENT: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+const TRANSPARENT: vec4<f32> = vec4<f32>(1.0, 1.0, 1.0, 0.0);
+const GLASS_EDGE: i32 = 0;
+const SMOOTH_EDGE: i32 = 1;
 
 @fragment
 fn fs_main(input: FragInput) -> @location(0) vec4<f32> {
-    let color = mix(TRANSPARENT, physical_sampling(input), uniforms.opacity);
-    return linear_to_srgb(color);
+    if uniforms.edge_type == GLASS_EDGE {
+        var color = physical_sampling(input);
+        color.a *= uniforms.opacity;
+        return linear_to_srgb(color);
+    } else {
+        var color = soft_edge_sampling(input);
+        color.a *= uniforms.opacity;
+        return linear_to_srgb(color);
+    }
+}
+
+fn soft_edge_sampling(input: FragInput) -> vec4<f32> {
+    let ixy = input.uv - vec2<f32>(0.5);
+    let dimensions = vec2<f32>(textureDimensions(image));
+    let p = ixy * dimensions;
+
+    let r = clamp_radius(uniforms.corner_radius, dimensions);
+    let sdf_gradient = sdg_rounded_box(p, dimensions / 2.0, r);
+    let gradient = sdf_gradient.yz;
+    let sdf = sdf_gradient.x;
+
+    let aa = fwidth(sdf);
+    let outside_factor = smoothstep(-aa, aa, sdf);
+    var color = textureSample(image, image_sampler, input.uv);
+    color = saturate(color);
+    color *= uniforms.tint;
+
+    let edge_factor = smoothstep(-uniforms.edge_radius, 0.0, sdf);
+    color = srgb_to_linear(color);
+    color.a *= (1.0 - edge_factor) * (1.0 - outside_factor);
+    return color;
 }
 
 // returns linear color
@@ -96,7 +124,8 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
     let aa = fwidth(sdf);
     let outside_factor = smoothstep(-aa, aa, sdf);
     color = srgb_to_linear(color);
-    return mix(color, TRANSPARENT, outside_factor);
+    color.a *= (1.0 - outside_factor);
+    return color;
 }
 
 fn edge_highlight(color: vec4<f32>, sdf: f32, sdf_gradient: vec2<f32>) -> vec4<f32> {
@@ -110,30 +139,28 @@ fn edge_highlight(color: vec4<f32>, sdf: f32, sdf_gradient: vec2<f32>) -> vec4<f
     return mix(color, highlight_color, f * t);
 }
 
-
 fn sdg_rounded_box(p: vec2<f32>, b: vec2<f32>, r: f32) -> vec3<f32> {
     let dis_gra = sdg_box(p, b - r);
-    return vec3<f32>( dis_gra.x - r, dis_gra.y, dis_gra.z );
+    return vec3<f32>(dis_gra.x - r, dis_gra.y, dis_gra.z);
 }
 
-fn sdg_box( p: vec2<f32>, b: vec2<f32> ) -> vec3<f32> {
-    let w = abs(p)-b;
+fn sdg_box(p: vec2<f32>, b: vec2<f32>) -> vec3<f32> {
+    let w = abs(p) - b;
     let s = vec2<f32>(
         select(1.0, -1.0, p.x < 0.0),
-        select(1.0, -1.0, p.y < 0.0));
-    let g = max(w.x,w.y);
-    let  q = max(w,vec2<f32>(0.0));
+        select(1.0, -1.0, p.y < 0.0)
+    );
+    let g = max(w.x, w.y);
+    let q = max(w, vec2<f32>(0.0));
     let l = length(q);
 
-
-    return vec3<f32>(   
+    return vec3<f32>(
         select(g, l, g > 0.0),
         s * select(
-            select(vec2<f32>(0,1), vec2<f32>(1,0), w.x>w.y),
-            q/l,
-            g>0.0
+            select(vec2<f32>(0, 1), vec2<f32>(1, 0), w.x > w.y),
+            q / l,
+            g > 0.0
         ),
-    
     );
 }
 
@@ -190,8 +217,8 @@ fn hsv_to_rgb(hsv: vec4<f32>) -> vec4<f32> {
 // ---------- sRGB <-> linear ----------
 fn srgb_to_linear(c: vec4<f32>) -> vec4<f32> {
     let cutoff = vec4<f32>(0.04045);
-    var low    = c / 12.92;
-    var high   = pow((c + vec4<f32>(0.055)) / 1.055, vec4<f32>(2.4));
+    var low = c / 12.92;
+    var high = pow((c + vec4<f32>(0.055)) / 1.055, vec4<f32>(2.4));
     low.a = c.a;
     high.a = c.a;
     return select(high, low, c <= cutoff);
@@ -199,8 +226,8 @@ fn srgb_to_linear(c: vec4<f32>) -> vec4<f32> {
 
 fn linear_to_srgb(c: vec4<f32>) -> vec4<f32> {
     let cutoff = vec4<f32>(0.0031308);
-    var low    = 12.92 * c;
-    var high   = 1.055 * pow(c, vec4<f32>(1.0 / 2.4)) - vec4<f32>(0.055);
+    var low = 12.92 * c;
+    var high = 1.055 * pow(c, vec4<f32>(1.0 / 2.4)) - vec4<f32>(0.055);
     low.a = c.a;
     high.a = c.a;
     return select(high, low, c <= cutoff);
@@ -216,7 +243,7 @@ fn apply_glass_exposure(
     tint: vec4<f32>,
     ev_stops: f32,
 ) -> vec4<f32> {
-    let lin      = srgb_to_linear(srgb_in);
+    let lin = srgb_to_linear(srgb_in);
     let filtered = lin * tint * exp2(ev_stops);
     return linear_to_srgb(clamp(filtered, vec4<f32>(0.0), vec4<f32>(1.0)));
 }
