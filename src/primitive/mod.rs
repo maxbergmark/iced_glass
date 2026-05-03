@@ -5,7 +5,7 @@ use crate::{
 
 pub mod text;
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Primitive {
     pub id: u64,
     pub uniforms: Uniforms,

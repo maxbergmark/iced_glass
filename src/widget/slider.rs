@@ -15,6 +15,8 @@ use iced::{
     window,
 };
 
+use crate::widget::EdgeType;
+
 /// Creates a new [`GlassSlider`] with the given range, value, and `on_change` function.
 pub fn glass_slider<'a, T, Message, Theme>(
     range: RangeInclusive<T>,
@@ -517,6 +519,7 @@ where
                         opacity: 1.0,
                         tint,
                         content_scale: (1.0, 1.0),
+                        edge_type: EdgeType::GlassEdge,
                     },
                 },
             );
