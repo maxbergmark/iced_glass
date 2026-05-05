@@ -9,6 +9,7 @@ pub struct Uniforms {
     pub edge_radius: f32,
     pub height: f32,
     pub refractive_index: f32,
+    pub chromatic_aberration: f32,
     pub rim_width: f32,
     pub opacity: f32,
     pub tint: iced::Color,
@@ -28,6 +29,7 @@ impl Uniforms {
             edge_radius: self.edge_radius * scale,
             height: self.height * scale,
             refractive_index: self.refractive_index,
+            chromatic_aberration: self.chromatic_aberration,
             rim_width: self.rim_width * scale,
             opacity: self.opacity,
             tint: [self.tint.r, self.tint.g, self.tint.b, self.tint.a],
@@ -35,8 +37,8 @@ impl Uniforms {
                 EdgeType::GlassEdge => 0,
                 EdgeType::SoftEdge => 1,
             },
-            _pad2: [0.0, 0.0],
             content_scale: [self.content_scale.0, self.content_scale.1],
+            _pad: 0.0,
         }
     }
 
@@ -76,5 +78,6 @@ pub struct Raw {
 
     pub opacity: f32,
     pub edge_type: i32,
-    _pad2: [f32; 2],
+    pub chromatic_aberration: f32,
+    _pad: f32,
 }

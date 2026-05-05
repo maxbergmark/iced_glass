@@ -34,6 +34,8 @@ pub struct Style {
     pub edge_height: f32,
     /// Sets the refractive index for the glass refraction
     pub refractive_index: f32,
+    /// Sets the chromatic aberration for the glass refraction
+    pub chromatic_aberration: f32,
     /// Sets the rim width for the edge highlight effect
     pub rim_width: f32,
     /// Sets the opacity for the widget
@@ -51,6 +53,7 @@ impl Default for Style {
             edge_radius: 0.0,
             edge_height: 0.0,
             refractive_index: 1.5,
+            chromatic_aberration: 0.0,
             rim_width: 1.0,
             opacity: 1.0,
             edge_type: EdgeType::GlassEdge,

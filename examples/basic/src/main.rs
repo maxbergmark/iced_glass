@@ -16,6 +16,7 @@ pub struct Ui {
     edge_radius: f32,
     edge_height: f32,
     refractive_index: f32,
+    chromatic_aberration: f32,
     rim_width: f32,
     opacity: f32,
     tint: Color,
@@ -32,6 +33,7 @@ pub enum Message {
     SetEdgeRadius(f32),
     SetEdgeHeight(f32),
     SetRefractiveIndex(f32),
+    SetChromaticAberration(f32),
     SetRimWidth(f32),
     MouseMove(iced::Point),
     MouseState(bool),
@@ -58,17 +60,18 @@ fn main() -> iced::Result {
 impl Default for Ui {
     fn default() -> Self {
         Self {
-            width: 1250.0,
+            width: 1440.0,
             height: 500.0,
             blur_radius: 500.0,
             corner_radius: 100.0,
             saturation: 1.1,
-            lightness: -1.5,
+            lightness: 0.0,
             mouse_position: Some(iced::Point::new(1400.0, 800.0)),
             moving: false,
             edge_radius: 30.0,
             edge_height: 300.0,
             refractive_index: 2.5,
+            chromatic_aberration: 0.0,
             rim_width: 2.0,
             opacity: 1.0,
             tint: Color::WHITE,
@@ -114,6 +117,10 @@ impl Ui {
             }
             Message::SetRefractiveIndex(refractive_index) => {
                 self.refractive_index = refractive_index;
+                Task::none()
+            }
+            Message::SetChromaticAberration(chromatic_aberration) => {
+                self.chromatic_aberration = chromatic_aberration;
                 Task::none()
             }
             Message::SetRimWidth(rim_width) => {
@@ -232,30 +239,34 @@ impl Ui {
 
     fn inner_content(&self) -> iced::Element<'_, Message> {
         iced::widget::container(iced::widget::column![
-            iced::widget::text("Liquid Glass").size(30.0),
+            // iced::widget::text("Liquid Glass").size(30.0),
             iced::widget::container(iced::widget::column![
                 iced::widget::row![
                     self.styled_text(
                         "Rim Width: ",
                         self.rim_width,
+                        240.0,
                         0.0..=5.0,
                         Message::SetRimWidth
                     ),
                     self.styled_text(
                         "Blur Radius: ",
                         self.blur_radius,
+                        240.0,
                         0.0..=10000.0,
                         Message::SetBlurRadius
                     ),
                     self.styled_text(
                         "Corner Radius: ",
                         self.corner_radius,
+                        240.0,
                         0.0..=150.0,
                         Message::SetCornerRadius
                     ),
                     self.styled_text(
                         "Saturation: ",
                         self.saturation,
+                        240.0,
                         0.0..=2.0,
                         Message::SetSaturation
                     ),
@@ -267,28 +278,45 @@ impl Ui {
                     self.styled_text(
                         "Lightness: ",
                         self.lightness,
+                        200.0,
                         -4.0..=2.0,
                         Message::SetLightness
                     ),
                     self.styled_text(
                         "Edge Radius: ",
                         self.edge_radius,
+                        200.0,
                         0.0..=100.0,
                         Message::SetEdgeRadius
                     ),
                     self.styled_text(
                         "Edge Height: ",
                         self.edge_height,
+                        200.0,
                         0.0..=1000.0,
                         Message::SetEdgeHeight
                     ),
                     self.styled_text(
                         "Refractive Index: ",
                         self.refractive_index,
+                        200.0,
                         1.0..=10.0,
                         Message::SetRefractiveIndex
                     ),
-                    self.styled_text("Opacity: ", self.opacity, 0.0..=1.0, Message::SetOpacity),
+                    self.styled_text(
+                        "Aberration: ",
+                        self.chromatic_aberration,
+                        200.0,
+                        0.0..=1.0,
+                        Message::SetChromaticAberration
+                    ),
+                    self.styled_text(
+                        "Opacity: ",
+                        self.opacity,
+                        200.0,
+                        0.0..=1.0,
+                        Message::SetOpacity
+                    ),
                 ]
                 .spacing(20.0)
                 .padding(20.0)
@@ -306,6 +334,7 @@ impl Ui {
         &self,
         text: &'static str,
         value: f32,
+        width: f32,
         range: RangeInclusive<f32>,
         message: impl Fn(f32) -> Message + 'static,
     ) -> iced::Element<'_, Message> {
@@ -326,12 +355,13 @@ impl Ui {
             .spacing(5.0)
             .padding(iced::Padding::default().horizontal(15.0)),
         )
-        .center_x(Length::from(200.0))
+        .center_x(Length::from(width))
         .center_y(Length::from(100.0))
         .padding(10.0)
         .glass_style(|_theme| iced_glass::Style {
             blur_radius: 50.0,
             saturation: self.saturation,
+            lightness: -2.0,
             rim_width: 1.0,
             ..Default::default()
         })
@@ -410,12 +440,13 @@ impl Ui {
             }),
         )
         // .style(|theme| self.style(theme))
-        .center_x(Length::from(200.0))
+        .center_x(Length::from(260.0))
         .center_y(Length::from(100.0))
         .padding(10.0)
         .glass_style(|_theme| iced_glass::Style {
             blur_radius: 50.0,
             saturation: self.saturation,
+            lightness: -2.0,
             ..Default::default()
         })
         .style(|_theme| iced::widget::container::Style {
@@ -457,6 +488,7 @@ impl Ui {
             edge_radius: self.edge_radius,
             edge_height: self.edge_height,
             refractive_index: self.refractive_index,
+            chromatic_aberration: self.chromatic_aberration,
             rim_width: self.rim_width,
             opacity: self.opacity,
             edge_type: EdgeType::GlassEdge,

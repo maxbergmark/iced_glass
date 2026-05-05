@@ -361,6 +361,7 @@ where
                     edge_radius: glass_style.edge_radius,
                     height: glass_style.edge_height,
                     refractive_index: glass_style.refractive_index,
+                    chromatic_aberration: glass_style.chromatic_aberration,
                     rim_width: glass_style.rim_width,
                     opacity: glass_style.opacity,
                     tint,

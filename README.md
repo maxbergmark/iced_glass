@@ -76,6 +76,7 @@ impl Ui {
             edge_radius: 20.0, // bevel radius of container
             edge_height: 100.0, // accentuate refraction by adding depth
             refractive_index: 1.5, // amount of refraction
+            chromatic_aberration: 0.1, // spread in refraction index for red/blue channels
             rim_width: 2.0, // rim highlight
             opacity: 1.0, // select opacity, useful for fade-in effects
             edge_type: EdgeType::GlassEdge // choose between refractive glass edges or smooth fade-in
@@ -121,7 +122,7 @@ More widgets are planned to be added.
 - [ ] Add `Button` widget with default styling
 - [ ] Add `Toggle` widget with default styling
 - [x] Add `Text` widget with default styling
-- [ ] Add configurable chromatic aberration
+- [x] Add configurable chromatic aberration
 - [x] Add timing metrics for GPU shader stages
     - This has been tested locally, but it requires enabling feature flags on device creation in iced. 
 
