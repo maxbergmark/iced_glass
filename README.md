@@ -29,7 +29,7 @@ A Rust library and demo app that implements Apple-style **liquid / frosted glass
 
 <br>
 
-<img width="720" src="docs/desktop_dock.webp" alt="Animated glass effects" />
+<img width="600" src="docs/desktop_dock.webp" alt="Animated glass effects" />
 
 **Animated with iced's built-in animation system**
 
