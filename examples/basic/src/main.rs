@@ -65,7 +65,7 @@ impl Default for Ui {
             blur_radius: 500.0,
             corner_radius: 100.0,
             saturation: 1.1,
-            lightness: -1.5,
+            lightness: 0.0,
             mouse_position: Some(iced::Point::new(1400.0, 800.0)),
             moving: false,
             edge_radius: 30.0,
@@ -239,7 +239,7 @@ impl Ui {
 
     fn inner_content(&self) -> iced::Element<'_, Message> {
         iced::widget::container(iced::widget::column![
-            iced::widget::text("Liquid Glass").size(30.0),
+            // iced::widget::text("Liquid Glass").size(30.0),
             iced::widget::container(iced::widget::column![
                 iced::widget::row![
                     self.styled_text(
@@ -361,6 +361,7 @@ impl Ui {
         .glass_style(|_theme| iced_glass::Style {
             blur_radius: 50.0,
             saturation: self.saturation,
+            lightness: -2.0,
             rim_width: 1.0,
             ..Default::default()
         })
@@ -445,6 +446,7 @@ impl Ui {
         .glass_style(|_theme| iced_glass::Style {
             blur_radius: 50.0,
             saturation: self.saturation,
+            lightness: -2.0,
             ..Default::default()
         })
         .style(|_theme| iced::widget::container::Style {
