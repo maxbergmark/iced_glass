@@ -47,6 +47,7 @@
 //!         edge_radius: 20.0,
 //!         edge_height: 100.0,
 //!         refractive_index: 1.5,
+//!         chromatic_aberration: 0.1,
 //!         rim_width: 2.0,
 //!         opacity: 1.0,
 //!         edge_type: EdgeType::GlassEdge,

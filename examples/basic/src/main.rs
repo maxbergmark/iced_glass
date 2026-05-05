@@ -16,6 +16,7 @@ pub struct Ui {
     edge_radius: f32,
     edge_height: f32,
     refractive_index: f32,
+    chromatic_aberration: f32,
     rim_width: f32,
     opacity: f32,
     tint: Color,
@@ -32,6 +33,7 @@ pub enum Message {
     SetEdgeRadius(f32),
     SetEdgeHeight(f32),
     SetRefractiveIndex(f32),
+    SetChromaticAberration(f32),
     SetRimWidth(f32),
     MouseMove(iced::Point),
     MouseState(bool),
@@ -69,6 +71,7 @@ impl Default for Ui {
             edge_radius: 30.0,
             edge_height: 300.0,
             refractive_index: 2.5,
+            chromatic_aberration: 0.0,
             rim_width: 2.0,
             opacity: 1.0,
             tint: Color::WHITE,
@@ -114,6 +117,10 @@ impl Ui {
             }
             Message::SetRefractiveIndex(refractive_index) => {
                 self.refractive_index = refractive_index;
+                Task::none()
+            }
+            Message::SetChromaticAberration(chromatic_aberration) => {
+                self.chromatic_aberration = chromatic_aberration;
                 Task::none()
             }
             Message::SetRimWidth(rim_width) => {
@@ -288,6 +295,12 @@ impl Ui {
                         1.0..=10.0,
                         Message::SetRefractiveIndex
                     ),
+                    self.styled_text(
+                        "Chromatic Aberration: ",
+                        self.chromatic_aberration,
+                        0.0..=1.0,
+                        Message::SetChromaticAberration
+                    ),
                     self.styled_text("Opacity: ", self.opacity, 0.0..=1.0, Message::SetOpacity),
                 ]
                 .spacing(20.0)
@@ -457,6 +470,7 @@ impl Ui {
             edge_radius: self.edge_radius,
             edge_height: self.edge_height,
             refractive_index: self.refractive_index,
+            chromatic_aberration: self.chromatic_aberration,
             rim_width: self.rim_width,
             opacity: self.opacity,
             edge_type: EdgeType::GlassEdge,

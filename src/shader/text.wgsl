@@ -12,8 +12,8 @@ struct Uniforms {
     rim_width: f32,
     opacity: f32,
     edge_type: i32,
-    _pad2: f32,
-    _pad3: f32,
+    chromatic_aberration: f32,
+    _pad: f32,
 };
 
 @group(1)
@@ -71,10 +71,12 @@ const SMOOTH_EDGE: i32 = 1;
 @fragment
 fn fs_main(input: FragInput) -> @location(0) vec4<f32> {
     if uniforms.edge_type == GLASS_EDGE {
-        var color = physical_sampling(input);
+        var color_red = physical_sampling(input, uniforms.refractive_index - uniforms.chromatic_aberration);
+        var color_green = physical_sampling(input, uniforms.refractive_index);
+        var color_blue = physical_sampling(input, uniforms.refractive_index + uniforms.chromatic_aberration);
+        var color = vec4<f32>(color_red.r, color_green.g, color_blue.b, color_green.a);
         color.a *= uniforms.opacity;
-        return linear_to_srgb(color);
-    } else {
+        return linear_to_srgb(color);    } else {
         var color = soft_edge_sampling(input);
         color.a *= uniforms.opacity;
         return linear_to_srgb(color);
@@ -145,7 +147,7 @@ fn soft_edge_sampling(input: FragInput) -> vec4<f32> {
     return color;
 }
 
-fn physical_sampling(input: FragInput) -> vec4<f32> {
+fn physical_sampling(input: FragInput, refractive_index: f32) -> vec4<f32> {
     let ixy = input.atlas_uv - vec2<f32>(0.5);
     let dimensions = vec2<f32>(textureDimensions(image)) * uniforms.content_scale;
     let p = ixy * dimensions;
@@ -157,7 +159,7 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
     let sdf = msdf(input.atlas_uv, input.scale);
 
     let h = uniforms.height;
-    let n = uniforms.refractive_index;
+    let n = max(refractive_index, 1.0);
     let r_edge = clamp_radius(uniforms.edge_radius, dimensions);
     let dx = select(0.0, refract(sdf, r_edge, n, h), sdf > -r_edge && sdf < 0.0);
     let offset = gradient * dx;

@@ -14,6 +14,7 @@ pub struct Ui {
     edge_radius: f32,
     edge_height: f32,
     refractive_index: f32,
+    chromatic_aberration: f32,
     rim_width: f32,
     opacity: f32,
     font_size: f32,
@@ -36,6 +37,7 @@ pub enum Message {
     FontSize(f32),
     LineHeight(f32),
     RefractiveIndex(f32),
+    ChromaticAberration(f32),
     RimWidth(f32),
     Opacity(f32),
     FontSelection(FontSelection),
@@ -85,6 +87,7 @@ impl Default for Ui {
             saturation: 1.0,
             lightness: 2.0,
             refractive_index: 1.5,
+            chromatic_aberration: 0.0,
             rim_width: 0.5,
             opacity: 1.0,
             font_selection: None,
@@ -145,6 +148,10 @@ impl Ui {
             }
             Message::RefractiveIndex(refractive_index) => {
                 self.refractive_index = refractive_index;
+                Task::none()
+            }
+            Message::ChromaticAberration(chromatic_aberration) => {
+                self.chromatic_aberration = chromatic_aberration;
                 Task::none()
             }
             Message::RimWidth(rim_width) => {
@@ -215,7 +222,12 @@ impl Ui {
                         1.0..=400.0,
                         Message::FontSize
                     ),
-                    self.font_selector(),
+                    self.styled_slider(
+                        "Chromatic Aberration: ",
+                        self.chromatic_aberration,
+                        0.0..=1.0,
+                        Message::ChromaticAberration
+                    ),
                 ]
                 .align_y(Alignment::Center)
                 .padding(20.0)
@@ -253,6 +265,7 @@ impl Ui {
                 .spacing(20.0),
                 iced::widget::row![
                     self.text_input(),
+                    self.font_selector(),
                     self.style_selector(),
                     self.weight_selector(),
                     self.stretch_selector()
@@ -488,7 +501,7 @@ impl Ui {
                 left: 15.0,
             }),
         )
-        .center_x(3.0 * 200.0 + 2.0 * 20.0)
+        .center_x(2.0 * 200.0 + 1.0 * 20.0)
         .center_y(100.0)
         .padding(10.0)
         .glass_style(container_glass_style)
@@ -621,6 +634,7 @@ impl Ui {
             edge_radius: self.edge_radius,
             edge_height: self.edge_height,
             refractive_index: self.refractive_index,
+            chromatic_aberration: self.chromatic_aberration,
             rim_width: self.rim_width,
             opacity: self.opacity,
             edge_type: EdgeType::GlassEdge,
