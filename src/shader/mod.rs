@@ -59,29 +59,13 @@ pub fn create_sampler(device: &wgpu::Device) -> wgpu::Sampler {
     })
 }
 
-// #[must_use]
-// pub fn to_texture_view(texture: &wgpu::Texture, level: u32) -> wgpu::TextureView {
-//     texture.create_view(&wgpu::TextureViewDescriptor {
-//         label: Some("fragment.texture_view"),
-//         format: None,
-//         dimension: Some(wgpu::TextureViewDimension::D2),
-//         aspect: wgpu::TextureAspect::All,
-//         base_mip_level: level,
-//         mip_level_count: Some(1),
-//         base_array_layer: 0,
-//         array_layer_count: None,
-//         usage: None,
-//     })
-// }
-
 #[must_use]
 pub fn texture_bind_groups(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
     texture: &wgpu::Texture,
+    sampler: &wgpu::Sampler,
 ) -> Vec<wgpu::BindGroup> {
-    let sampler = create_sampler(device);
-
     (0..MIP_LEVEL_COUNT)
         .map(|level| {
             let src_view = texture.create_view(&wgpu::TextureViewDescriptor {
@@ -99,7 +83,7 @@ pub fn texture_bind_groups(
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&sampler),
+                        resource: wgpu::BindingResource::Sampler(sampler),
                     },
                 ],
             })

@@ -1,6 +1,6 @@
 use crate::{
     pipeline::{AtlasData, Pipeline, SharedBindGroupData, create_textures, instance::Instance},
-    shader::{text::TextShader, texture_bind_groups},
+    shader::{create_sampler, text::TextShader, texture_bind_groups},
     uniforms::Uniforms,
 };
 #[derive(Debug)]
@@ -53,15 +53,18 @@ impl TextInstance {
         self.instance.tex_a = copy_texture;
         self.instance.tex_b = gaussian_texture;
 
+        let sampler = create_sampler(device);
         self.instance.tex_a_bg = texture_bind_groups(
             device,
             &shared_bind_group_data.bgl_textures,
             &self.instance.tex_a,
+            &sampler,
         );
         self.instance.tex_b_bg = texture_bind_groups(
             device,
             &shared_bind_group_data.bgl_textures,
             &self.instance.tex_b,
+            &sampler,
         );
 
         self.texture_atlas_bg = TextShader::create_bind_group(

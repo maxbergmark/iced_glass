@@ -1,6 +1,6 @@
 use crate::{
     pipeline::{Pipeline, create_textures, create_uniforms_buffer},
-    shader::{texture_bind_groups, uniforms_bind_group},
+    shader::{create_sampler, texture_bind_groups, uniforms_bind_group},
     uniforms::Uniforms,
 };
 
@@ -18,6 +18,7 @@ pub struct Instance {
 }
 
 impl Instance {
+    #[allow(clippy::similar_names)]
     #[must_use]
     pub fn new(
         pipeline: &Pipeline,
@@ -26,7 +27,7 @@ impl Instance {
         width: u32,
         height: u32,
     ) -> Self {
-        let (copy_texture, gaussian_texture) = create_textures(
+        let (tex_a, tex_b) = create_textures(
             device,
             pipeline.shared_bind_group_data.device_format,
             width,
@@ -36,8 +37,9 @@ impl Instance {
         let uniforms_h = create_uniforms_buffer(device);
         let uniforms_v = create_uniforms_buffer(device);
 
-        let copy_texture_bg = texture_bind_groups(device, bgl_textures, &copy_texture);
-        let gaussian_texture_bg = texture_bind_groups(device, bgl_textures, &gaussian_texture);
+        let sampler = create_sampler(device);
+        let tex_a_bg = texture_bind_groups(device, bgl_textures, &tex_a, &sampler);
+        let tex_b_bg = texture_bind_groups(device, bgl_textures, &tex_b, &sampler);
 
         let uniform_bg_h = uniforms_bind_group(
             device,
@@ -51,14 +53,14 @@ impl Instance {
         );
 
         Self {
-            tex_a: copy_texture,
-            tex_b: gaussian_texture,
+            tex_a,
+            tex_b,
             uniforms_h,
             uniforms_v,
             uniform_bg_h,
             uniform_bg_v,
-            tex_a_bg: copy_texture_bg,
-            tex_b_bg: gaussian_texture_bg,
+            tex_a_bg,
+            tex_b_bg,
             size: wgpu::Extent3d {
                 width: width.max(1),
                 height: height.max(1),

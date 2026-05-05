@@ -392,7 +392,7 @@ impl Ui {
         {
             self.lightness
                 .animation
-                .interpolate(50.0, 99.0, Instant::now())
+                .interpolate(50.0, 100.0, Instant::now())
         } else {
             50.0
         }
