@@ -69,7 +69,7 @@ impl Ui {
         iced_glass::widget::container(
             self.content()
         )
-        .glass_style(|_theme| {
+        .glass_style(|_theme| iced_glass::Style {
             blur_radius: 10.0, // gaussian blur
             saturation: 0.8, // add or remove saturation from background texture
             lightness: -2.0, // tint glass lighter or darker in exposure steps
