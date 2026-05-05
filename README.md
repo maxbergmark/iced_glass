@@ -11,9 +11,28 @@
 
 A Rust library and demo app that implements Apple-style **liquid / frosted glass** UI effects using [Iced](https://github.com/iced-rs/iced) and custom WGPU shader pipelines.
 
-![iced_glass example](docs/iced_glass_example.png)
-<img width="600" alt="scroll_view" src="docs/scroll_view.webp" />
-<img width="600" alt="desktop_dock" src="docs/desktop_dock.webp" />
+## Examples
+
+<table>
+<tr>
+<td align="center">
+<img width="600" alt="Glass panel with real-time parameter controls" src="docs/iced_glass_example.png" />
+<br><em>Configurable liquid glass effects</em>
+</td>
+</tr>
+<tr>
+<td align="center">
+<img width="600" alt="Scrollable album grid with frosted glass UI" src="docs/scroll_view.webp" />
+<br><em>Renders in real time</em>
+</td>
+</tr>
+<tr>
+<td align="center">
+<img width="600" alt="Desktop dock with glass effect" src="docs/desktop_dock.webp" />
+<br><em>Can be animated using iced's animation system</em>
+</td>
+</tr>
+</table>
 
 ## Text
 
