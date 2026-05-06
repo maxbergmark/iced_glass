@@ -18,14 +18,14 @@ use iced_glass::widget::{
 };
 
 const FONT_BOLD: Font = Font {
-    family: Family::SansSerif,
+    family: Family::Name("Noto Sans"),
     weight: iced::font::Weight::Bold,
     stretch: Stretch::Normal,
     style: font::Style::Normal,
 };
 
 const FONT_NORMAL: Font = Font {
-    family: Family::SansSerif,
+    family: Family::Name("Noto Sans"),
     weight: iced::font::Weight::Normal,
     stretch: Stretch::Normal,
     style: font::Style::Normal,

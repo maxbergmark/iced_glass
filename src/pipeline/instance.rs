@@ -1,6 +1,8 @@
+use tracing::info;
+
 use crate::{
-    pipeline::{Pipeline, create_textures, create_uniforms_buffer},
-    shader::{create_sampler, texture_bind_groups, uniforms_bind_group},
+    pipeline::{Pipeline, create_textures},
+    shader::{create_sampler, create_uniforms_buffer, texture_bind_groups, uniforms_bind_group},
     uniforms::Uniforms,
 };
 
@@ -24,15 +26,14 @@ impl Instance {
         pipeline: &Pipeline,
         device: &wgpu::Device,
         bgl_textures: &wgpu::BindGroupLayout,
-        width: u32,
-        height: u32,
+        size: iced::Size<u32>,
     ) -> Self {
-        let (tex_a, tex_b) = create_textures(
-            device,
-            pipeline.shared_bind_group_data.device_format,
-            width,
-            height,
+        info!(
+            "creating instance with dimensions: {:?}x{:?}",
+            size.width, size.height
         );
+        let (tex_a, tex_b) =
+            create_textures(device, pipeline.shared_bind_group_data.device_format, size);
 
         let uniforms_h = create_uniforms_buffer(device);
         let uniforms_v = create_uniforms_buffer(device);
@@ -62,8 +63,8 @@ impl Instance {
             tex_a_bg,
             tex_b_bg,
             size: wgpu::Extent3d {
-                width: width.max(1),
-                height: height.max(1),
+                width: size.width.max(1),
+                height: size.height.max(1),
                 depth_or_array_layers: 1,
             },
         }

@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use cosmic_text::fontdb;
 use etagere::{AtlasAllocator, size2};
+use tracing::info;
 
 pub mod instance;
 pub mod text_instance;
@@ -93,6 +94,7 @@ impl iced::widget::shader::Pipeline for Pipeline {
     where
         Self: Sized,
     {
+        info!("creating pipeline with format: {:?}", format);
         let downsample_pipeline = DownsampleShader::create_pipeline(device, format);
         let blur_pipeline = GaussianShader::create_pipeline(device, format);
         let fragment_pipeline = FragmentShader::create_pipeline(device, format);
@@ -173,14 +175,13 @@ pub fn create_bgl_texture_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout
 pub fn create_textures(
     device: &wgpu::Device,
     format: wgpu::TextureFormat,
-    width: u32,
-    height: u32,
+    size: iced::Size<u32>,
 ) -> (wgpu::Texture, wgpu::Texture) {
-    let copy_to_texture = device.create_texture(&wgpu::TextureDescriptor {
+    let tex_a = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("glass.copy"),
         size: wgpu::Extent3d {
-            width: width.max(1),
-            height: height.max(1),
+            width: size.width.max(1),
+            height: size.height.max(1),
             depth_or_array_layers: 1,
         },
         mip_level_count: MIP_LEVEL_COUNT,
@@ -193,11 +194,11 @@ pub fn create_textures(
         view_formats: &[],
     });
 
-    let gaussian_texture = device.create_texture(&wgpu::TextureDescriptor {
+    let tex_b = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("glass.gaussian"),
         size: wgpu::Extent3d {
-            width: width.max(1),
-            height: height.max(1),
+            width: size.width.max(1),
+            height: size.height.max(1),
             depth_or_array_layers: 1,
         },
         mip_level_count: MIP_LEVEL_COUNT,
@@ -207,7 +208,7 @@ pub fn create_textures(
         usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::RENDER_ATTACHMENT,
         view_formats: &[],
     });
-    (copy_to_texture, gaussian_texture)
+    (tex_a, tex_b)
 }
 
 impl Pipeline {
@@ -217,15 +218,14 @@ impl Pipeline {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         id: u64,
-        width: u32,
-        height: u32,
+        size: iced::Size<u32>,
         scale: f32,
         uniforms: &Uniforms,
     ) {
         let needs_new = self
             .instances
             .get(&id)
-            .is_none_or(|inst| inst.size.width != width || inst.size.height != height);
+            .is_none_or(|inst| inst.size.width != size.width || inst.size.height != size.height);
         if needs_new {
             self.instances.insert(
                 id,
@@ -233,8 +233,7 @@ impl Pipeline {
                     self,
                     device,
                     &self.shared_bind_group_data.bgl_textures,
-                    width,
-                    height,
+                    size,
                 ),
             );
         }
@@ -308,13 +307,6 @@ impl Pipeline {
         &self.text_instances[&id]
     }
 
-    // #[allow(clippy::expect_used)]
-    // pub fn text_instance_mut(&mut self, id: u64) -> &mut TextInstance {
-    //     self.text_instances
-    //         .get_mut(&id)
-    //         .expect("Text instance not found")
-    // }
-
     /// Call at the end of rendering each frame.
     #[allow(unused)] // TODO: use this function to clean up instances and text instances
     pub fn gc(&mut self) {
@@ -338,13 +330,4 @@ pub fn content_scale(size: iced::Size<f32>) -> (f32, f32) {
         size.width / round_up(size.width as u32, 256) as f32,
         size.height / round_up(size.height as u32, 256) as f32,
     )
-}
-
-fn create_uniforms_buffer(device: &wgpu::Device) -> wgpu::Buffer {
-    device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("uniforms"),
-        size: std::mem::size_of::<crate::uniforms::Raw>() as u64,
-        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-    })
 }

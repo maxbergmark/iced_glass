@@ -90,3 +90,12 @@ pub fn texture_bind_groups(
         })
         .collect()
 }
+
+pub fn create_uniforms_buffer(device: &wgpu::Device) -> wgpu::Buffer {
+    device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("uniforms"),
+        size: std::mem::size_of::<crate::uniforms::Raw>() as u64,
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    })
+}

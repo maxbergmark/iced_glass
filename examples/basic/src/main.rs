@@ -18,6 +18,7 @@ pub struct Ui {
     refractive_index: f32,
     chromatic_aberration: f32,
     rim_width: f32,
+    rim_angle: f32,
     opacity: f32,
     tint: Color,
 }
@@ -35,6 +36,7 @@ pub enum Message {
     SetRefractiveIndex(f32),
     SetChromaticAberration(f32),
     SetRimWidth(f32),
+    SetRimAngle(f32),
     MouseMove(iced::Point),
     MouseState(bool),
     SetTint(ColorChannel, f32),
@@ -49,6 +51,11 @@ pub enum ColorChannel {
 }
 
 fn main() -> iced::Result {
+    tracing_subscriber::fmt()
+        .pretty() // multi-line, color-coded output with file:line info
+        .with_env_filter("info,iced=info")
+        .init();
+
     iced::application(Ui::boot, Ui::update, Ui::view)
         .subscription(Ui::subscription)
         .antialiasing(true)
@@ -73,6 +80,7 @@ impl Default for Ui {
             refractive_index: 2.5,
             chromatic_aberration: 0.0,
             rim_width: 2.0,
+            rim_angle: 0.0,
             opacity: 1.0,
             tint: Color::WHITE,
         }
@@ -89,67 +97,55 @@ impl Ui {
             Message::SetScale(scale) => {
                 self.width = 2.0 * scale;
                 self.height = scale;
-                Task::none()
             }
             Message::SetBlurRadius(blur_radius) => {
                 self.blur_radius = blur_radius;
-                Task::none()
             }
             Message::SetCornerRadius(corner_radius) => {
                 self.corner_radius = corner_radius;
-                Task::none()
             }
             Message::SetSaturation(saturation) => {
                 self.saturation = saturation;
-                Task::none()
             }
             Message::SetLightness(lightness) => {
                 self.lightness = lightness;
-                Task::none()
             }
             Message::SetEdgeRadius(edge_radius) => {
                 self.edge_radius = edge_radius;
-                Task::none()
             }
             Message::SetEdgeHeight(edge_height) => {
                 self.edge_height = edge_height;
-                Task::none()
             }
             Message::SetRefractiveIndex(refractive_index) => {
                 self.refractive_index = refractive_index;
-                Task::none()
             }
             Message::SetChromaticAberration(chromatic_aberration) => {
                 self.chromatic_aberration = chromatic_aberration;
-                Task::none()
             }
             Message::SetRimWidth(rim_width) => {
                 self.rim_width = rim_width;
-                Task::none()
+            }
+            Message::SetRimAngle(rim_angle) => {
+                self.rim_angle = rim_angle;
             }
             Message::MouseMove(point) => {
                 if self.moving {
                     self.mouse_position = Some(point);
                 }
-                Task::none()
             }
             Message::MouseState(moving) => {
                 self.moving = moving;
-                Task::none()
             }
             Message::SetOpacity(opacity) => {
                 self.opacity = opacity;
-                Task::none()
             }
-            Message::SetTint(channel, value) => {
-                match channel {
-                    ColorChannel::Red => self.tint.r = value,
-                    ColorChannel::Green => self.tint.g = value,
-                    ColorChannel::Blue => self.tint.b = value,
-                }
-                Task::none()
-            }
+            Message::SetTint(channel, value) => match channel {
+                ColorChannel::Red => self.tint.r = value,
+                ColorChannel::Green => self.tint.g = value,
+                ColorChannel::Blue => self.tint.b = value,
+            },
         }
+        Task::none()
     }
 
     pub fn subscription(&self) -> iced::Subscription<Message> {
@@ -245,28 +241,35 @@ impl Ui {
                     self.styled_text(
                         "Rim Width: ",
                         self.rim_width,
-                        240.0,
+                        200.0,
                         0.0..=5.0,
                         Message::SetRimWidth
                     ),
                     self.styled_text(
+                        "Rim Angle: ",
+                        self.rim_angle,
+                        200.0,
+                        0.0..=10.0,
+                        Message::SetRimAngle
+                    ),
+                    self.styled_text(
                         "Blur Radius: ",
-                        self.blur_radius,
-                        240.0,
-                        0.0..=10000.0,
-                        Message::SetBlurRadius
+                        self.blur_radius.sqrt(),
+                        200.0,
+                        0.0..=100.0,
+                        |v| Message::SetBlurRadius(v * v)
                     ),
                     self.styled_text(
                         "Corner Radius: ",
                         self.corner_radius,
-                        240.0,
+                        200.0,
                         0.0..=150.0,
                         Message::SetCornerRadius
                     ),
                     self.styled_text(
                         "Saturation: ",
                         self.saturation,
-                        240.0,
+                        200.0,
                         0.0..=2.0,
                         Message::SetSaturation
                     ),
@@ -490,6 +493,7 @@ impl Ui {
             refractive_index: self.refractive_index,
             chromatic_aberration: self.chromatic_aberration,
             rim_width: self.rim_width,
+            rim_angle: self.rim_angle,
             opacity: self.opacity,
             edge_type: EdgeType::GlassEdge,
         }

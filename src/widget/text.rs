@@ -509,6 +509,7 @@ where
                     refractive_index: glass_style.refractive_index,
                     chromatic_aberration: glass_style.chromatic_aberration,
                     rim_width: glass_style.rim_width,
+                    rim_angle: glass_style.rim_angle,
                     opacity: glass_style.opacity,
                     tint,
                     content_scale: content_scale(bounds.size()),

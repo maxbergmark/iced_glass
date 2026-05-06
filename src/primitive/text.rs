@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use etagere::size2;
 use freetype::Face;
 use msdfgen::{Bitmap, FillRule, FontExt, Framing, MsdfGeneratorConfig, Range, Rgb};
+use tracing::{debug, warn};
 
 use crate::{
     pipeline::{
@@ -238,13 +239,12 @@ fn add_to_atlas(
     glyph: &GlyphData,
 ) -> Option<AtlasPosition> {
     let Some((data, size, framing)) = get_sdf_data(font, glyph.glyph_id) else {
-        // eprintln!(
-        //     "Failed to get sdf data for glyph: {:?} (font: {:?})",
-        //     glyph.glyph_id, glyph.font_id
-        // );
+        warn!(
+            "Failed to get sdf data for glyph: {:?} (font: {:?})",
+            glyph.glyph_id, glyph.font_id
+        );
         return None;
     };
-    // println!("size: {:?}", size);
     let allocation = atlas_data
         .allocator
         .allocate(size2(size.width as i32, size.height as i32))?;
@@ -252,14 +252,11 @@ fn add_to_atlas(
     let offset = allocation.rectangle.min;
     let position = iced::Point::new(offset.x as u32, offset.y as u32);
 
-    // TODO: do I need to do this twice?
-    // let bbox = get_glyph_bounding_box(font, glyph.glyph_id)?;
     let units_per_em = f32::from(font.em_size());
 
     let ap = AtlasPosition {
         position,
         size,
-        // bbox,
         units_per_em,
         framing,
     };
@@ -267,6 +264,10 @@ fn add_to_atlas(
         .atlas_position
         .insert((glyph.font_id, glyph.glyph_id), ap);
 
+    debug!(
+        "copying sdf data for glyph: {:?} (font: {:?}) to texture: {:?}",
+        glyph.glyph_id, glyph.font_id, size
+    );
     copy_to_texture(queue, atlas_data, position, size, &data);
     Some(ap)
 }

@@ -26,6 +26,7 @@ notosans = "0.1.0"
 etagere = "0.3.0"
 # freetype-rs = "0.38.0"
 freetype-rs = "0.32.0"
+tracing = "0.1.44"
 
 [workspace]
 members = [".", "examples/*"]

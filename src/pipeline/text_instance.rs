@@ -1,3 +1,5 @@
+use tracing::info;
+
 use crate::{
     pipeline::{AtlasData, Pipeline, SharedBindGroupData, create_textures, instance::Instance},
     shader::{create_sampler, text::TextShader, texture_bind_groups},
@@ -19,7 +21,11 @@ impl TextInstance {
         bgl_textures: &wgpu::BindGroupLayout,
         size: iced::Size<u32>,
     ) -> Self {
-        let instance = Instance::new(pipeline, device, bgl_textures, size.width, size.height);
+        info!(
+            "creating text instance with size: {:?}x{:?}",
+            size.width, size.height
+        );
+        let instance = Instance::new(pipeline, device, bgl_textures, size);
 
         let vertex_buffer = TextShader::create_vertex_buffer(device);
         let texture_atlas_bg = TextShader::create_bind_group(
@@ -44,14 +50,13 @@ impl TextInstance {
         device: &wgpu::Device,
         size: iced::Size<u32>,
     ) {
-        let (copy_texture, gaussian_texture) = create_textures(
-            device,
-            shared_bind_group_data.device_format,
-            size.width,
-            size.height,
+        info!(
+            "updating text instance size from {:?}x{:?} to {:?}x{:?}",
+            self.instance.size.width, self.instance.size.height, size.width, size.height
         );
-        self.instance.tex_a = copy_texture;
-        self.instance.tex_b = gaussian_texture;
+        let (tex_a, tex_b) = create_textures(device, shared_bind_group_data.device_format, size);
+        self.instance.tex_a = tex_a;
+        self.instance.tex_b = tex_b;
 
         let sampler = create_sampler(device);
         self.instance.tex_a_bg = texture_bind_groups(
