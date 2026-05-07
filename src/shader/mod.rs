@@ -1,6 +1,7 @@
 pub mod downsample;
 pub mod fragment;
 pub mod gaussian;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod text;
 
 pub const MIP_LEVEL_COUNT: u32 = 4;

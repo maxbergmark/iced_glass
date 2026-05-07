@@ -1,10 +1,12 @@
 mod container;
 mod slider;
 /// Public text widget
+#[cfg(not(target_arch = "wasm32"))]
 pub mod text;
 
 pub use container::glass_container as container;
 pub use slider::glass_slider as slider;
+#[cfg(not(target_arch = "wasm32"))]
 pub use text::glass_text as text;
 
 /// Selects whether to use glass refraction or smooth blending for the edge

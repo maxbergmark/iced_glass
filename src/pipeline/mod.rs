@@ -1,21 +1,27 @@
 use std::collections::{HashMap, HashSet};
 
-use cosmic_text::fontdb;
+#[cfg(not(target_arch = "wasm32"))]
 use etagere::{AtlasAllocator, size2};
 use tracing::info;
 
 pub mod instance;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod text_atlas;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod text_instance;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::{
-    pipeline::{instance::Instance, text_instance::TextInstance},
+    pipeline::{text_atlas::AtlasData, text_instance::TextInstance},
+    shader::text::{TEXT_ATLAS_SIZE, TextShader},
+};
+
+use crate::{
+    pipeline::instance::Instance,
     shader::{
-        MIP_LEVEL_COUNT, create_sampler,
-        downsample::DownsampleShader,
-        fragment::FragmentShader,
-        gaussian::GaussianShader,
-        text::{TEXT_ATLAS_SIZE, TextShader},
-        uniforms_bind_group_layout,
+        MIP_LEVEL_COUNT, create_sampler, downsample::DownsampleShader, fragment::FragmentShader,
+        gaussian::GaussianShader, uniforms_bind_group_layout,
     },
     uniforms::Uniforms,
 };
@@ -25,14 +31,18 @@ pub struct Pipeline {
     pub downsample: wgpu::RenderPipeline,
     pub blur: wgpu::RenderPipeline,
     pub fragment: wgpu::RenderPipeline,
+    #[cfg(not(target_arch = "wasm32"))]
     pub text: wgpu::RenderPipeline,
 
     instances: HashMap<u64, Instance>,
     live_this_frame: HashSet<u64>,
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub text_instances: HashMap<u64, TextInstance>,
+    #[cfg(not(target_arch = "wasm32"))]
     live_text_this_frame: HashSet<u64>,
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub atlas_data: AtlasData,
 }
 
@@ -40,7 +50,7 @@ impl std::fmt::Debug for Pipeline {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Pipeline")
             .field("instances", &self.instances.len())
-            .field("text_instances", &self.text_instances.len())
+            // .field("text_instances", &self.text_instances.len())
             .finish_non_exhaustive()
     }
 }
@@ -51,42 +61,8 @@ pub struct SharedBindGroupData {
     pub sampler: wgpu::Sampler,
     pub bgl_textures: wgpu::BindGroupLayout, // group 0 layout
     pub bgl_uniforms: wgpu::BindGroupLayout, // group 1 layout
-    pub bgl_text: wgpu::BindGroupLayout,     // group 0 layout
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
-pub struct GlyphId(pub u16);
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct Rect {
-    pub x_min: i16,
-    pub y_min: i16,
-    pub x_max: i16,
-    pub y_max: i16,
-}
-
-pub struct AtlasData {
-    pub texture_atlas: wgpu::Texture,
-    pub atlas_position: HashMap<(fontdb::ID, GlyphId), AtlasPosition>,
-    pub allocator: AtlasAllocator,
-}
-
-impl std::fmt::Debug for AtlasData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AtlasData")
-            .field("texture_atlas", &self.texture_atlas)
-            .field("atlas_position", &self.atlas_position)
-            .finish_non_exhaustive()
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct AtlasPosition {
-    pub position: iced::Point<u32>,
-    pub size: iced::Size<u32>,
-    // pub bbox: Rect,
-    pub units_per_em: f32,
-    pub framing: msdfgen::Framing<f64>,
+    #[cfg(not(target_arch = "wasm32"))]
+    pub bgl_text: wgpu::BindGroupLayout, // group 0 layout
 }
 
 impl iced::widget::shader::Pipeline for Pipeline {
@@ -98,8 +74,10 @@ impl iced::widget::shader::Pipeline for Pipeline {
         let downsample_pipeline = DownsampleShader::create_pipeline(device, format);
         let blur_pipeline = GaussianShader::create_pipeline(device, format);
         let fragment_pipeline = FragmentShader::create_pipeline(device, format);
+        #[cfg(not(target_arch = "wasm32"))]
         let text_pipeline = TextShader::create_pipeline(device, format);
 
+        #[cfg(not(target_arch = "wasm32"))]
         let texture_atlas = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("text.texture_atlas"),
             size: wgpu::Extent3d {
@@ -123,17 +101,22 @@ impl iced::widget::shader::Pipeline for Pipeline {
                 sampler: create_sampler(device),
                 bgl_textures: create_bgl_texture_layout(device),
                 bgl_uniforms: uniforms_bind_group_layout(device),
+                #[cfg(not(target_arch = "wasm32"))]
                 bgl_text: TextShader::create_bind_group_layout(device),
             },
             downsample: downsample_pipeline,
             blur: blur_pipeline,
             fragment: fragment_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
             text: text_pipeline,
             instances: HashMap::new(),
             live_this_frame: HashSet::new(),
+            #[cfg(not(target_arch = "wasm32"))]
             text_instances: HashMap::new(),
+            #[cfg(not(target_arch = "wasm32"))]
             live_text_this_frame: HashSet::new(),
 
+            #[cfg(not(target_arch = "wasm32"))]
             atlas_data: AtlasData {
                 texture_atlas,
                 atlas_position: HashMap::new(),
@@ -234,6 +217,7 @@ impl Pipeline {
                     device,
                     &self.shared_bind_group_data.bgl_textures,
                     size,
+                    &self.shared_bind_group_data.sampler,
                 ),
             );
         }
@@ -243,6 +227,7 @@ impl Pipeline {
         self.live_this_frame.insert(id);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn prepare_text_instance(
         &mut self,
         device: &wgpu::Device,
@@ -303,27 +288,30 @@ impl Pipeline {
     }
 
     #[must_use]
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn text_instance(&self, id: u64) -> &TextInstance {
         &self.text_instances[&id]
     }
 
-    /// Call at the end of rendering each frame.
-    #[allow(unused)] // TODO: use this function to clean up instances and text instances
-    pub fn gc(&mut self) {
-        self.instances
-            .retain(|id, _| self.live_this_frame.contains(id));
-        self.text_instances
-            .retain(|id, _| self.live_text_this_frame.contains(id));
-        self.live_this_frame.clear();
-        self.live_text_this_frame.clear();
-    }
+    // Call at the end of rendering each frame.
+    // #[allow(unused)] // TODO: use this function to clean up instances and text instances
+    // pub fn gc(&mut self) {
+    //     self.instances
+    //         .retain(|id, _| self.live_this_frame.contains(id));
+    //     self.text_instances
+    //         .retain(|id, _| self.live_text_this_frame.contains(id));
+    //     self.live_this_frame.clear();
+    //     self.live_text_this_frame.clear();
+    // }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub const fn round_up(size: u32, granularity: u32) -> u32 {
     size.div_ceil(granularity) * granularity
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn content_scale(size: iced::Size<f32>) -> (f32, f32) {
     (

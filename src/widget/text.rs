@@ -16,7 +16,7 @@ use iced::{
 use itertools::Itertools;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
-use crate::pipeline::{GlyphId, content_scale};
+use crate::pipeline::{content_scale, text_atlas::GlyphId};
 
 /// A widget that renders text with a glass effect.
 #[must_use]

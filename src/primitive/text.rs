@@ -7,7 +7,9 @@ use tracing::{debug, warn};
 
 use crate::{
     pipeline::{
-        AtlasData, AtlasPosition, GlyphId, Pipeline, Rect, round_up, text_instance::TextInstance,
+        Pipeline, round_up,
+        text_atlas::{AtlasData, AtlasPosition, GlyphId, Rect},
+        text_instance::TextInstance,
     },
     primitive::{copy_background, downsample, horizontal_blur, upsample, vertical_blur},
     shader::text::TEXT_ATLAS_SIZE,

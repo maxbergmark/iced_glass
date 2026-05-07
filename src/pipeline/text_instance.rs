@@ -2,7 +2,7 @@ use tracing::info;
 
 use crate::{
     pipeline::{AtlasData, Pipeline, SharedBindGroupData, create_textures, instance::Instance},
-    shader::{create_sampler, text::TextShader, texture_bind_groups},
+    shader::{text::TextShader, texture_bind_groups},
     uniforms::Uniforms,
 };
 #[derive(Debug)]
@@ -25,7 +25,13 @@ impl TextInstance {
             "creating text instance with size: {:?}x{:?}",
             size.width, size.height
         );
-        let instance = Instance::new(pipeline, device, bgl_textures, size);
+        let instance = Instance::new(
+            pipeline,
+            device,
+            bgl_textures,
+            size,
+            &pipeline.shared_bind_group_data.sampler,
+        );
 
         let vertex_buffer = TextShader::create_vertex_buffer(device);
         let texture_atlas_bg = TextShader::create_bind_group(
@@ -58,18 +64,18 @@ impl TextInstance {
         self.instance.tex_a = tex_a;
         self.instance.tex_b = tex_b;
 
-        let sampler = create_sampler(device);
+        let sampler = &shared_bind_group_data.sampler;
         self.instance.tex_a_bg = texture_bind_groups(
             device,
             &shared_bind_group_data.bgl_textures,
             &self.instance.tex_a,
-            &sampler,
+            sampler,
         );
         self.instance.tex_b_bg = texture_bind_groups(
             device,
             &shared_bind_group_data.bgl_textures,
             &self.instance.tex_b,
-            &sampler,
+            sampler,
         );
 
         self.texture_atlas_bg = TextShader::create_bind_group(

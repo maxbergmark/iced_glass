@@ -3,6 +3,7 @@ use crate::{
     uniforms::Uniforms,
 };
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod text;
 
 #[derive(Debug, Clone, Copy)]
@@ -27,6 +28,12 @@ impl iced::widget::shader::Primitive for Primitive {
         let height = (bounds.height * scale) as u32;
         let size = iced::Size::new(width, height);
         pipeline.prepare_instance(device, queue, self.id, size, scale, &self.uniforms);
+        device.on_uncaptured_error(std::sync::Arc::new(move |error| {
+            tracing::error!("Uncaptured error: {:?}", error);
+        }));
+        device.set_device_lost_callback(move |reason, message| {
+            tracing::error!("Device lost: {:?}, {}", reason, message);
+        });
     }
 
     fn render(
@@ -41,13 +48,16 @@ impl iced::widget::shader::Primitive for Primitive {
         let Some(copy_size) = calculate_copy_size(texture, instance, bounds) else {
             return;
         };
+        tracing::info!("Copy size: {:?}", copy_size);
 
         let mip_level = self.uniforms.mip_level();
         copy_background(encoder, &instance.tex_a, texture, bounds, &copy_size);
-        downsample(encoder, pipeline, instance, mip_level);
-        horizontal_blur(encoder, pipeline, instance, mip_level);
-        vertical_blur(encoder, pipeline, instance, mip_level);
-        upsample(encoder, pipeline, instance, mip_level);
+        if self.uniforms.blur_radius > 0.0 {
+            downsample(encoder, pipeline, instance, mip_level);
+            horizontal_blur(encoder, pipeline, instance, mip_level);
+            vertical_blur(encoder, pipeline, instance, mip_level);
+            upsample(encoder, pipeline, instance, mip_level);
+        }
         fragment_pass(encoder, pipeline, instance, target, bounds);
     }
 }
@@ -188,7 +198,7 @@ fn horizontal_blur(
             }),
             resolve_target: None,
             ops: wgpu::Operations {
-                load: wgpu::LoadOp::Load,
+                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
                 store: wgpu::StoreOp::Store,
             },
             depth_slice: None,
@@ -220,7 +230,7 @@ fn vertical_blur(
             }),
             resolve_target: None,
             ops: wgpu::Operations {
-                load: wgpu::LoadOp::Load,
+                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
                 store: wgpu::StoreOp::Store,
             },
             depth_slice: None,

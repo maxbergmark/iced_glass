@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use crate::{
-    pipeline::{AtlasData, SharedBindGroupData},
+    pipeline::{SharedBindGroupData, text_atlas::AtlasData},
     primitive::text::{VERTICES_PER_GLYPH, VertexData},
     shader::uniforms_bind_group_layout,
 };
