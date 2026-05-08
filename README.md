@@ -4,8 +4,10 @@
 
 # Iced Glass
 ![Rust](https://img.shields.io/badge/Rust-2024_edition-orange)
-[![Test Status](https://img.shields.io/github/actions/workflow/status/maxbergmark/iced_glass/rust.yml?branch=main&event=push&label=test)](https://github.com/maxbergmark/iced_glass/actions)
-
+[![check](https://img.shields.io/github/check-runs/maxbergmark/iced_glass/main?nameFilter=check&label=check)](https://github.com/maxbergmark/iced_glass/actions)
+[![clippy](https://img.shields.io/github/check-runs/maxbergmark/iced_glass/main?nameFilter=clippy&label=clippy)](https://github.com/maxbergmark/iced_glass/actions)
+[![test](https://img.shields.io/github/check-runs/maxbergmark/iced_glass/main?nameFilter=test&label=test)](https://github.com/maxbergmark/iced_glass/actions)
+[![build](https://img.shields.io/github/check-runs/maxbergmark/iced_glass/main?nameFilter=build&label=build)](https://github.com/maxbergmark/iced_glass/actions)
 
 </div>
 
