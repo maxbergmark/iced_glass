@@ -7,7 +7,8 @@ use tracing::{debug, warn};
 
 use crate::{
     pipeline::{
-        Pipeline, round_up,
+        Pipeline,
+        text::round_up,
         text_atlas::{AtlasData, AtlasPosition, GlyphId, Rect},
         text_instance::TextInstance,
     },
@@ -53,10 +54,11 @@ impl iced::widget::shader::Primitive for TextPrimitive {
 
         #[allow(clippy::expect_used)]
         let instance = pipeline
+            .text
             .text_instances
             .get_mut(&self.id)
             .expect("Text instance not found");
-        let atlas_data = &mut pipeline.atlas_data;
+        let atlas_data = &mut pipeline.text.atlas_data;
 
         let vertices = self.create_vertex_buffer(atlas_data, queue, bounds);
         instance.num_glyphs = vertices.len() as u32 / VERTICES_PER_GLYPH;
@@ -125,7 +127,7 @@ fn text_pass(
         1.0,
     );
 
-    pass.set_pipeline(&pipeline.text);
+    pass.set_pipeline(&pipeline.text.pipeline);
     pass.set_bind_group(0, &instance.texture_atlas_bg, &[]);
     pass.set_bind_group(1, &instance.instance.uniform_bg_h, &[]);
     pass.set_vertex_buffer(0, instance.vertex_buffer.slice(..));

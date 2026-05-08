@@ -1,17 +1,10 @@
 pub mod downsample;
 pub mod fragment;
 pub mod gaussian;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "text")]
 pub mod text;
 
 pub const MIP_LEVEL_COUNT: u32 = 4;
-
-// #[derive(Debug)]
-// pub struct RenderShaderData {
-//     pub pipeline: wgpu::RenderPipeline,
-//     pub bind_group: wgpu::BindGroup,
-//     pub uniform_bind_group: wgpu::BindGroup,
-// }
 
 #[must_use]
 pub fn uniforms_bind_group(
@@ -92,6 +85,7 @@ pub fn texture_bind_groups(
         .collect()
 }
 
+#[must_use]
 pub fn create_uniforms_buffer(device: &wgpu::Device) -> wgpu::Buffer {
     device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("uniforms"),

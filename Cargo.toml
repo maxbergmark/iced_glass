@@ -3,6 +3,17 @@ name = "iced_glass"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["text"]
+text = [
+    "dep:msdfgen",
+    "dep:notosans",
+    "dep:freetype-rs",
+    "dep:etagere",
+    "dep:cosmic-text",
+    "dep:itertools",
+]
+
 [dependencies]
 iced = { git = "https://github.com/maxbergmark/iced", features = [
     "wgpu",
@@ -18,13 +29,12 @@ bytemuck = "1.25.0"
 num-traits = "0.2.19"
 tracing = { version = "0.1.44", features = ["log"] }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-msdfgen = { version = "0.2.1", features = ["freetype-rs"] }
-notosans = "0.1.0"
-freetype-rs = "0.32.0"
-etagere = "0.3.0"
-cosmic-text = "0.19.0"
-itertools = "0.14.0"
+msdfgen = { version = "0.2.1", features = ["freetype-rs"], optional = true }
+notosans = { version = "0.1.0", optional = true }
+freetype-rs = { version = "0.32.0", optional = true }
+etagere = { version = "0.3.0", optional = true }
+cosmic-text = { version = "0.19.0", optional = true }
+itertools = { version = "0.14.0", optional = true }
 
 [workspace]
 members = [".", "examples/*"]

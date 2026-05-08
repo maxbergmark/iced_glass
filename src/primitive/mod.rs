@@ -3,7 +3,7 @@ use crate::{
     uniforms::Uniforms,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "text")]
 pub mod text;
 
 #[derive(Debug, Clone, Copy)]
@@ -28,12 +28,6 @@ impl iced::widget::shader::Primitive for Primitive {
         let height = (bounds.height * scale) as u32;
         let size = iced::Size::new(width, height);
         pipeline.prepare_instance(device, queue, self.id, size, scale, &self.uniforms);
-        device.on_uncaptured_error(std::sync::Arc::new(move |error| {
-            tracing::error!("Uncaptured error: {:?}", error);
-        }));
-        device.set_device_lost_callback(move |reason, message| {
-            tracing::error!("Device lost: {:?}, {}", reason, message);
-        });
     }
 
     fn render(
@@ -48,7 +42,6 @@ impl iced::widget::shader::Primitive for Primitive {
         let Some(copy_size) = calculate_copy_size(texture, instance, bounds) else {
             return;
         };
-        tracing::info!("Copy size: {:?}", copy_size);
 
         let mip_level = self.uniforms.mip_level();
         copy_background(encoder, &instance.tex_a, texture, bounds, &copy_size);

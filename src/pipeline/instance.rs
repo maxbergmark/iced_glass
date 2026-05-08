@@ -1,7 +1,7 @@
-use tracing::info;
+use tracing::debug;
 
 use crate::{
-    pipeline::{Pipeline, create_textures},
+    pipeline::{SharedBindGroupData, create_textures},
     shader::{create_uniforms_buffer, texture_bind_groups, uniforms_bind_group},
     uniforms::Uniforms,
 };
@@ -23,35 +23,26 @@ impl Instance {
     #[allow(clippy::similar_names)]
     #[must_use]
     pub fn new(
-        pipeline: &Pipeline,
+        bg_data: &SharedBindGroupData,
         device: &wgpu::Device,
-        bgl_textures: &wgpu::BindGroupLayout,
         size: iced::Size<u32>,
-        sampler: &wgpu::Sampler,
     ) -> Self {
-        info!(
+        debug!(
             "creating instance with dimensions: {:?}x{:?}",
             size.width, size.height
         );
-        let (tex_a, tex_b) =
-            create_textures(device, pipeline.shared_bind_group_data.device_format, size);
+        let (tex_a, tex_b) = create_textures(device, bg_data.device_format, size);
 
         let uniforms_h = create_uniforms_buffer(device);
         let uniforms_v = create_uniforms_buffer(device);
+        let sampler = &bg_data.sampler;
+        let bgl_textures = &bg_data.bgl_textures;
 
         let tex_a_bg = texture_bind_groups(device, bgl_textures, &tex_a, sampler);
         let tex_b_bg = texture_bind_groups(device, bgl_textures, &tex_b, sampler);
 
-        let uniform_bg_h = uniforms_bind_group(
-            device,
-            &pipeline.shared_bind_group_data.bgl_uniforms,
-            &uniforms_h,
-        );
-        let uniform_bg_v = uniforms_bind_group(
-            device,
-            &pipeline.shared_bind_group_data.bgl_uniforms,
-            &uniforms_v,
-        );
+        let uniform_bg_h = uniforms_bind_group(device, &bg_data.bgl_uniforms, &uniforms_h);
+        let uniform_bg_v = uniforms_bind_group(device, &bg_data.bgl_uniforms, &uniforms_v);
 
         Self {
             tex_a,

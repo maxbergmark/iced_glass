@@ -375,7 +375,6 @@ dependencies = [
  "console_log",
  "iced",
  "iced_glass",
- "log",
  "tracing-subscriber",
 ]
 

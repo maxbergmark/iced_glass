@@ -6,19 +6,13 @@ edition = "2024"
 publish = false
 
 [dependencies]
-iced_glass.workspace = true
-iced.workspace = true
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-log = "0.4.29"
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tracing-subscriber = "0.3"
+iced_glass = { path = "../..", default-features = false }
+iced = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-iced.workspace = true
-iced.features = [
-    "webgl",
-    "fira-sans",
-] # add others as you need: "image", "svg", "debug", "fira-sans"
+iced = { workspace = true, features = ["webgl", "fira-sans"] }
 console_error_panic_hook = "0.1"
 console_log = "1.0"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
