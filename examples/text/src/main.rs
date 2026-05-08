@@ -636,6 +636,7 @@ impl Ui {
             refractive_index: self.refractive_index,
             chromatic_aberration: self.chromatic_aberration,
             rim_width: self.rim_width,
+            rim_angle: 0.0, // TODO: add rim angle slider
             opacity: self.opacity,
             edge_type: EdgeType::GlassEdge,
         }

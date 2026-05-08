@@ -3,6 +3,7 @@ use crate::{
     uniforms::Uniforms,
 };
 
+#[cfg(feature = "text")]
 pub mod text;
 
 #[derive(Debug, Clone, Copy)]
@@ -25,7 +26,8 @@ impl iced::widget::shader::Primitive for Primitive {
         let scale = viewport.scale_factor();
         let width = (bounds.width * scale) as u32;
         let height = (bounds.height * scale) as u32;
-        pipeline.prepare_instance(device, queue, self.id, width, height, scale, &self.uniforms);
+        let size = iced::Size::new(width, height);
+        pipeline.prepare_instance(device, queue, self.id, size, scale, &self.uniforms);
     }
 
     fn render(
@@ -43,10 +45,12 @@ impl iced::widget::shader::Primitive for Primitive {
 
         let mip_level = self.uniforms.mip_level();
         copy_background(encoder, &instance.tex_a, texture, bounds, &copy_size);
-        downsample(encoder, pipeline, instance, mip_level);
-        horizontal_blur(encoder, pipeline, instance, mip_level);
-        vertical_blur(encoder, pipeline, instance, mip_level);
-        upsample(encoder, pipeline, instance, mip_level);
+        if self.uniforms.blur_radius > 0.0 {
+            downsample(encoder, pipeline, instance, mip_level);
+            horizontal_blur(encoder, pipeline, instance, mip_level);
+            vertical_blur(encoder, pipeline, instance, mip_level);
+            upsample(encoder, pipeline, instance, mip_level);
+        }
         fragment_pass(encoder, pipeline, instance, target, bounds);
     }
 }
@@ -187,7 +191,7 @@ fn horizontal_blur(
             }),
             resolve_target: None,
             ops: wgpu::Operations {
-                load: wgpu::LoadOp::Load,
+                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
                 store: wgpu::StoreOp::Store,
             },
             depth_slice: None,
@@ -219,7 +223,7 @@ fn vertical_blur(
             }),
             resolve_target: None,
             ops: wgpu::Operations {
-                load: wgpu::LoadOp::Load,
+                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
                 store: wgpu::StoreOp::Store,
             },
             depth_slice: None,

@@ -13,7 +13,7 @@ struct Uniforms {
     opacity: f32,
     edge_type: i32,
     chromatic_aberration: f32,
-    _pad: f32,
+    rim_angle: f32,
 };
 
 @group(1)
@@ -184,7 +184,7 @@ fn edge_highlight(color: vec4<f32>, sdf: f32, sdf_gradient: vec2<f32>) -> vec4<f
 
     let highlight_color = apply_glass_exposure(color, vec4<f32>(1.0), 3.0);
     let highlight_width = uniforms.rim_width;
-    let sun_direction = normalize(vec2<f32>(1.0, 2.0));
+    let sun_direction = normalize(vec2<f32>(cos(uniforms.rim_angle), sin(uniforms.rim_angle)));
     let f = pow(dot(sdf_gradient, sun_direction), 2.0);
     let t = smoothstep(-highlight_width - aa, -highlight_width + aa, sdf);
     return mix(color, highlight_color, f * t);

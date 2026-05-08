@@ -1,10 +1,12 @@
 mod container;
 mod slider;
 /// Public text widget
+#[cfg(feature = "text")]
 pub mod text;
 
 pub use container::glass_container as container;
 pub use slider::glass_slider as slider;
+#[cfg(feature = "text")]
 pub use text::glass_text as text;
 
 /// Selects whether to use glass refraction or smooth blending for the edge
@@ -38,6 +40,8 @@ pub struct Style {
     pub chromatic_aberration: f32,
     /// Sets the rim width for the edge highlight effect
     pub rim_width: f32,
+    /// Sets the rim angle for the edge highlight effect
+    pub rim_angle: f32,
     /// Sets the opacity for the widget
     pub opacity: f32,
     /// Sets the edge type for the widget
@@ -55,6 +59,7 @@ impl Default for Style {
             refractive_index: 1.5,
             chromatic_aberration: 0.0,
             rim_width: 1.0,
+            rim_angle: 0.0,
             opacity: 1.0,
             edge_type: EdgeType::GlassEdge,
         }
@@ -104,10 +109,24 @@ impl Style {
         self
     }
 
+    /// Sets the chromatic aberration of the widget
+    #[must_use]
+    pub const fn chromatic_aberration(mut self, chromatic_aberration: f32) -> Self {
+        self.chromatic_aberration = chromatic_aberration;
+        self
+    }
+
     /// Sets the rim width of the widget
     #[must_use]
     pub const fn rim_width(mut self, rim_width: f32) -> Self {
         self.rim_width = rim_width;
+        self
+    }
+
+    /// Sets the rim angle of the widget
+    #[must_use]
+    pub const fn rim_angle(mut self, rim_angle: f32) -> Self {
+        self.rim_angle = rim_angle;
         self
     }
 

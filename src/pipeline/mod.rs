@@ -1,20 +1,24 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, hash_map::Entry};
 
-use cosmic_text::fontdb;
-use etagere::{AtlasAllocator, size2};
+use tracing::info;
 
 pub mod instance;
+
+#[cfg(feature = "text")]
+pub mod text;
+#[cfg(feature = "text")]
+pub mod text_atlas;
+#[cfg(feature = "text")]
 pub mod text_instance;
 
+#[cfg(feature = "text")]
+use crate::{pipeline::text::TextPipeline, shader::text::TextShader};
+
 use crate::{
-    pipeline::{instance::Instance, text_instance::TextInstance},
+    pipeline::instance::Instance,
     shader::{
-        MIP_LEVEL_COUNT, create_sampler,
-        downsample::DownsampleShader,
-        fragment::FragmentShader,
-        gaussian::GaussianShader,
-        text::{TEXT_ATLAS_SIZE, TextShader},
-        uniforms_bind_group_layout,
+        MIP_LEVEL_COUNT, create_sampler, downsample::DownsampleShader, fragment::FragmentShader,
+        gaussian::GaussianShader, uniforms_bind_group_layout,
     },
     uniforms::Uniforms,
 };
@@ -24,23 +28,20 @@ pub struct Pipeline {
     pub downsample: wgpu::RenderPipeline,
     pub blur: wgpu::RenderPipeline,
     pub fragment: wgpu::RenderPipeline,
-    pub text: wgpu::RenderPipeline,
+    #[cfg(feature = "text")]
+    pub text: TextPipeline,
 
     instances: HashMap<u64, Instance>,
     live_this_frame: HashSet<u64>,
-
-    pub text_instances: HashMap<u64, TextInstance>,
-    live_text_this_frame: HashSet<u64>,
-
-    pub atlas_data: AtlasData,
 }
 
 impl std::fmt::Debug for Pipeline {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Pipeline")
-            .field("instances", &self.instances.len())
-            .field("text_instances", &self.text_instances.len())
-            .finish_non_exhaustive()
+        let mut d = f.debug_struct("Pipeline");
+        d.field("instances", &self.instances.len());
+        #[cfg(feature = "text")]
+        d.field("text", &self.text);
+        d.finish_non_exhaustive()
     }
 }
 
@@ -50,42 +51,8 @@ pub struct SharedBindGroupData {
     pub sampler: wgpu::Sampler,
     pub bgl_textures: wgpu::BindGroupLayout, // group 0 layout
     pub bgl_uniforms: wgpu::BindGroupLayout, // group 1 layout
-    pub bgl_text: wgpu::BindGroupLayout,     // group 0 layout
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
-pub struct GlyphId(pub u16);
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct Rect {
-    pub x_min: i16,
-    pub y_min: i16,
-    pub x_max: i16,
-    pub y_max: i16,
-}
-
-pub struct AtlasData {
-    pub texture_atlas: wgpu::Texture,
-    pub atlas_position: HashMap<(fontdb::ID, GlyphId), AtlasPosition>,
-    pub allocator: AtlasAllocator,
-}
-
-impl std::fmt::Debug for AtlasData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AtlasData")
-            .field("texture_atlas", &self.texture_atlas)
-            .field("atlas_position", &self.atlas_position)
-            .finish_non_exhaustive()
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct AtlasPosition {
-    pub position: iced::Point<u32>,
-    pub size: iced::Size<u32>,
-    // pub bbox: Rect,
-    pub units_per_em: f32,
-    pub framing: msdfgen::Framing<f64>,
+    #[cfg(feature = "text")]
+    pub bgl_text: wgpu::BindGroupLayout, // group 0 layout
 }
 
 impl iced::widget::shader::Pipeline for Pipeline {
@@ -93,26 +60,16 @@ impl iced::widget::shader::Pipeline for Pipeline {
     where
         Self: Sized,
     {
+        info!("creating pipeline with format: {:?}", format);
         let downsample_pipeline = DownsampleShader::create_pipeline(device, format);
         let blur_pipeline = GaussianShader::create_pipeline(device, format);
         let fragment_pipeline = FragmentShader::create_pipeline(device, format);
-        let text_pipeline = TextShader::create_pipeline(device, format);
 
-        let texture_atlas = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("text.texture_atlas"),
-            size: wgpu::Extent3d {
-                width: TEXT_ATLAS_SIZE,
-                height: TEXT_ATLAS_SIZE,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING
-                | wgpu::TextureUsages::RENDER_ATTACHMENT
-                | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
+        device.on_uncaptured_error(std::sync::Arc::new(move |error| {
+            tracing::error!("Uncaptured error: {:?}", error);
+        }));
+        device.set_device_lost_callback(move |reason, message| {
+            tracing::error!("Device lost: {:?}, {}", reason, message);
         });
 
         Self {
@@ -121,26 +78,26 @@ impl iced::widget::shader::Pipeline for Pipeline {
                 sampler: create_sampler(device),
                 bgl_textures: create_bgl_texture_layout(device),
                 bgl_uniforms: uniforms_bind_group_layout(device),
+                #[cfg(feature = "text")]
                 bgl_text: TextShader::create_bind_group_layout(device),
             },
             downsample: downsample_pipeline,
             blur: blur_pipeline,
             fragment: fragment_pipeline,
-            text: text_pipeline,
+            #[cfg(feature = "text")]
+            text: TextPipeline::new(device, format),
             instances: HashMap::new(),
             live_this_frame: HashSet::new(),
-            text_instances: HashMap::new(),
-            live_text_this_frame: HashSet::new(),
-
-            atlas_data: AtlasData {
-                texture_atlas,
-                atlas_position: HashMap::new(),
-                allocator: AtlasAllocator::new(size2(
-                    TEXT_ATLAS_SIZE as i32,
-                    TEXT_ATLAS_SIZE as i32,
-                )),
-            },
         }
+    }
+
+    fn trim(&mut self) {
+        self.instances
+            .retain(|id, _| self.live_this_frame.contains(id));
+        self.live_this_frame.clear();
+
+        #[cfg(feature = "text")]
+        self.text.trim();
     }
 }
 
@@ -173,14 +130,13 @@ pub fn create_bgl_texture_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout
 pub fn create_textures(
     device: &wgpu::Device,
     format: wgpu::TextureFormat,
-    width: u32,
-    height: u32,
+    size: iced::Size<u32>,
 ) -> (wgpu::Texture, wgpu::Texture) {
-    let copy_to_texture = device.create_texture(&wgpu::TextureDescriptor {
+    let tex_a = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("glass.copy"),
         size: wgpu::Extent3d {
-            width: width.max(1),
-            height: height.max(1),
+            width: size.width.max(1),
+            height: size.height.max(1),
             depth_or_array_layers: 1,
         },
         mip_level_count: MIP_LEVEL_COUNT,
@@ -193,11 +149,11 @@ pub fn create_textures(
         view_formats: &[],
     });
 
-    let gaussian_texture = device.create_texture(&wgpu::TextureDescriptor {
+    let tex_b = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("glass.gaussian"),
         size: wgpu::Extent3d {
-            width: width.max(1),
-            height: height.max(1),
+            width: size.width.max(1),
+            height: size.height.max(1),
             depth_or_array_layers: 1,
         },
         mip_level_count: MIP_LEVEL_COUNT,
@@ -207,7 +163,7 @@ pub fn create_textures(
         usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::RENDER_ATTACHMENT,
         view_formats: &[],
     });
-    (copy_to_texture, gaussian_texture)
+    (tex_a, tex_b)
 }
 
 impl Pipeline {
@@ -217,134 +173,29 @@ impl Pipeline {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         id: u64,
-        width: u32,
-        height: u32,
-        scale: f32,
-        uniforms: &Uniforms,
-    ) {
-        let needs_new = self
-            .instances
-            .get(&id)
-            .is_none_or(|inst| inst.size.width != width || inst.size.height != height);
-        if needs_new {
-            self.instances.insert(
-                id,
-                Instance::new(
-                    self,
-                    device,
-                    &self.shared_bind_group_data.bgl_textures,
-                    width,
-                    height,
-                ),
-            );
-        }
-        #[allow(clippy::expect_used)]
-        let inst = self.instances.get_mut(&id).expect("Instance not found");
-        inst.copy_uniforms_to_device(queue, uniforms, scale);
-        self.live_this_frame.insert(id);
-    }
-
-    pub fn prepare_text_instance(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        id: u64,
         size: iced::Size<u32>,
         scale: f32,
         uniforms: &Uniforms,
     ) {
-        let needs_new = self.text_instances.get(&id).is_none_or(|inst| {
-            inst.instance.size.width < size.width || inst.instance.size.height < size.height
-        });
-        if needs_new {
-            let alloc_size = iced::Size::new(round_up(size.width, 256), round_up(size.height, 256));
-
-            match self.text_instances.get_mut(&id) {
-                Some(inst) => {
-                    inst.update_size(
-                        &self.shared_bind_group_data,
-                        &self.atlas_data,
-                        device,
-                        alloc_size,
-                    );
+        let inst = match self.instances.entry(id) {
+            Entry::Occupied(mut occ) => {
+                let same_size =
+                    occ.get().size.width == size.width && occ.get().size.height == size.height;
+                if !same_size {
+                    *occ.get_mut() = Instance::new(&self.shared_bind_group_data, device, size);
                 }
-                None => {
-                    self.text_instances.insert(
-                        id,
-                        TextInstance::new(
-                            self,
-                            device,
-                            &self.shared_bind_group_data.bgl_textures,
-                            alloc_size,
-                        ),
-                    );
-                }
+                occ.into_mut()
             }
-        }
-        #[allow(clippy::expect_used)]
-        let inst = self
-            .text_instances
-            .get_mut(&id)
-            .expect("Text instance not found");
-
-        // TODO: find a cleaner way to do this
-        let mut uniforms = *uniforms;
-        uniforms.content_scale = (
-            size.width as f32 / inst.instance.size.width as f32,
-            size.height as f32 / inst.instance.size.height as f32,
-        );
-
-        inst.copy_uniforms_to_device(queue, &uniforms, scale);
-        self.live_text_this_frame.insert(id);
+            Entry::Vacant(vac) => {
+                vac.insert(Instance::new(&self.shared_bind_group_data, device, size))
+            }
+        };
+        inst.copy_uniforms_to_device(queue, uniforms, scale);
+        self.live_this_frame.insert(id);
     }
 
     #[must_use]
     pub fn instance(&self, id: u64) -> &Instance {
         &self.instances[&id]
     }
-
-    #[must_use]
-    pub fn text_instance(&self, id: u64) -> &TextInstance {
-        &self.text_instances[&id]
-    }
-
-    // #[allow(clippy::expect_used)]
-    // pub fn text_instance_mut(&mut self, id: u64) -> &mut TextInstance {
-    //     self.text_instances
-    //         .get_mut(&id)
-    //         .expect("Text instance not found")
-    // }
-
-    /// Call at the end of rendering each frame.
-    #[allow(unused)] // TODO: use this function to clean up instances and text instances
-    pub fn gc(&mut self) {
-        self.instances
-            .retain(|id, _| self.live_this_frame.contains(id));
-        self.text_instances
-            .retain(|id, _| self.live_text_this_frame.contains(id));
-        self.live_this_frame.clear();
-        self.live_text_this_frame.clear();
-    }
-}
-
-#[must_use]
-pub const fn round_up(size: u32, granularity: u32) -> u32 {
-    size.div_ceil(granularity) * granularity
-}
-
-#[must_use]
-pub fn content_scale(size: iced::Size<f32>) -> (f32, f32) {
-    (
-        size.width / round_up(size.width as u32, 256) as f32,
-        size.height / round_up(size.height as u32, 256) as f32,
-    )
-}
-
-fn create_uniforms_buffer(device: &wgpu::Device) -> wgpu::Buffer {
-    device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("uniforms"),
-        size: std::mem::size_of::<crate::uniforms::Raw>() as u64,
-        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-    })
 }

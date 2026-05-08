@@ -1,6 +1,6 @@
 use std::ops::RangeInclusive;
 
-use iced::{Alignment, Color, Length, Size, Task};
+use iced::{Alignment, Color, Length, Task};
 use iced_glass::widget::EdgeType;
 
 #[derive(Debug, Clone)]
@@ -21,6 +21,10 @@ pub struct Ui {
     rim_angle: f32,
     opacity: f32,
     tint: Color,
+    ship_handle: iced::widget::image::Handle,
+    bw_handle: iced::widget::image::Handle,
+    nat_handle: iced::widget::image::Handle,
+    flower_handle: iced::widget::image::Handle,
 }
 
 #[allow(unused)]
@@ -51,21 +55,17 @@ pub enum ColorChannel {
 }
 
 fn main() -> iced::Result {
-    tracing_subscriber::fmt()
-        .pretty() // multi-line, color-coded output with file:line info
-        .with_env_filter("info,iced=info")
-        .init();
+    #[cfg(target_arch = "wasm32")]
+    {
+        console_error_panic_hook::set_once();
+        let _ = console_log::init_with_level(log::Level::Debug);
+    }
 
     iced::application(Ui::boot, Ui::update, Ui::view)
         .subscription(Ui::subscription)
+        .theme(theme)
         .antialiasing(true)
-        .transparent(true)
-        .window_size(Size::new(2560.0, 1440.0))
-        .title("Liquid Glass Demo")
-        .style(|_state, _theme| iced::theme::Style {
-            background_color: Color::TRANSPARENT,
-            text_color: Color::WHITE,
-        })
+        .title("Liquid Glass In The Browser")
         .run()
 }
 
@@ -88,9 +88,26 @@ impl Default for Ui {
             rim_angle: 0.0,
             opacity: 1.0,
             tint: Color::WHITE,
+            ship_handle: image_handle(SHIP),
+            bw_handle: image_handle(BW),
+            nat_handle: image_handle(NAT),
+            flower_handle: image_handle(FLW),
         }
     }
 }
+
+fn theme(_ui: &Ui) -> iced::Theme {
+    iced::Theme::Dark
+}
+
+fn image_handle(bytes: &'static [u8]) -> iced::widget::image::Handle {
+    iced::widget::image::Handle::from_bytes(bytes)
+}
+
+const SHIP: &[u8] = include_bytes!("../assets/ship.jpg");
+const BW: &[u8] = include_bytes!("../assets/black_white.jpg");
+const NAT: &[u8] = include_bytes!("../assets/nature.jpg");
+const FLW: &[u8] = include_bytes!("../assets/flowers.jpg");
 
 impl Ui {
     pub fn boot() -> (Ui, Task<Message>) {
@@ -167,18 +184,18 @@ impl Ui {
     fn image(&self) -> iced::Element<'_, Message> {
         iced::widget::container(iced::widget::column![
             iced::widget::row![
-                iced::widget::image("examples/basic/assets/ship.jpg")
+                iced::widget::image(&self.ship_handle)
                     .width(Length::FillPortion(1))
                     .height(Length::FillPortion(1)),
-                iced::widget::image("examples/basic/assets/black_white.jpg")
+                iced::widget::image(&self.bw_handle)
                     .width(Length::FillPortion(1))
                     .height(Length::FillPortion(1))
             ],
             iced::widget::row![
-                iced::widget::image("examples/basic/assets/nature.jpg")
+                iced::widget::image(&self.nat_handle)
                     .width(Length::FillPortion(1))
                     .height(Length::FillPortion(1)),
-                iced::widget::image("examples/basic/assets/flowers.jpg")
+                iced::widget::image(&self.flower_handle)
                     .width(Length::FillPortion(1))
                     .height(Length::FillPortion(1))
             ]
@@ -191,9 +208,13 @@ impl Ui {
     fn mouse_area(&self) -> iced::Element<'_, Message> {
         iced::widget::container(
             iced::widget::mouse_area(
-                iced::widget::container(iced::widget::text("Liquid Glass Demo").size(300.0))
-                    .width(Length::Fill)
-                    .center_y(Length::Fill),
+                iced::widget::container(
+                    iced::widget::text("Liquid Glass Demo")
+                        .size(300.0)
+                        .color(iced::Color::WHITE),
+                )
+                .width(Length::Fill)
+                .center_y(Length::Fill),
             )
             .on_move(Message::MouseMove)
             .on_press(Message::MouseState(true))
@@ -213,6 +234,7 @@ impl Ui {
                 .glass_style(|theme| self.glass_style(theme))
                 .style(|theme| self.style(theme)),
         )
+        // .center(Length::Fill)
         .align_left(Length::Fill)
         .align_top(Length::Fill)
         .padding(iced::Padding {
@@ -254,7 +276,7 @@ impl Ui {
                         "Rim Angle: ",
                         self.rim_angle,
                         200.0,
-                        0.0..=10.0,
+                        0.0..=std::f32::consts::PI,
                         Message::SetRimAngle
                     ),
                     self.styled_text(
