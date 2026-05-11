@@ -1,13 +1,21 @@
 use std::{ops::RangeInclusive, time::Instant};
 
 use iced::{
-    Alignment, Background, Border, Color, Element, Length, Padding, Point, Shadow, Size,
+    Alignment, Background, Border, Color, Element, Font, Length, Padding, Point, Shadow, Size,
     Subscription, Task, Theme, Vector,
+    font::{self, Family, Stretch, Weight},
     widget::{column, container, image, mouse_area, responsive, row, slider, space, stack, text},
 };
 use iced_glass::{
     glass_stack,
-    widget::{EdgeType, InnerContent, container as glass_container, text as glass_text},
+    widget::{EdgeType, StackOffset, container as glass_container, text as glass_text},
+};
+
+const FONT_BOLD: Font = Font {
+    family: Family::Name("Noto Sans"),
+    weight: Weight::Bold,
+    stretch: Stretch::Normal,
+    style: font::Style::Normal,
 };
 
 #[derive(Debug, Clone)]
@@ -79,7 +87,7 @@ impl Default for Ui {
     fn default() -> Self {
         Self {
             width: 1440.0,
-            height: 500.0,
+            height: 400.0,
             blur_radius: 500.0,
             corner_radius: 100.0,
             saturation: 1.1,
@@ -166,7 +174,7 @@ impl Ui {
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
-        iced::time::every(std::time::Duration::from_millis(16)).map(|_| Message::Noop)
+        iced::time::every(std::time::Duration::from_millis(8)).map(|_| Message::Noop)
     }
 
     pub fn view(&self) -> Element<'_, Message> {
@@ -204,6 +212,7 @@ impl Ui {
                 container(
                     glass_text("Liquid Glass Demo")
                         .size(300.0)
+                        .font(FONT_BOLD)
                         .glass_style(|_theme| iced_glass::Style {
                             blur_radius: 50.0,
                             lightness: 2.0,
@@ -239,44 +248,27 @@ impl Ui {
         // tracing::info!("offset_x: {}, offset_y: {}", offset_x, offset_y);
         container(
             glass_stack![
-                InnerContent {
-                    container: self.inner_content(),
-                    offset: Vector::new(offset_x, offset_y),
-                },
-                InnerContent {
-                    container: container(space()).width(200.0).height(200.0).into(),
-                    offset: Vector::new(0.0, 0.0),
-                },
-                InnerContent {
-                    container: container(space()).width(400.0).height(400.0).into(),
-                    offset: Vector::new(2560.0 - 400.0, 0.0),
-                },
-                InnerContent {
-                    container: container(space()).width(200.0).height(400.0).into(),
-                    offset: Vector::new(0.0, 1440.0 - 400.0),
-                },
-                InnerContent {
-                    container: container(space()).width(200.0).height(200.0).into(),
-                    offset: Vector::new(2560.0 - 200.0, 1440.0 - 200.0),
-                },
-                InnerContent {
-                    container: container(text("Containers can blend together").size(50.0))
-                        .center(400.0)
-                        .padding(20.0)
-                        .into(),
-                    offset: Vector::new(
-                        1200.0 + f32::sin(elapsed * 2.0) * 100.0,
-                        300.0 + f32::cos(elapsed * 2.0) * 100.0,
-                    ),
-                },
-                InnerContent {
-                    container: space().width(200.0).height(200.0).into(),
-                    offset: Vector::new(1300.0 + f32::sin(elapsed * 2.2) * 300.0, 400.0),
-                },
-                InnerContent {
-                    container: space().width(300.0).height(300.0).into(),
-                    offset: Vector::new(1250.0, 350.0 + f32::cos(elapsed * 2.4) * 300.0),
-                },
+                container(
+                    text("Containers can blend together")
+                        .size(50.0)
+                        .style(text_black)
+                )
+                .center(400.0)
+                .padding(20.0)
+                .with_offset(Vector::new(
+                    1200.0 + f32::sin(elapsed * 2.0) * 100.0,
+                    300.0 + f32::cos(elapsed * 2.0) * 100.0,
+                )),
+                space()
+                    .width(200.0)
+                    .height(200.0)
+                    .with_offset(Vector::new(1300.0 + f32::sin(elapsed * 2.2) * 300.0, 400.0)),
+                space()
+                    .width(300.0)
+                    .height(300.0)
+                    .with_offset(Vector::new(1250.0, 350.0 + f32::cos(elapsed * 2.4) * 300.0)),
+                self.inner_content()
+                    .with_offset(Vector::new(offset_x, offset_y)),
             ]
             .width(2560.0)
             .height(1440.0)
@@ -610,5 +602,11 @@ impl Ui {
                 border_color: Color::from_rgba(0.3, 0.3, 1.0, 1.0),
             },
         }
+    }
+}
+
+fn text_black(_theme: &Theme) -> text::Style {
+    text::Style {
+        color: Some(Color::BLACK),
     }
 }

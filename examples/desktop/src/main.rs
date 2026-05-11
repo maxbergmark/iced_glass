@@ -16,7 +16,7 @@ use iced::{
 use iced_glass::{
     glass_stack,
     widget::{
-        EdgeType, InnerContent, container as glass_container, slider as glass_slider,
+        EdgeType, StackOffset, container as glass_container, slider as glass_slider,
         text as glass_text,
     },
 };
@@ -288,93 +288,68 @@ impl Ui {
         let b = (1.0 - (-40.0 * icons_blend).exp()) * (1.0 - (-2.0 * (1.0 - icons_blend)).exp());
         container(
             glass_stack![
-                InnerContent {
-                    container: container(
-                        row![
-                            svg(icon_path_outline("search"))
-                                .opacity(self.get_search_opacity())
-                                .style(self.svg_white())
-                                .width(30.0)
-                                .height(30.0),
-                            text_input("Search...", "").width(Length::Fill).style(
-                                |_theme, _status| text_input::Style {
-                                    border: Border {
-                                        color: color_opacity(
-                                            Color::WHITE,
-                                            self.get_search_opacity()
-                                        ),
-                                        width: 0.0,
-                                        radius: 50.0.into(),
-                                    },
-                                    background: Background::Color(Color::TRANSPARENT),
-                                    icon: Color::WHITE,
-                                    placeholder: color_opacity(
-                                        Color::WHITE,
-                                        self.get_search_opacity()
-                                    ),
-                                    value: color_opacity(Color::WHITE, self.get_search_opacity()),
-                                    selection: color_opacity(
-                                        Color::WHITE,
-                                        self.get_search_opacity()
-                                    ),
-                                }
-                            ),
-                        ]
-                        .padding(10.0)
-                    )
-                    .width(640.0 - icons_opacity * 200.0 - 40.0 * opacity)
-                    // .height(100.0)
-                    .into(),
-                    offset: Vector::new(0.0, 0.0),
-                },
-                InnerContent {
-                    container: container(
-                        svg(icon_path_outline("camera"))
+                container(
+                    row![
+                        svg(icon_path_outline("search"))
+                            .opacity(self.get_search_opacity())
                             .style(self.svg_white())
-                            .opacity(icons_opacity * opacity)
                             .width(30.0)
-                            .height(30.0)
-                    )
-                    .center(50.0)
-                    .into(),
-                    offset: Vector::new(410.0, 0.0),
-                },
-                InnerContent {
-                    container: container(
-                        svg(icon_path_outline("airplane"))
-                            .style(self.svg_white())
-                            .opacity(icons_opacity * opacity)
-                            .width(30.0)
-                            .height(30.0)
-                    )
-                    .center(50.0)
-                    .into(),
-                    offset: Vector::new(410.0 + icons_opacity * 60.0, 0.0),
-                },
-                InnerContent {
-                    container: container(
-                        svg(icon_path_outline("sunny"))
-                            .style(self.svg_white())
-                            .opacity(icons_opacity * opacity)
-                            .width(30.0)
-                            .height(30.0)
-                    )
-                    .center(50.0)
-                    .into(),
-                    offset: Vector::new(410.0 + icons_opacity * 120.0, 0.0),
-                },
-                InnerContent {
-                    container: container(
-                        svg(icon_path_outline("terminal"))
-                            .style(self.svg_white())
-                            .opacity(icons_opacity * opacity)
-                            .width(30.0)
-                            .height(30.0)
-                    )
-                    .center(50.0)
-                    .into(),
-                    offset: Vector::new(410.0 + icons_opacity * 180.0, 0.0),
-                }
+                            .height(30.0),
+                        text_input("Search...", "")
+                            .width(Length::Fill)
+                            .style(|_theme, _status| text_input::Style {
+                                border: Border {
+                                    color: color_opacity(Color::WHITE, self.get_search_opacity()),
+                                    width: 0.0,
+                                    radius: 50.0.into(),
+                                },
+                                background: Background::Color(Color::TRANSPARENT),
+                                icon: Color::WHITE,
+                                placeholder: color_opacity(Color::WHITE, self.get_search_opacity()),
+                                value: color_opacity(Color::WHITE, self.get_search_opacity()),
+                                selection: color_opacity(Color::WHITE, self.get_search_opacity()),
+                            }),
+                    ]
+                    .padding(10.0)
+                )
+                .width(640.0 - icons_opacity * 200.0 - 40.0 * opacity)
+                .with_offset(Vector::new(0.0, 0.0)),
+                container(
+                    svg(icon_path_outline("camera"))
+                        .style(self.svg_white())
+                        .opacity(icons_opacity * opacity)
+                        .width(30.0)
+                        .height(30.0)
+                )
+                .center(50.0)
+                .with_offset(Vector::new(410.0, 0.0)),
+                container(
+                    svg(icon_path_outline("airplane"))
+                        .style(self.svg_white())
+                        .opacity(icons_opacity * opacity)
+                        .width(30.0)
+                        .height(30.0)
+                )
+                .center(50.0)
+                .with_offset(Vector::new(410.0 + icons_opacity * 60.0, 0.0)),
+                container(
+                    svg(icon_path_outline("sunny"))
+                        .style(self.svg_white())
+                        .opacity(icons_opacity * opacity)
+                        .width(30.0)
+                        .height(30.0)
+                )
+                .center(50.0)
+                .with_offset(Vector::new(410.0 + icons_opacity * 120.0, 0.0)),
+                container(
+                    svg(icon_path_outline("terminal"))
+                        .style(self.svg_white())
+                        .opacity(icons_opacity * opacity)
+                        .width(30.0)
+                        .height(30.0)
+                )
+                .center(50.0)
+                .with_offset(Vector::new(410.0 + icons_opacity * 180.0, 0.0)),
             ]
             .width(700.0)
             .height(50.0)

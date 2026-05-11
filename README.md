@@ -37,13 +37,20 @@ A Rust library and demo app that implements Apple-style **liquid / frosted glass
 
 <br>
 
+
+<img width="600" src="docs/glass_stack.webp" alt="Blend containers" />
+
+**Blend multiple containers using `glass_stack`**
+
+<br>
+
 </div>
 
 ## Text
 
 ![iced_glass example](docs/text_rendering.png)
 
-With the rewrite of the refraction math using signed distance functions, it is now possible to render text with refraction. This is still a work in progress, as characters are rendered one at a time. Each glyph is rasterized into an MSDF atlas on first use and cached for subsequent frames. The SDF is then used in the fragment shader both for inside/outside testing and to drive the refraction and rim-light effects, giving text the same glass appearance as iced_glass::widget::container.
+With the rewrite of the refraction math using signed distance functions, it is now possible to render text with refraction. This is rendered using `cosmic-text`, `freetype-rs` and `msdfgen-rs`. Each glyph is rasterized into an MSDF atlas on first use and cached for subsequent frames. The SDF is then used in the fragment shader both for inside/outside testing and to drive the refraction and rim-light effects, giving text the same glass appearance as `iced_glass::widget::container`.
 
 ### Limitations
 

@@ -152,12 +152,32 @@ fn sdf(p: vec2<f32>, dimensions: vec2<f32>, r: f32) -> vec3<f32> {
     }   
 }
 
-fn rounded_group_sdf(p: vec2<f32>, r: f32) -> vec3<f32> {
-    let dis_gra = group_sdf(p, r);
-    return vec3<f32>(dis_gra.x - r, dis_gra.y, dis_gra.z);
-}
+// fn rounded_group_sdf(p: vec2<f32>, r: f32) -> vec3<f32> {
+//     let dis_gra = group_sdf(p, r);
+//     return vec3<f32>(dis_gra.x - r, dis_gra.y, dis_gra.z);
+// }
 
-fn group_sdf(p: vec2<f32>, r: f32) -> vec3<f32> {
+fn rounded_group_sdf(p: vec2<f32>, r: f32) -> vec3<f32> { return group_sdf(p, r); } 
+
+fn group_sdf(p: vec2<f32>, r: f32) -> vec3<f32> { 
+    var best_sdf = 1e20; 
+    var best_grad = vec2<f32>(0.0); 
+    let k = uniforms.blending_factor; 
+    let n = uniforms.num_children; 
+    for (var i: u32 = 0u; i < n; i = i + 1u) { 
+        let c = children[i]; 
+        let local_p = p - c.center; 
+        let r_i = min(r, min(c.half_size.x, c.half_size.y)); 
+        let sdg = sdg_box(local_p, c.half_size - r_i); 
+        let d = sdg.x - r_i; // <-- per-child inflate 
+        let s = smin(best_sdf, d, k); 
+        best_sdf = s.x; 
+        best_grad = mix(best_grad, sdg.yz, s.y); 
+    }
+    return vec3<f32>(best_sdf, best_grad); 
+} 
+
+fn group_sdf2(p: vec2<f32>, r: f32) -> vec3<f32> {
     var best_sdf = 1e20;
     var best_grad = vec2<f32>(0.0);
     let k = uniforms.blending_factor; // add this; in pixels. Try ~40-100 for "soft" merging.
@@ -165,7 +185,8 @@ fn group_sdf(p: vec2<f32>, r: f32) -> vec3<f32> {
     for (var i: u32 = 0u; i < n; i = i + 1u) {
         let c = children[i];
         let local_p = p - c.center;
-        let sdg = sdg_box(local_p, c.half_size - r);
+        let r_clamp = clamp_radius(r, c.half_size * 2.0);
+        let sdg = sdg_box(local_p, c.half_size - r_clamp);
         let s = smin(best_sdf, sdg.x, k);
         best_sdf  = s.x;
         best_grad = mix(best_grad, sdg.yz, s.y);
@@ -223,18 +244,18 @@ fn sdg_box(p: vec2<f32>, b: vec2<f32>) -> vec3<f32> {
 }
 
 fn clamp_radius(radius: f32, dimensions: vec2<f32>) -> f32 {
-    if uniforms.num_children > 0 {
-        var min_x = 1e20;
-        var min_y = 1e20;
-        for (var i: u32 = 0u; i < uniforms.num_children; i = i + 1u) {
-            let c = children[i];
-            min_x = min(min_x, c.half_size.x);
-            min_y = min(min_y, c.half_size.y);
-        }
-        return min(radius, min(min_x, min_y));
-    } else {
+    // if uniforms.num_children > 0 {
+    //     var min_x = 1e20;
+    //     var min_y = 1e20;
+    //     for (var i: u32 = 0u; i < uniforms.num_children; i = i + 1u) {
+    //         let c = children[i];
+    //         min_x = min(min_x, c.half_size.x);
+    //         min_y = min(min_y, c.half_size.y);
+    //     }
+    //     return min(radius, min(min_x, min_y));
+    // } else {
         return min(radius, min(dimensions.x, dimensions.y) / 2.0);
-    }
+    // }
 }
 
 fn refract(x: f32, r: f32, n: f32, h: f32) -> f32 {
