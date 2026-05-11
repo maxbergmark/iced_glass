@@ -20,7 +20,7 @@ use crate::uniforms::ChildRaw;
 ///
 /// Keep in mind that too much layering will normally produce bad UX as well as
 /// introduce certain rendering overhead. Use this widget sparingly!
-pub struct GlassGroup<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer> {
+pub struct GlassStack<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer> {
     width: Length,
     height: Length,
     children: Vec<InnerContent<'a, Message, Theme, Renderer>>,
@@ -28,6 +28,8 @@ pub struct GlassGroup<'a, Message, Theme = iced::Theme, Renderer = iced::Rendere
     base_layer: usize,
     glass_style: crate::StyleFn<'a, Theme>,
     corner_radius: f32,
+    tint: Color,
+    blending_factor: f32,
 }
 
 /// A container that displays a child element on top of the current [`GlassGroup`].
@@ -38,7 +40,7 @@ pub struct InnerContent<'a, Message, Theme, Renderer> {
     pub offset: Vector,
 }
 
-impl<Message, Theme, Renderer> std::fmt::Debug for GlassGroup<'_, Message, Theme, Renderer>
+impl<Message, Theme, Renderer> std::fmt::Debug for GlassStack<'_, Message, Theme, Renderer>
 where
     Renderer: iced::advanced::Renderer,
 {
@@ -74,7 +76,7 @@ struct State {
 }
 static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1000);
 
-impl<'a, Message, Theme, Renderer> GlassGroup<'a, Message, Theme, Renderer>
+impl<'a, Message, Theme, Renderer> GlassStack<'a, Message, Theme, Renderer>
 where
     Renderer: iced::advanced::Renderer,
 {
@@ -116,6 +118,8 @@ where
             base_layer: 0,
             glass_style: Box::new(|_| crate::Style::default()),
             corner_radius: 50.0,
+            tint: Color::WHITE,
+            blending_factor: 1.0,
         }
     }
 
@@ -168,7 +172,7 @@ where
         self,
         children: impl IntoIterator<Item = InnerContent<'a, Message, Theme, Renderer>>,
     ) -> Self {
-        children.into_iter().fold(self, GlassGroup::push)
+        children.into_iter().fold(self, GlassStack::push)
     }
 
     /// Sets whether the [`GlassGroup`] should clip overflowing content.
@@ -195,9 +199,23 @@ where
         self.corner_radius = corner_radius;
         self
     }
+
+    /// Sets the tint of the [`Container`].
+    #[must_use]
+    pub const fn tint(mut self, tint: Color) -> Self {
+        self.tint = tint;
+        self
+    }
+
+    /// Sets the blending factor of the [`Container`].
+    #[must_use]
+    pub const fn blending_factor(mut self, blending_factor: f32) -> Self {
+        self.blending_factor = blending_factor;
+        self
+    }
 }
 
-impl<Message, Theme, Renderer> Default for GlassGroup<'_, Message, Theme, Renderer>
+impl<Message, Theme, Renderer> Default for GlassStack<'_, Message, Theme, Renderer>
 where
     Renderer: iced::advanced::Renderer,
 {
@@ -207,7 +225,7 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> iced::advanced::Widget<Message, Theme, Renderer>
-    for GlassGroup<'a, Message, Theme, Renderer>
+    for GlassStack<'a, Message, Theme, Renderer>
 where
     Renderer: iced::advanced::Renderer + iced_wgpu::primitive::Renderer + 'a,
 {
@@ -451,10 +469,11 @@ where
                     rim_width: glass_style.rim_width,
                     rim_angle: glass_style.rim_angle,
                     opacity: glass_style.opacity,
-                    tint: Color::WHITE,
+                    tint: self.tint,
                     content_scale: (1.0, 1.0),
                     edge_type: glass_style.edge_type,
                     num_children: children.len() as u32,
+                    blending_factor: self.blending_factor,
                 },
                 children,
             },
@@ -557,14 +576,14 @@ where
     }
 }
 
-impl<'a, Message, Theme, Renderer> From<GlassGroup<'a, Message, Theme, Renderer>>
+impl<'a, Message, Theme, Renderer> From<GlassStack<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
     Theme: 'a,
     Renderer: iced::advanced::Renderer + iced_wgpu::primitive::Renderer + 'a,
 {
-    fn from(stack: GlassGroup<'a, Message, Theme, Renderer>) -> Self {
+    fn from(stack: GlassStack<'a, Message, Theme, Renderer>) -> Self {
         Self::new(stack)
     }
 }

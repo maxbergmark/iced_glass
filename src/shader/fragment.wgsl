@@ -15,9 +15,9 @@ struct Uniforms {
     chromatic_aberration: f32,
     rim_angle: f32,
     num_children: u32,
+    blending_factor: f32,
     _pad: f32,
     _pad2: f32,
-    _pad3: f32,
 };
 
 struct Child {
@@ -160,7 +160,7 @@ fn rounded_group_sdf(p: vec2<f32>, r: f32) -> vec3<f32> {
 fn group_sdf(p: vec2<f32>, r: f32) -> vec3<f32> {
     var best_sdf = 1e20;
     var best_grad = vec2<f32>(0.0);
-    let k = uniforms.corner_radius; // add this; in pixels. Try ~40-100 for "soft" merging.
+    let k = uniforms.blending_factor; // add this; in pixels. Try ~40-100 for "soft" merging.
     let n = uniforms.num_children;
     for (var i: u32 = 0u; i < n; i = i + 1u) {
         let c = children[i];
@@ -176,7 +176,7 @@ fn group_sdf(p: vec2<f32>, r: f32) -> vec3<f32> {
 // Returns (smoothed_sdf, t) where t in [0,1] is the blend factor for `b`.
 // k > 0. With k -> 0 this reduces to min(a,b) with t = step(b, a).
 fn smin(a: f32, b: f32, k: f32) -> vec2<f32> {
-    let h = max(k - abs(a - b), 0.0) / k;
+    let h = max(k - abs(a - b), 0.0) / max(k, 1e-6);
     let m = h * h * 0.5;
     let s = m * k * 0.5;
     if (a < b) {
@@ -223,7 +223,18 @@ fn sdg_box(p: vec2<f32>, b: vec2<f32>) -> vec3<f32> {
 }
 
 fn clamp_radius(radius: f32, dimensions: vec2<f32>) -> f32 {
-    return min(radius, min(dimensions.x, dimensions.y) / 2.0);
+    if uniforms.num_children > 0 {
+        var min_x = 1e20;
+        var min_y = 1e20;
+        for (var i: u32 = 0u; i < uniforms.num_children; i = i + 1u) {
+            let c = children[i];
+            min_x = min(min_x, c.half_size.x);
+            min_y = min(min_y, c.half_size.y);
+        }
+        return min(radius, min(min_x, min_y));
+    } else {
+        return min(radius, min(dimensions.x, dimensions.y) / 2.0);
+    }
 }
 
 fn refract(x: f32, r: f32, n: f32, h: f32) -> f32 {

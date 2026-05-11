@@ -3,12 +3,11 @@ use std::{ops::RangeInclusive, time::Instant};
 use iced::{
     Alignment, Background, Border, Color, Element, Length, Padding, Point, Shadow, Size,
     Subscription, Task, Theme, Vector,
-    widget::{
-        column, container, image, mouse_area, responsive, row, slider, space, stack, svg, text,
-    },
+    widget::{column, container, image, mouse_area, responsive, row, slider, space, stack, text},
 };
-use iced_glass::widget::{
-    EdgeType, GlassGroup, InnerContent, container as glass_container, text as glass_text,
+use iced_glass::{
+    glass_stack,
+    widget::{EdgeType, InnerContent, container as glass_container, text as glass_text},
 };
 
 #[derive(Debug, Clone)]
@@ -29,6 +28,7 @@ pub struct Ui {
     rim_angle: f32,
     opacity: f32,
     tint: Color,
+    blending_factor: f32,
     start_time: Instant,
 }
 
@@ -50,6 +50,7 @@ pub enum Message {
     MouseState(bool),
     SetTint(ColorChannel, f32),
     SetOpacity(f32),
+    SetBlendingFactor(f32),
     Noop,
 }
 
@@ -93,6 +94,7 @@ impl Default for Ui {
             rim_angle: 0.0,
             opacity: 1.0,
             tint: Color::WHITE,
+            blending_factor: 1.0,
             start_time: Instant::now(),
         }
     }
@@ -155,6 +157,9 @@ impl Ui {
                 ColorChannel::Green => self.tint.g = value,
                 ColorChannel::Blue => self.tint.b = value,
             },
+            Message::SetBlendingFactor(blending_factor) => {
+                self.blending_factor = blending_factor;
+            }
             Message::Noop => {}
         }
         Task::none()
@@ -233,7 +238,7 @@ impl Ui {
         let elapsed = self.start_time.elapsed().as_secs_f32();
         // tracing::info!("offset_x: {}, offset_y: {}", offset_x, offset_y);
         container(
-            GlassGroup::from_vec(vec![
+            glass_stack![
                 InnerContent {
                     container: self.inner_content(),
                     offset: Vector::new(offset_x, offset_y),
@@ -260,34 +265,28 @@ impl Ui {
                         .padding(20.0)
                         .into(),
                     offset: Vector::new(
-                        500.0 + f32::sin(elapsed * 2.0) * 100.0,
-                        500.0 + f32::cos(elapsed * 2.0) * 100.0,
+                        1200.0 + f32::sin(elapsed * 2.0) * 100.0,
+                        300.0 + f32::cos(elapsed * 2.0) * 100.0,
                     ),
                 },
-            ])
+                InnerContent {
+                    container: space().width(200.0).height(200.0).into(),
+                    offset: Vector::new(1300.0 + f32::sin(elapsed * 2.2) * 300.0, 400.0),
+                },
+                InnerContent {
+                    container: space().width(300.0).height(300.0).into(),
+                    offset: Vector::new(1250.0, 350.0 + f32::cos(elapsed * 2.4) * 300.0),
+                },
+            ]
             .width(2560.0)
             .height(1440.0)
             .corner_radius(self.corner_radius)
+            .tint(self.tint)
+            .blending_factor(self.blending_factor)
             .glass_style(|theme| self.glass_style(theme)),
         )
         .align_left(Length::Fill)
         .align_top(Length::Fill)
-        // .padding(Padding {
-        //     top: self
-        //         .mouse_position
-        //         .map(|point| {
-        //             (point.y - self.height / 2.0).clamp(0.0, window_size.height - self.height)
-        //         })
-        //         .unwrap_or(0.0),
-        //     left: self
-        //         .mouse_position
-        //         .map(|point| {
-        //             (point.x - self.width / 2.0).clamp(0.0, window_size.width - self.width)
-        //         })
-        //         .unwrap_or(0.0),
-        //     bottom: 0.0,
-        //     right: 0.0,
-        // })
         .into()
     }
 
@@ -306,7 +305,7 @@ impl Ui {
                         "Rim Angle: ",
                         self.rim_angle,
                         200.0,
-                        0.0..=10.0,
+                        0.0..=std::f32::consts::PI,
                         Message::SetRimAngle
                     ),
                     self.styled_text(
@@ -338,44 +337,51 @@ impl Ui {
                     self.styled_text(
                         "Lightness: ",
                         self.lightness,
-                        200.0,
+                        170.0,
                         -4.0..=2.0,
                         Message::SetLightness
                     ),
                     self.styled_text(
                         "Edge Radius: ",
                         self.edge_radius,
-                        200.0,
+                        170.0,
                         0.0..=100.0,
                         Message::SetEdgeRadius
                     ),
                     self.styled_text(
                         "Edge Height: ",
                         self.edge_height,
-                        200.0,
+                        170.0,
                         0.0..=1000.0,
                         Message::SetEdgeHeight
                     ),
                     self.styled_text(
                         "Refractive Index: ",
                         self.refractive_index,
-                        200.0,
+                        170.0,
                         1.0..=10.0,
                         Message::SetRefractiveIndex
                     ),
                     self.styled_text(
                         "Aberration: ",
                         self.chromatic_aberration,
-                        200.0,
+                        170.0,
                         0.0..=1.0,
                         Message::SetChromaticAberration
                     ),
                     self.styled_text(
                         "Opacity: ",
                         self.opacity,
-                        200.0,
+                        170.0,
                         0.0..=1.0,
                         Message::SetOpacity
+                    ),
+                    self.styled_text(
+                        "Blending: ",
+                        self.blending_factor,
+                        170.0,
+                        0.0..=200.0,
+                        Message::SetBlendingFactor
                     ),
                 ]
                 .spacing(20.0)

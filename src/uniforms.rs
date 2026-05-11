@@ -17,6 +17,7 @@ pub struct Uniforms {
     pub content_scale: (f32, f32),
     pub edge_type: EdgeType,
     pub num_children: u32,
+    pub blending_factor: f32,
 }
 
 impl Uniforms {
@@ -42,9 +43,9 @@ impl Uniforms {
             },
             content_scale: [self.content_scale.0, self.content_scale.1],
             num_children: self.num_children,
+            blending_factor: self.blending_factor,
             _pad: 0.0,
             _pad2: 0.0,
-            _pad3: 0.0,
         }
     }
 
@@ -88,9 +89,9 @@ pub struct Raw {
     pub rim_angle: f32,
 
     pub num_children: u32,
+    pub blending_factor: f32,
     pub _pad: f32,
     pub _pad2: f32,
-    pub _pad3: f32,
 }
 
 #[derive(Debug, Default, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
