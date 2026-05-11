@@ -3,8 +3,13 @@ use std::time::Instant;
 use iced::{
     Alignment, Animation, Background, Border, Color, Font, Length, Size, Task,
     font::Weight,
-    widget::slider::{self, Handle, Rail},
+    widget::{
+        Column, Row, button, column, container, image, mouse_area, row, scrollable,
+        slider::{self, Handle, Rail},
+        space, stack, svg, text, text_input,
+    },
 };
+use iced_glass::widget::{container as glass_container, slider as glass_slider};
 use itertools::Itertools;
 use serde::Deserialize;
 
@@ -84,19 +89,15 @@ impl Ui {
                 self.search_value = search_value;
                 self.opacity.go_mut(false, Instant::now());
                 self.hover_info.is_hovered = false;
-                Task::none()
             }
             Message::SetCurrentAlbum(album_card) => {
                 self.current_album = Some(album_card);
-                Task::none()
             }
             Message::SetPlaybackTime(playback_time) => {
                 self.playback_time = playback_time;
-                Task::none()
             }
             Message::TogglePlayback => {
                 self.playing = !self.playing;
-                Task::none()
             }
             Message::SetHoverAlbum(index) => {
                 let old_index = self.hover_info.index;
@@ -110,16 +111,15 @@ impl Ui {
                     self.opacity = Animation::new(false).quick();
                 }
                 self.opacity.go_mut(true, now);
-                Task::none()
             }
             Message::ClearHoverAlbum => {
                 self.hover_info.is_hovered = false;
                 self.opacity.go_mut(false, Instant::now());
                 // self.hover_info.event_time = Instant::now();
-                Task::none()
             }
-            Message::Noop => Task::none(),
+            Message::Noop => {}
         }
+        Task::none()
     }
 
     pub fn subscription(&self) -> iced::Subscription<Message> {
@@ -133,22 +133,19 @@ impl Ui {
     }
 
     pub fn view(&self) -> iced::Element<'_, Message> {
-        iced::widget::container(iced::widget::column![iced::widget::stack![
-            self.scroll_view(),
-            self.glass(),
-        ],])
-        .style(|_theme| iced::widget::container::Style {
-            background: Some(Background::Color(Color::BLACK)),
-            ..Default::default()
-        })
-        .into()
+        container(column![stack![self.scroll_view(), self.glass(),],])
+            .style(|_theme| container::Style {
+                background: Some(Background::Color(Color::BLACK)),
+                ..Default::default()
+            })
+            .into()
     }
 
     fn scroll_view(&self) -> iced::Element<'_, Message> {
-        iced::widget::scrollable(iced::widget::column![
-            iced::widget::space().height(Length::from(100.0)),
-            iced::widget::container(
-                iced::widget::Column::with_children(
+        scrollable(column![
+            space().height(Length::from(100.0)),
+            container(
+                Column::with_children(
                     self.album_cards
                         .iter()
                         .enumerate()
@@ -162,7 +159,7 @@ impl Ui {
                         .chunks(4)
                         .into_iter()
                         .map(|chunk| {
-                            iced::widget::Row::from_vec(
+                            Row::from_vec(
                                 chunk
                                     .map(|(idx, album_card)| {
                                         album_card.view(idx, self.hover_info, &self.opacity)
@@ -176,7 +173,7 @@ impl Ui {
                 .spacing(20.0),
             )
             .center_x(Length::Fill),
-            iced::widget::space().height(Length::from(150.0)),
+            space().height(Length::from(150.0)),
         ])
         .height(Length::Fill)
         .height(Length::Fill)
@@ -185,10 +182,10 @@ impl Ui {
     }
 
     fn glass(&self) -> iced::Element<'_, Message> {
-        iced::widget::container(iced::widget::column![
-            // iced::widget::space().height(Length::from(20.0)),
+        container(column![
+            // space().height(Length::from(20.0)),
             self.search_bar(),
-            iced::widget::space().height(Length::Fill),
+            space().height(Length::Fill),
             self.playback_bar(),
         ])
         .center_x(Length::Fill)
@@ -198,14 +195,14 @@ impl Ui {
     }
 
     fn search_bar(&self) -> iced::Element<'_, Message> {
-        iced_glass::widget::container(
-            iced::widget::row![
-                iced::widget::svg("examples/scroll_view/assets/search.svg")
+        glass_container(
+            row![
+                svg("examples/scroll_view/assets/search.svg")
                     .width(Length::from(30.0))
                     .height(Length::from(30.0))
                     .style(|theme, _status| self.icon_style(theme)),
-                // iced::widget::text("Album Search").size(20.0),
-                iced::widget::text_input("Search", self.search_value.as_str())
+                // text("Album Search").size(20.0),
+                text_input("Search", self.search_value.as_str())
                     .style(|theme, _status| self.input_style(theme))
                     .on_input(Message::SearchValueChange)
             ]
@@ -238,24 +235,24 @@ impl Ui {
         } else {
             "examples/scroll_view/assets/play.svg"
         };
-        iced_glass::widget::container(
-            iced::widget::button(
-                iced::widget::container(
-                    iced::widget::row![
-                        iced::widget::row![
-                            iced::widget::svg("examples/scroll_view/assets/back.svg")
+        glass_container(
+            button(
+                container(
+                    row![
+                        row![
+                            svg("examples/scroll_view/assets/back.svg")
                                 .width(Length::from(20.0))
                                 .height(Length::from(20.0))
                                 .style(|theme, _status| self.icon_style(theme)),
-                            iced::widget::button(
-                                iced::widget::svg(play_icon)
+                            button(
+                                svg(play_icon)
                                     .width(Length::from(30.0))
                                     .height(Length::from(30.0))
                                     .style(|theme, _status| self.icon_style(theme))
                             )
                             .on_press(Message::TogglePlayback)
                             .style(|theme, _status| button_style(theme)),
-                            iced::widget::svg("examples/scroll_view/assets/forward.svg")
+                            svg("examples/scroll_view/assets/forward.svg")
                                 .width(Length::from(20.0))
                                 .height(Length::from(20.0))
                                 .style(|theme, _status| self.icon_style(theme))
@@ -265,9 +262,7 @@ impl Ui {
                         self.current_album
                             .as_ref()
                             .map(|album_card| album_card.mini_view(self.playback_time))
-                            .unwrap_or_else(|| iced::widget::text("No album selected")
-                                .size(20.0)
-                                .into()),
+                            .unwrap_or_else(|| text("No album selected").size(20.0).into()),
                     ]
                     .padding(iced::Padding {
                         top: 15.0,
@@ -301,8 +296,8 @@ impl Ui {
         .into()
     }
 
-    fn style(&self, _theme: &iced::Theme) -> iced::widget::container::Style {
-        iced::widget::container::Style {
+    fn style(&self, _theme: &iced::Theme) -> container::Style {
+        container::Style {
             shadow: iced::Shadow {
                 color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
                 offset: iced::Vector::new(0.0, 12.0),
@@ -316,8 +311,8 @@ impl Ui {
         }
     }
 
-    fn input_style(&self, _theme: &iced::Theme) -> iced::widget::text_input::Style {
-        iced::widget::text_input::Style {
+    fn input_style(&self, _theme: &iced::Theme) -> text_input::Style {
+        text_input::Style {
             background: Background::Color(Color::TRANSPARENT),
             icon: Color::WHITE,
             placeholder: Color::from_rgb(0.8, 0.8, 0.8),
@@ -327,8 +322,8 @@ impl Ui {
         }
     }
 
-    fn icon_style(&self, _theme: &iced::Theme) -> iced::widget::svg::Style {
-        iced::widget::svg::Style {
+    fn icon_style(&self, _theme: &iced::Theme) -> svg::Style {
+        svg::Style {
             color: Some(Color::WHITE),
         }
     }
@@ -357,9 +352,9 @@ impl AlbumCard {
         let overlay: iced::Element<'_, Message> = if is_hovered {
             let opacity = opacity.interpolate(0.0, 1.0, Instant::now());
 
-            iced::widget::container(
-                iced_glass::widget::container(
-                    iced::widget::svg("examples/scroll_view/assets/play.svg")
+            container(
+                glass_container(
+                    svg("examples/scroll_view/assets/play.svg")
                         .width(Length::from(15.0))
                         .height(Length::from(15.0))
                         .style(|theme, _status| self.icon_style(theme))
@@ -382,13 +377,13 @@ impl AlbumCard {
             .padding(10.0)
             .into()
         } else {
-            iced::widget::space().into()
+            space().into()
         };
 
-        iced::widget::container(
-            iced::widget::mouse_area(iced::widget::column![
-                iced::widget::stack![
-                    iced::widget::image(format!(
+        container(
+            mouse_area(column![
+                stack![
+                    image(format!(
                         "examples/scroll_view/assets/album_covers/{}",
                         self.file.clone()
                     ))
@@ -396,19 +391,19 @@ impl AlbumCard {
                     .height(200.0),
                     overlay,
                 ],
-                iced::widget::container(iced::widget::column![
-                    iced::widget::text(title)
+                container(column![
+                    text(title)
                         .size(15.0)
                         .style(|theme| self.text_style(theme))
                         .font(BOLD),
-                    iced::widget::row![
-                        iced::widget::text(self.year.to_string())
+                    row![
+                        text(self.year.to_string())
                             .size(12.0)
                             .style(|theme| self.text_style_gray(theme)),
-                        iced::widget::text("•")
+                        text("•")
                             .size(12.0)
                             .style(|theme| self.text_style_gray(theme)),
-                        iced::widget::text(self.artist.clone())
+                        text(self.artist.clone())
                             .size(12.0)
                             .style(|theme| self.text_style_gray(theme)),
                     ]
@@ -435,30 +430,30 @@ impl AlbumCard {
         } else {
             self.title.clone()
         };
-        iced::widget::container(
-            iced::widget::row![
-                iced::widget::image(format!(
+        container(
+            row![
+                image(format!(
                     "examples/scroll_view/assets/album_covers/{}",
                     self.file.clone()
                 ))
                 .border_radius(10.0)
                 .width(Length::from(60.0))
                 .height(Length::from(60.0)),
-                iced::widget::column![
-                    iced::widget::text(title).size(15.0).font(BOLD),
-                    iced::widget::row![
-                        iced::widget::text(self.year.to_string())
+                column![
+                    text(title).size(15.0).font(BOLD),
+                    row![
+                        text(self.year.to_string())
                             .size(15.0)
                             .style(|theme| self.text_style_gray(theme)),
-                        iced::widget::text("•")
+                        text("•")
                             .size(15.0)
                             .style(|theme| self.text_style_gray(theme)),
-                        iced::widget::text(self.artist.clone())
+                        text(self.artist.clone())
                             .size(15.0)
                             .style(|theme| self.text_style_gray(theme))
                     ]
                     .spacing(5.0),
-                    iced_glass::widget::slider(0.0..=1.0, playback_time, Message::SetPlaybackTime)
+                    glass_slider(0.0..=1.0, playback_time, Message::SetPlaybackTime)
                         .step(0.01_f32)
                         .style(self.slider_style()),
                 ],
@@ -468,8 +463,8 @@ impl AlbumCard {
         .into()
     }
 
-    fn style(&self, _theme: &iced::Theme, opacity: f32) -> iced::widget::container::Style {
-        iced::widget::container::Style {
+    fn style(&self, _theme: &iced::Theme, opacity: f32) -> container::Style {
+        container::Style {
             shadow: iced::Shadow {
                 color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25 * opacity),
                 offset: iced::Vector::new(0.0, 12.0),
@@ -483,14 +478,14 @@ impl AlbumCard {
         }
     }
 
-    fn text_style(&self, _theme: &iced::Theme) -> iced::widget::text::Style {
-        iced::widget::text::Style {
+    fn text_style(&self, _theme: &iced::Theme) -> text::Style {
+        text::Style {
             color: Some(Color::WHITE),
         }
     }
 
-    fn text_style_gray(&self, _theme: &iced::Theme) -> iced::widget::text::Style {
-        iced::widget::text::Style {
+    fn text_style_gray(&self, _theme: &iced::Theme) -> text::Style {
+        text::Style {
             color: Some(Color::from_rgb(0.6, 0.6, 0.6)),
         }
     }
@@ -526,15 +521,15 @@ impl AlbumCard {
         }
     }
 
-    fn icon_style(&self, _theme: &iced::Theme) -> iced::widget::svg::Style {
-        iced::widget::svg::Style {
+    fn icon_style(&self, _theme: &iced::Theme) -> svg::Style {
+        svg::Style {
             color: Some(Color::WHITE),
         }
     }
 }
 
-fn button_style(_theme: &iced::Theme) -> iced::widget::button::Style {
-    iced::widget::button::Style {
+fn button_style(_theme: &iced::Theme) -> button::Style {
+    button::Style {
         background: None,
         text_color: Color::WHITE,
         border: Border::default(),

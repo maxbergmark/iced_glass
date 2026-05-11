@@ -1,4 +1,10 @@
-use iced::{Alignment, Background, Gradient, Length, Radians, Size, Task, gradient::Linear};
+use iced::{
+    Alignment, Background, Border, Color, Element, Gradient, Length, Radians, Size, Subscription,
+    Task, Theme,
+    gradient::Linear,
+    widget::{column, container, row, slider, text},
+};
+use iced_glass::widget::{container as glass_container, slider as glass_slider};
 
 #[derive(Debug, Clone)]
 pub struct Ui {
@@ -41,8 +47,8 @@ impl Ui {
         (Self::default(), Task::none())
     }
 
-    pub fn subscription(&self) -> iced::Subscription<Message> {
-        iced::Subscription::none()
+    pub fn subscription(&self) -> Subscription<Message> {
+        Subscription::none()
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
@@ -66,11 +72,11 @@ impl Ui {
         }
     }
 
-    pub fn view(&self) -> iced::Element<'_, Message> {
-        iced::widget::container(
-            iced_glass::widget::container(
-                iced::widget::column![
-                    iced_glass::widget::slider(0.0..=1.0, self.value, Message::Value)
+    pub fn view(&self) -> Element<'_, Message> {
+        container(
+            glass_container(
+                column![
+                    glass_slider(0.0..=1.0, self.value, Message::Value)
                         .step(0.01_f32)
                         .width(1000.0)
                         .height(100.0)
@@ -81,49 +87,37 @@ impl Ui {
                             refractive_index: self.refractive_index,
                             ..Default::default()
                         }),
-                    iced::widget::row![
-                        iced_glass::widget::container(iced::widget::column![
-                            iced::widget::text("Edge Radius: "),
-                            iced::widget::slider(
-                                0.0..=100.0,
-                                self.edge_radius,
-                                Message::EdgeRadius
-                            )
-                            .step(1.0_f32)
-                            .width(100.0)
-                            .height(100.0)
+                    row![
+                        glass_container(column![
+                            text("Edge Radius: "),
+                            slider(0.0..=100.0, self.edge_radius, Message::EdgeRadius)
+                                .step(1.0_f32)
+                                .width(100.0)
+                                .height(100.0)
                         ])
                         .padding(20.0)
                         .style(border_radius(20.0))
                         .glass_style(|_theme| iced_glass::Style::default().lightness(-1.0))
                         .center_x(200.0)
                         .center_y(100.0),
-                        iced_glass::widget::container(iced::widget::column![
-                            iced::widget::text("Edge Height: "),
-                            iced::widget::slider(
-                                0.0..=100.0,
-                                self.edge_height,
-                                Message::EdgeHeight
-                            )
-                            .step(1.0_f32)
-                            .width(100.0)
-                            .height(100.0)
+                        glass_container(column![
+                            text("Edge Height: "),
+                            slider(0.0..=100.0, self.edge_height, Message::EdgeHeight)
+                                .step(1.0_f32)
+                                .width(100.0)
+                                .height(100.0)
                         ])
                         .padding(20.0)
                         .style(border_radius(20.0))
                         .glass_style(|_theme| iced_glass::Style::default().lightness(-1.0))
                         .center_x(200.0)
                         .center_y(100.0),
-                        iced_glass::widget::container(iced::widget::column![
-                            iced::widget::text("Refractive Index: "),
-                            iced::widget::slider(
-                                1.0..=2.0,
-                                self.refractive_index,
-                                Message::RefractiveIndex
-                            )
-                            .step(0.01_f32)
-                            .width(100.0)
-                            .height(100.0)
+                        glass_container(column![
+                            text("Refractive Index: "),
+                            slider(1.0..=2.0, self.refractive_index, Message::RefractiveIndex)
+                                .step(0.01_f32)
+                                .width(100.0)
+                                .height(100.0)
                         ])
                         .padding(20.0)
                         .style(border_radius(20.0))
@@ -147,19 +141,19 @@ impl Ui {
                 refractive_index: 2.5,
                 ..Default::default()
             })
-            .style(|_theme| iced::widget::container::Style {
-                border: iced::Border {
+            .style(|_theme| container::Style {
+                border: Border {
                     radius: 50.0.into(),
                     ..Default::default()
                 },
                 ..Default::default()
             }),
         )
-        .style(|_theme| iced::widget::container::Style {
+        .style(|_theme| container::Style {
             background: Some(Background::Gradient(Gradient::Linear(
                 Linear::new(Radians::from(3.0))
-                    .add_stop(0.0, iced::Color::from_rgba(0.6, 0.6, 0.6, 1.0))
-                    .add_stop(1.0, iced::Color::from_rgba(0.4, 0.4, 0.4, 1.0)),
+                    .add_stop(0.0, Color::from_rgba(0.6, 0.6, 0.6, 1.0))
+                    .add_stop(1.0, Color::from_rgba(0.4, 0.4, 0.4, 1.0)),
             ))),
             ..Default::default()
         })
@@ -168,38 +162,35 @@ impl Ui {
     }
 }
 
-fn slider_style(
-    _theme: &iced::Theme,
-    _status: iced::widget::slider::Status,
-) -> iced::widget::slider::Style {
-    let fill_color = iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0);
-    iced::widget::slider::Style {
-        rail: iced::widget::slider::Rail {
+fn slider_style(_theme: &Theme, _status: slider::Status) -> slider::Style {
+    let fill_color = Color::from_rgba(0.3, 0.3, 1.0, 1.0);
+    slider::Style {
+        rail: slider::Rail {
             backgrounds: (
-                iced::Background::Color(fill_color),
-                iced::Background::Color(iced::Color::WHITE),
+                Background::Color(fill_color),
+                Background::Color(Color::WHITE),
             ),
             width: 60.0,
-            border: iced::Border {
+            border: Border {
                 radius: 30.0.into(),
                 ..Default::default()
             },
         },
-        handle: iced::widget::slider::Handle {
-            shape: iced::widget::slider::HandleShape::Rectangle {
+        handle: slider::Handle {
+            shape: slider::HandleShape::Rectangle {
                 width: 200,
                 border_radius: 50.0.into(),
             },
-            background: iced::Background::Color(fill_color),
+            background: Background::Color(fill_color),
             border_width: 0.0,
-            border_color: iced::Color::TRANSPARENT,
+            border_color: Color::TRANSPARENT,
         },
     }
 }
 
-fn border_radius(radius: f32) -> impl Fn(&iced::Theme) -> iced::widget::container::Style {
-    move |_theme| iced::widget::container::Style {
-        border: iced::Border {
+fn border_radius(radius: f32) -> impl Fn(&Theme) -> container::Style {
+    move |_theme| container::Style {
+        border: Border {
             radius: radius.into(),
             ..Default::default()
         },

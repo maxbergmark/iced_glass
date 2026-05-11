@@ -1,6 +1,12 @@
 use std::time::{Duration, Instant};
 
-use iced::{Alignment, Background, Gradient, Length, Radians, Size, Task, gradient::Linear};
+use iced::{
+    Alignment, Background, Border, Color, Element, Gradient, Length, Radians, Size, Subscription,
+    Task, Theme,
+    gradient::Linear,
+    widget::{Row, column, container, image, row, slider, space, stack, text},
+};
+use iced_glass::widget::container as glass_container;
 
 #[derive(Debug, Clone)]
 pub struct Ui {
@@ -59,35 +65,34 @@ impl Ui {
         }
     }
 
-    pub fn subscription(&self) -> iced::Subscription<Message> {
+    pub fn subscription(&self) -> Subscription<Message> {
         // Only request frames while the animation is running
         iced::time::every(std::time::Duration::from_millis(16)).map(|_| Message::Noop)
     }
 
-    pub fn view(&self) -> iced::Element<'_, Message> {
-        iced::widget::container(iced::widget::stack![
-            iced::widget::image("examples/stress_test/assets/mountain.jpg")
+    pub fn view(&self) -> Element<'_, Message> {
+        container(stack![
+            image("examples/stress_test/assets/mountain.jpg")
                 .width(Length::Fill)
                 .height(Length::Fill),
-            iced::widget::column![
-                iced::widget::row![
-                    iced::widget::slider(0.0..=1000.0, self.blur_radius, Message::BlurRadius)
-                        .width(200.0),
-                    iced::widget::text(format!("{:.0}", self.blur_radius)).width(50.0),
+            column![
+                row![
+                    slider(0.0..=1000.0, self.blur_radius, Message::BlurRadius).width(200.0),
+                    text(format!("{:.0}", self.blur_radius)).width(50.0),
                 ],
-                iced::widget::row![
-                    iced::widget::slider(0.0..=1000.0, self.num_containers as f32, |v| {
+                row![
+                    slider(0.0..=1000.0, self.num_containers as f32, |v| {
                         Message::NumContainers(v as usize)
                     })
                     .width(200.0),
-                    iced::widget::text(format!("{}", self.num_containers)).width(50.0),
+                    text(format!("{}", self.num_containers)).width(50.0),
                 ],
-                iced::widget::text(format!(
+                text(format!(
                     "Frame time: {:.1}ms",
                     self.elapsed.as_secs_f32() * 1e3
                 )),
-                iced::widget::Row::from_iter((0..self.num_containers).map(|_i| {
-                    iced_glass::widget::container(iced::widget::space())
+                Row::from_iter((0..self.num_containers).map(|_i| {
+                    glass_container(space())
                         .center(50.0)
                         .glass_style(|_theme| iced_glass::Style {
                             blur_radius: 50.0,
@@ -103,11 +108,11 @@ impl Ui {
             ]
             .align_x(Alignment::Center)
         ])
-        .style(|_theme| iced::widget::container::Style {
+        .style(|_theme| container::Style {
             background: Some(Background::Gradient(Gradient::Linear(
                 Linear::new(Radians::from(3.0))
-                    .add_stop(0.0, iced::Color::from_rgba(0.6, 0.6, 0.6, 1.0))
-                    .add_stop(1.0, iced::Color::from_rgba(0.4, 0.4, 0.4, 1.0)),
+                    .add_stop(0.0, Color::from_rgba(0.6, 0.6, 0.6, 1.0))
+                    .add_stop(1.0, Color::from_rgba(0.4, 0.4, 0.4, 1.0)),
             ))),
             ..Default::default()
         })
@@ -116,9 +121,9 @@ impl Ui {
     }
 }
 
-fn border_radius(radius: f32) -> impl Fn(&iced::Theme) -> iced::widget::container::Style {
-    move |_theme| iced::widget::container::Style {
-        border: iced::Border {
+fn border_radius(radius: f32) -> impl Fn(&Theme) -> container::Style {
+    move |_theme| container::Style {
+        border: Border {
             radius: radius.into(),
             ..Default::default()
         },

@@ -1,7 +1,15 @@
 use std::ops::RangeInclusive;
 
-use iced::{Alignment, Length, Size, Task, color, widget::container};
-use iced_glass::widget::EdgeType;
+use iced::widget::{radio, text_input};
+use iced::{
+    Alignment, Background, Border, Color, Element, Length, Padding, Shadow, Size, Subscription,
+    Task, Theme, Vector,
+    widget::{column, container, image, row, slider, space, stack, text},
+};
+use iced::{Font, color, font};
+use iced_glass::widget::{
+    EdgeType, container as glass_container, slider as glass_slider, text as glass_text,
+};
 
 mod declaration;
 
@@ -20,9 +28,9 @@ pub struct Ui {
     font_size: f32,
     line_height: f32,
     font_selection: Option<FontSelection>,
-    style: iced::font::Style,
-    weight: iced::font::Weight,
-    stretch: iced::font::Stretch,
+    style: font::Style,
+    weight: font::Weight,
+    stretch: font::Stretch,
     text: String,
 }
 
@@ -41,9 +49,9 @@ pub enum Message {
     RimWidth(f32),
     Opacity(f32),
     FontSelection(FontSelection),
-    Style(iced::font::Style),
-    Weight(iced::font::Weight),
-    Stretch(iced::font::Stretch),
+    Style(font::Style),
+    Weight(font::Weight),
+    Stretch(font::Stretch),
     Text(String),
 }
 
@@ -91,9 +99,9 @@ impl Default for Ui {
             rim_width: 0.5,
             opacity: 1.0,
             font_selection: None,
-            style: iced::font::Style::Normal,
-            weight: iced::font::Weight::Normal,
-            stretch: iced::font::Stretch::Normal,
+            style: font::Style::Normal,
+            weight: font::Weight::Normal,
+            stretch: font::Stretch::Normal,
             text: String::new(),
         }
     }
@@ -104,8 +112,8 @@ impl Ui {
         (Self::default(), Task::none())
     }
 
-    pub fn subscription(&self) -> iced::Subscription<Message> {
-        iced::Subscription::none()
+    pub fn subscription(&self) -> Subscription<Message> {
+        Subscription::none()
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
@@ -185,13 +193,13 @@ impl Ui {
         }
     }
 
-    pub fn view(&self) -> iced::Element<'_, Message> {
-        iced::widget::stack![
-            iced::widget::image("examples/text/assets/flowers.jpg")
+    pub fn view(&self) -> Element<'_, Message> {
+        stack![
+            image("examples/text/assets/flowers.jpg")
                 .width(Length::Fill)
                 .height(Length::Fill),
-            iced::widget::column![
-                iced::widget::row![
+            column![
+                row![
                     self.styled_slider(
                         "Container Size: ",
                         self.container_size,
@@ -232,7 +240,7 @@ impl Ui {
                 .align_y(Alignment::Center)
                 .padding(20.0)
                 .spacing(20.0),
-                iced::widget::row![
+                row![
                     self.styled_slider(
                         "Line Height: ",
                         self.line_height,
@@ -263,7 +271,7 @@ impl Ui {
                 .align_y(Alignment::Center)
                 .padding(20.0)
                 .spacing(20.0),
-                iced::widget::row![
+                row![
                     self.text_input(),
                     self.font_selector(),
                     self.style_selector(),
@@ -271,9 +279,9 @@ impl Ui {
                     self.stretch_selector()
                 ]
                 .spacing(20.0),
-                iced::widget::space().height(100.0),
-                iced::widget::container(
-                    iced::widget::row![
+                space().height(100.0),
+                container(
+                    row![
                         self.styled_text(declaration::DECLARATION),
                         self.styled_text(&self.text),
                         self.styled_text("Hello\nHallå\n你好\nสวัสดี"),
@@ -282,10 +290,10 @@ impl Ui {
                     .spacing(20.0)
                 )
                 .center_x(Length::Fill)
-                .style(|_theme: &iced::Theme| {
-                    iced::widget::container::Style {
-                        border: iced::Border {
-                            color: iced::Color::WHITE,
+                .style(|_theme: &Theme| {
+                    container::Style {
+                        border: Border {
+                            color: Color::WHITE,
                             width: 0.0,
                             radius: 0.0.into(),
                         },
@@ -298,33 +306,33 @@ impl Ui {
         .into()
     }
 
-    fn font_selector(&self) -> iced::Element<'_, Message> {
-        iced_glass::widget::container(
-            iced::widget::column![
-                iced::widget::text("Font: "),
-                iced::widget::row![
-                    iced::widget::column![
-                        iced::widget::radio(
+    fn font_selector(&self) -> Element<'_, Message> {
+        glass_container(
+            column![
+                text("Font: "),
+                row![
+                    column![
+                        radio(
                             "Noto",
                             FontSelection::NotoSans,
                             self.font_selection,
                             Message::FontSelection
                         ),
-                        iced::widget::radio(
+                        radio(
                             "Arial",
                             FontSelection::ArialUnicodeMS,
                             self.font_selection,
                             Message::FontSelection
                         ),
                     ],
-                    iced::widget::column![
-                        iced::widget::radio(
+                    column![
+                        radio(
                             "Songti",
                             FontSelection::SongtiSC,
                             self.font_selection,
                             Message::FontSelection
                         ),
-                        iced::widget::radio(
+                        radio(
                             "System",
                             FontSelection::System,
                             self.font_selection,
@@ -336,7 +344,7 @@ impl Ui {
             ]
             .align_x(Alignment::Center)
             .spacing(5.0)
-            .padding(iced::Padding {
+            .padding(Padding {
                 top: 0.0,
                 right: 15.0,
                 bottom: 0.0,
@@ -351,28 +359,28 @@ impl Ui {
         .into()
     }
 
-    fn style_selector(&self) -> iced::Element<'_, Message> {
-        iced_glass::widget::container(
-            iced::widget::column![
-                iced::widget::text("Style: "),
-                iced::widget::row![
-                    iced::widget::column![
-                        iced::widget::radio(
+    fn style_selector(&self) -> Element<'_, Message> {
+        glass_container(
+            column![
+                text("Style: "),
+                row![
+                    column![
+                        radio(
                             "Normal",
-                            iced::font::Style::Normal,
+                            font::Style::Normal,
                             Some(self.style),
                             Message::Style
                         ),
-                        iced::widget::radio(
+                        radio(
                             "Italic",
-                            iced::font::Style::Italic,
+                            font::Style::Italic,
                             Some(self.style),
                             Message::Style
                         ),
                     ],
-                    iced::widget::column![iced::widget::radio(
+                    column![radio(
                         "Oblique",
-                        iced::font::Style::Oblique,
+                        font::Style::Oblique,
                         Some(self.style),
                         Message::Style
                     ),],
@@ -381,7 +389,7 @@ impl Ui {
             ]
             .align_x(Alignment::Center)
             .spacing(5.0)
-            .padding(iced::Padding {
+            .padding(Padding {
                 top: 0.0,
                 right: 15.0,
                 bottom: 0.0,
@@ -396,28 +404,28 @@ impl Ui {
         .into()
     }
 
-    fn weight_selector(&self) -> iced::Element<'_, Message> {
-        iced_glass::widget::container(
-            iced::widget::column![
-                iced::widget::text("Weight: "),
-                iced::widget::row![
-                    iced::widget::column![
-                        iced::widget::radio(
+    fn weight_selector(&self) -> Element<'_, Message> {
+        glass_container(
+            column![
+                text("Weight: "),
+                row![
+                    column![
+                        radio(
                             "ExtraLight",
-                            iced::font::Weight::ExtraLight,
+                            font::Weight::ExtraLight,
                             Some(self.weight),
                             Message::Weight
                         ),
-                        iced::widget::radio(
+                        radio(
                             "Normal",
-                            iced::font::Weight::Normal,
+                            font::Weight::Normal,
                             Some(self.weight),
                             Message::Weight
                         ),
                     ],
-                    iced::widget::column![iced::widget::radio(
+                    column![radio(
                         "ExtraBold",
-                        iced::font::Weight::ExtraBold,
+                        font::Weight::ExtraBold,
                         Some(self.weight),
                         Message::Weight
                     ),],
@@ -426,7 +434,7 @@ impl Ui {
             ]
             .align_x(Alignment::Center)
             .spacing(5.0)
-            .padding(iced::Padding {
+            .padding(Padding {
                 top: 0.0,
                 right: 15.0,
                 bottom: 0.0,
@@ -441,28 +449,28 @@ impl Ui {
         .into()
     }
 
-    fn stretch_selector(&self) -> iced::Element<'_, Message> {
-        iced_glass::widget::container(
-            iced::widget::column![
-                iced::widget::text("Stretch: "),
-                iced::widget::row![
-                    iced::widget::column![
-                        iced::widget::radio(
+    fn stretch_selector(&self) -> Element<'_, Message> {
+        glass_container(
+            column![
+                text("Stretch: "),
+                row![
+                    column![
+                        radio(
                             "Condensed",
-                            iced::font::Stretch::Condensed,
+                            font::Stretch::Condensed,
                             Some(self.stretch),
                             Message::Stretch
                         ),
-                        iced::widget::radio(
+                        radio(
                             "Normal",
-                            iced::font::Stretch::Normal,
+                            font::Stretch::Normal,
                             Some(self.stretch),
                             Message::Stretch
                         ),
                     ],
-                    iced::widget::column![iced::widget::radio(
+                    column![radio(
                         "Expanded",
-                        iced::font::Stretch::Expanded,
+                        font::Stretch::Expanded,
                         Some(self.stretch),
                         Message::Stretch
                     ),],
@@ -471,7 +479,7 @@ impl Ui {
             ]
             .align_x(Alignment::Center)
             .spacing(5.0)
-            .padding(iced::Padding {
+            .padding(Padding {
                 top: 0.0,
                 right: 15.0,
                 bottom: 0.0,
@@ -486,15 +494,15 @@ impl Ui {
         .into()
     }
 
-    fn text_input(&self) -> iced::Element<'_, Message> {
-        iced_glass::widget::container(
-            iced::widget::column![
-                iced::widget::text("Text input: "),
-                iced::widget::text_input("Text...", &self.text).on_input(Message::Text)
+    fn text_input(&self) -> Element<'_, Message> {
+        glass_container(
+            column![
+                text("Text input: "),
+                text_input("Text...", &self.text).on_input(Message::Text)
             ]
             .align_x(Alignment::Center)
             .spacing(5.0)
-            .padding(iced::Padding {
+            .padding(Padding {
                 top: 0.0,
                 right: 15.0,
                 bottom: 0.0,
@@ -510,15 +518,15 @@ impl Ui {
     }
 
     #[allow(dead_code)]
-    fn styled_text<'a>(&'a self, s: &'a str) -> iced::Element<'a, Message> {
-        let font = self.font_selection.map(|f| iced::Font {
-            family: iced::font::Family::Name(f.name()),
+    fn styled_text<'a>(&'a self, s: &'a str) -> Element<'a, Message> {
+        let font = self.font_selection.map(|f| Font {
+            family: font::Family::Name(f.name()),
             weight: self.weight,
             stretch: self.stretch,
             style: self.style,
         });
-        iced::widget::container(
-            iced_glass::widget::text(s)
+        container(
+            glass_text(s)
                 .width(Length::Fill)
                 .height(Length::Fill)
                 .glass_style(|theme| self.glass_style(theme))
@@ -528,8 +536,8 @@ impl Ui {
         )
         .width(self.container_size)
         .height(self.container_size)
-        .style(|_theme: &iced::Theme| iced::widget::container::Style {
-            border: iced::Border {
+        .style(|_theme: &Theme| container::Style {
+            border: Border {
                 color: color!(0xFFFFFF),
                 width: 0.0,
                 radius: 5.0.into(),
@@ -540,19 +548,19 @@ impl Ui {
     }
 
     #[allow(dead_code)]
-    fn normal_text(&self, s: &'static str) -> iced::Element<'_, Message> {
-        let font = self.font_selection.map(|f| iced::Font {
-            family: iced::font::Family::Name(f.name()),
+    fn normal_text(&self, s: &'static str) -> Element<'_, Message> {
+        let font = self.font_selection.map(|f| Font {
+            family: font::Family::Name(f.name()),
             weight: self.weight,
             stretch: self.stretch,
             style: self.style,
         });
-        iced::widget::container(
-            iced::widget::text(s)
+        container(
+            text(s)
                 .width(Length::Fill)
                 .height(Length::Fill)
                 .size(self.font_size)
-                .shaping(iced::widget::text::Shaping::Advanced)
+                .shaping(text::Shaping::Advanced)
                 .font_maybe(font)
                 .line_height(self.line_height),
         )
@@ -563,26 +571,24 @@ impl Ui {
 
     fn styled_slider(
         &self,
-        text: &'static str,
+        s: &'static str,
         value: f32,
         range: RangeInclusive<f32>,
         message: impl Fn(f32) -> Message + 'static,
-    ) -> iced::Element<'_, Message> {
-        iced_glass::widget::container(
-            iced::widget::column![
-                iced::widget::row![
-                    iced::widget::text(text).size(15.0).center(),
-                    iced::widget::text(format!("{value:.2}"))
-                        .size(15.0)
-                        .center(),
+    ) -> Element<'_, Message> {
+        glass_container(
+            column![
+                row![
+                    text(s).size(15.0).center(),
+                    text(format!("{value:.2}")).size(15.0).center(),
                 ],
-                iced_glass::widget::slider(range, value, message)
+                glass_slider(range, value, message)
                     .step(0.01_f32)
                     .style(|theme, status| self.slider_style(theme, status)),
             ]
             .align_x(Alignment::Center)
             .spacing(5.0)
-            .padding(iced::Padding {
+            .padding(Padding {
                 top: 0.0,
                 right: 15.0,
                 bottom: 0.0,
@@ -597,36 +603,32 @@ impl Ui {
         .into()
     }
 
-    fn slider_style(
-        &self,
-        _theme: &iced::Theme,
-        _status: iced::widget::slider::Status,
-    ) -> iced::widget::slider::Style {
-        iced::widget::slider::Style {
-            rail: iced::widget::slider::Rail {
+    fn slider_style(&self, _theme: &Theme, _status: slider::Status) -> slider::Style {
+        slider::Style {
+            rail: slider::Rail {
                 backgrounds: (
-                    iced::Background::Color(iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0)),
-                    iced::Background::Color(iced::Color::WHITE),
+                    Background::Color(Color::from_rgba(0.3, 0.3, 1.0, 1.0)),
+                    Background::Color(Color::WHITE),
                 ),
                 width: 5.0,
-                border: iced::Border {
+                border: Border {
                     radius: 20.0.into(),
                     ..Default::default()
                 },
             },
-            handle: iced::widget::slider::Handle {
-                shape: iced::widget::slider::HandleShape::Rectangle {
+            handle: slider::Handle {
+                shape: slider::HandleShape::Rectangle {
                     width: 30,
                     border_radius: 10.0.into(),
                 },
-                background: iced::Background::Color(iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0)),
+                background: Background::Color(Color::from_rgba(0.3, 0.3, 1.0, 1.0)),
                 border_width: 1.0,
-                border_color: iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0),
+                border_color: Color::from_rgba(0.3, 0.3, 1.0, 1.0),
             },
         }
     }
 
-    fn glass_style(&self, _theme: &iced::Theme) -> iced_glass::Style {
+    fn glass_style(&self, _theme: &Theme) -> iced_glass::Style {
         iced_glass::Style {
             blur_radius: self.blur_radius,
             saturation: self.saturation,
@@ -643,7 +645,7 @@ impl Ui {
     }
 }
 
-fn container_glass_style(_theme: &iced::Theme) -> iced_glass::Style {
+fn container_glass_style(_theme: &Theme) -> iced_glass::Style {
     iced_glass::Style {
         blur_radius: 50.0,
         lightness: -2.0,
@@ -655,14 +657,14 @@ fn container_glass_style(_theme: &iced::Theme) -> iced_glass::Style {
     }
 }
 
-fn container_style(_theme: &iced::Theme) -> container::Style {
+fn container_style(_theme: &Theme) -> container::Style {
     container::Style {
-        shadow: iced::Shadow {
-            color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
-            offset: iced::Vector::new(0.0, 12.0),
+        shadow: Shadow {
+            color: Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+            offset: Vector::new(0.0, 12.0),
             blur_radius: 40.0,
         },
-        border: iced::Border {
+        border: Border {
             radius: 20.0.into(),
             ..Default::default()
         },

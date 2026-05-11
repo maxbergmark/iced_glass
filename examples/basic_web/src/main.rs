@@ -1,7 +1,11 @@
 use std::ops::RangeInclusive;
 
-use iced::{Alignment, Color, Length, Task};
-use iced_glass::widget::EdgeType;
+use iced::{
+    Alignment, Background, Border, Color, Element, Length, Padding, Point, Shadow, Size,
+    Subscription, Task, Theme, Vector,
+    widget::{column, container, image, mouse_area, responsive, row, slider, space, stack, text},
+};
+use iced_glass::widget::{EdgeType, container as glass_container, slider as glass_slider};
 
 #[derive(Debug, Clone)]
 pub struct Ui {
@@ -21,10 +25,10 @@ pub struct Ui {
     rim_angle: f32,
     opacity: f32,
     tint: Color,
-    ship_handle: iced::widget::image::Handle,
-    bw_handle: iced::widget::image::Handle,
-    nat_handle: iced::widget::image::Handle,
-    flower_handle: iced::widget::image::Handle,
+    ship_handle: image::Handle,
+    bw_handle: image::Handle,
+    nat_handle: image::Handle,
+    flower_handle: image::Handle,
 }
 
 #[allow(unused)]
@@ -78,7 +82,7 @@ impl Default for Ui {
             corner_radius: 100.0,
             saturation: 1.1,
             lightness: 0.0,
-            mouse_position: Some(iced::Point::new(1400.0, 800.0)),
+            mouse_position: Some(Point::new(1400.0, 800.0)),
             moving: false,
             edge_radius: 30.0,
             edge_height: 300.0,
@@ -96,12 +100,12 @@ impl Default for Ui {
     }
 }
 
-fn theme(_ui: &Ui) -> iced::Theme {
-    iced::Theme::Dark
+fn theme(_ui: &Ui) -> Theme {
+    Theme::Dark
 }
 
-fn image_handle(bytes: &'static [u8]) -> iced::widget::image::Handle {
-    iced::widget::image::Handle::from_bytes(bytes)
+fn image_handle(bytes: &'static [u8]) -> image::Handle {
+    image::Handle::from_bytes(bytes)
 }
 
 const SHIP: &[u8] = include_bytes!("../assets/ship.jpg");
@@ -170,32 +174,30 @@ impl Ui {
         Task::none()
     }
 
-    pub fn subscription(&self) -> iced::Subscription<Message> {
-        iced::Subscription::none()
+    pub fn subscription(&self) -> Subscription<Message> {
+        Subscription::none()
     }
 
-    pub fn view(&self) -> iced::Element<'_, Message> {
-        iced::widget::responsive(move |size| {
-            iced::widget::stack![self.image(), self.mouse_area(), self.glass(size),].into()
-        })
-        .into()
+    pub fn view(&self) -> Element<'_, Message> {
+        responsive(move |size| stack![self.image(), self.mouse_area(), self.glass(size),].into())
+            .into()
     }
 
-    fn image(&self) -> iced::Element<'_, Message> {
-        iced::widget::container(iced::widget::column![
-            iced::widget::row![
-                iced::widget::image(&self.ship_handle)
+    fn image(&self) -> Element<'_, Message> {
+        container(column![
+            row![
+                image(&self.ship_handle)
                     .width(Length::FillPortion(1))
                     .height(Length::FillPortion(1)),
-                iced::widget::image(&self.bw_handle)
+                image(&self.bw_handle)
                     .width(Length::FillPortion(1))
                     .height(Length::FillPortion(1))
             ],
-            iced::widget::row![
-                iced::widget::image(&self.nat_handle)
+            row![
+                image(&self.nat_handle)
                     .width(Length::FillPortion(1))
                     .height(Length::FillPortion(1)),
-                iced::widget::image(&self.flower_handle)
+                image(&self.flower_handle)
                     .width(Length::FillPortion(1))
                     .height(Length::FillPortion(1))
             ]
@@ -205,16 +207,12 @@ impl Ui {
         .into()
     }
 
-    fn mouse_area(&self) -> iced::Element<'_, Message> {
-        iced::widget::container(
-            iced::widget::mouse_area(
-                iced::widget::container(
-                    iced::widget::text("Liquid Glass Demo")
-                        .size(300.0)
-                        .color(iced::Color::WHITE),
-                )
-                .width(Length::Fill)
-                .center_y(Length::Fill),
+    fn mouse_area(&self) -> Element<'_, Message> {
+        container(
+            mouse_area(
+                container(text("Liquid Glass Demo").size(300.0).color(Color::WHITE))
+                    .width(Length::Fill)
+                    .center_y(Length::Fill),
             )
             .on_move(Message::MouseMove)
             .on_press(Message::MouseState(true))
@@ -225,9 +223,9 @@ impl Ui {
         .into()
     }
 
-    fn glass(&self, window_size: iced::Size) -> iced::Element<'_, Message> {
-        iced::widget::container(
-            iced_glass::widget::container(self.inner_content())
+    fn glass(&self, window_size: Size) -> Element<'_, Message> {
+        container(
+            glass_container(self.inner_content())
                 .width(Length::from(self.width))
                 .height(Length::from(self.height))
                 .center_y(Length::from(self.height))
@@ -237,7 +235,7 @@ impl Ui {
         // .center(Length::Fill)
         .align_left(Length::Fill)
         .align_top(Length::Fill)
-        .padding(iced::Padding {
+        .padding(Padding {
             top: self
                 .mouse_position
                 .map(|point| {
@@ -260,11 +258,11 @@ impl Ui {
         .into()
     }
 
-    fn inner_content(&self) -> iced::Element<'_, Message> {
-        iced::widget::container(iced::widget::column![
-            // iced::widget::text("Liquid Glass").size(30.0),
-            iced::widget::container(iced::widget::column![
-                iced::widget::row![
+    fn inner_content(&self) -> Element<'_, Message> {
+        container(column![
+            // text("Liquid Glass").size(30.0),
+            container(column![
+                row![
                     self.styled_text(
                         "Rim Width: ",
                         self.rim_width,
@@ -304,7 +302,7 @@ impl Ui {
                 ]
                 .spacing(20.0)
                 .padding(20.0),
-                iced::widget::row![
+                row![
                     self.styled_text(
                         "Lightness: ",
                         self.lightness,
@@ -362,28 +360,26 @@ impl Ui {
 
     fn styled_text(
         &self,
-        text: &'static str,
+        s: &'static str,
         value: f32,
         width: f32,
         range: RangeInclusive<f32>,
         message: impl Fn(f32) -> Message + 'static,
-    ) -> iced::Element<'_, Message> {
-        // iced::widget::container(
-        iced_glass::widget::container(
-            iced::widget::column![
-                iced::widget::row![
-                    iced::widget::text(text).size(15.0).center(),
-                    iced::widget::text(format!("{value:.2}"))
-                        .size(15.0)
-                        .center(),
+    ) -> Element<'_, Message> {
+        // container(
+        glass_container(
+            column![
+                row![
+                    text(s).size(15.0).center(),
+                    text(format!("{value:.2}")).size(15.0).center(),
                 ],
-                iced_glass::widget::slider(range, value, message)
+                glass_slider(range, value, message)
                     .step(0.01_f32)
                     .style(|theme, status| self.slider_style(theme, status)),
             ]
             .align_x(Alignment::Center)
             .spacing(5.0)
-            .padding(iced::Padding::default().horizontal(15.0)),
+            .padding(Padding::default().horizontal(15.0)),
         )
         .center_x(Length::from(width))
         .center_y(Length::from(100.0))
@@ -397,13 +393,13 @@ impl Ui {
         })
         // .edge_radius(self.edge_radius)
         // .edge_height(self.edge_height)
-        .style(|_theme| iced::widget::container::Style {
-            shadow: iced::Shadow {
-                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25),
-                offset: iced::Vector::new(0.0, 12.0),
+        .style(|_theme| container::Style {
+            shadow: Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+                offset: Vector::new(0.0, 12.0),
                 blur_radius: 40.0,
             },
-            border: iced::Border {
+            border: Border {
                 radius: 20.0.into(),
                 ..Default::default()
             },
@@ -412,22 +408,22 @@ impl Ui {
         .into()
     }
 
-    fn color_picker(&self, text: &'static str, value: Color) -> iced::Element<'_, Message> {
-        // iced::widget::container(
-        iced_glass::widget::container(
-            iced::widget::column![
-                iced::widget::row![
-                    iced::widget::text(text).size(15.0).center(),
-                    iced::widget::container(iced::widget::space())
+    fn color_picker(&self, s: &'static str, value: Color) -> Element<'_, Message> {
+        // container(
+        glass_container(
+            column![
+                row![
+                    text(s).size(15.0).center(),
+                    container(space())
                         .center(Length::from(15.0))
-                        .style(move |_theme| iced::widget::container::Style {
-                            background: Some(iced::Background::Color(value)),
+                        .style(move |_theme| container::Style {
+                            background: Some(Background::Color(value)),
                             ..Default::default()
                         }),
                 ]
                 .align_y(Alignment::Center),
-                iced::widget::row![
-                    iced_glass::widget::slider(0.0..=1.0, value.r, |value| Message::SetTint(
+                row![
+                    glass_slider(0.0..=1.0, value.r, |value| Message::SetTint(
                         ColorChannel::Red,
                         value
                     ))
@@ -437,7 +433,7 @@ impl Ui {
                         status,
                         Color::from_rgb(1.0, 0.0, 0.0)
                     )),
-                    iced_glass::widget::slider(0.0..=1.0, value.g, |value| Message::SetTint(
+                    glass_slider(0.0..=1.0, value.g, |value| Message::SetTint(
                         ColorChannel::Green,
                         value
                     ))
@@ -447,7 +443,7 @@ impl Ui {
                         status,
                         Color::from_rgb(0.0, 1.0, 0.0)
                     )),
-                    iced_glass::widget::slider(0.0..=1.0, value.b, |value| Message::SetTint(
+                    glass_slider(0.0..=1.0, value.b, |value| Message::SetTint(
                         ColorChannel::Blue,
                         value
                     ))
@@ -462,7 +458,7 @@ impl Ui {
             ]
             .align_x(Alignment::Center)
             .spacing(5.0)
-            .padding(iced::Padding {
+            .padding(Padding {
                 top: 0.0,
                 right: 15.0,
                 bottom: 0.0,
@@ -479,13 +475,13 @@ impl Ui {
             lightness: -2.0,
             ..Default::default()
         })
-        .style(|_theme| iced::widget::container::Style {
-            shadow: iced::Shadow {
-                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25 * 0.0),
-                offset: iced::Vector::new(0.0, 12.0),
+        .style(|_theme| container::Style {
+            shadow: Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.25 * 0.0),
+                offset: Vector::new(0.0, 12.0),
                 blur_radius: 40.0 * 0.0,
             },
-            border: iced::Border {
+            border: Border {
                 radius: 20.0.into(),
                 ..Default::default()
             },
@@ -494,23 +490,23 @@ impl Ui {
         .into()
     }
 
-    fn style(&self, _theme: &iced::Theme) -> iced::widget::container::Style {
-        iced::widget::container::Style {
-            shadow: iced::Shadow {
-                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.25 * 0.0),
-                offset: iced::Vector::new(0.0, 12.0),
+    fn style(&self, _theme: &Theme) -> container::Style {
+        container::Style {
+            shadow: Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.25 * 0.0),
+                offset: Vector::new(0.0, 12.0),
                 blur_radius: 40.0 * 0.0,
             },
-            border: iced::Border {
+            border: Border {
                 radius: self.corner_radius.into(),
                 ..Default::default()
             },
-            background: Some(iced::Background::Color(self.tint)),
+            background: Some(Background::Color(self.tint)),
             ..Default::default()
         }
     }
 
-    fn glass_style(&self, _theme: &iced::Theme) -> iced_glass::Style {
+    fn glass_style(&self, _theme: &Theme) -> iced_glass::Style {
         iced_glass::Style {
             blur_radius: self.blur_radius,
             saturation: self.saturation,
@@ -526,61 +522,54 @@ impl Ui {
         }
     }
 
-    fn slider_style(
-        &self,
-        _theme: &iced::Theme,
-        _status: iced::widget::slider::Status,
-    ) -> iced::widget::slider::Style {
-        iced::widget::slider::Style {
-            rail: iced::widget::slider::Rail {
+    fn slider_style(&self, _theme: &Theme, _status: slider::Status) -> slider::Style {
+        slider::Style {
+            rail: slider::Rail {
                 backgrounds: (
-                    iced::Background::Color(iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0)),
-                    iced::Background::Color(iced::Color::WHITE),
+                    Background::Color(Color::from_rgba(0.3, 0.3, 1.0, 1.0)),
+                    Background::Color(Color::WHITE),
                 ),
                 width: 5.0,
-                border: iced::Border {
+                border: Border {
                     radius: self.corner_radius.into(),
                     ..Default::default()
                 },
             },
-            handle: iced::widget::slider::Handle {
-                shape: iced::widget::slider::HandleShape::Rectangle {
+            handle: slider::Handle {
+                shape: slider::HandleShape::Rectangle {
                     width: 30,
                     border_radius: 10.0.into(),
                 },
-                background: iced::Background::Color(iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0)),
+                background: Background::Color(Color::from_rgba(0.3, 0.3, 1.0, 1.0)),
                 border_width: 1.0,
-                border_color: iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0),
+                border_color: Color::from_rgba(0.3, 0.3, 1.0, 1.0),
             },
         }
     }
 
     fn colored_slider_style(
         &self,
-        _theme: &iced::Theme,
-        _status: iced::widget::slider::Status,
+        _theme: &Theme,
+        _status: slider::Status,
         color: Color,
-    ) -> iced::widget::slider::Style {
-        iced::widget::slider::Style {
-            rail: iced::widget::slider::Rail {
-                backgrounds: (
-                    iced::Background::Color(color),
-                    iced::Background::Color(iced::Color::WHITE),
-                ),
+    ) -> slider::Style {
+        slider::Style {
+            rail: slider::Rail {
+                backgrounds: (Background::Color(color), Background::Color(Color::WHITE)),
                 width: 5.0,
-                border: iced::Border {
+                border: Border {
                     radius: self.corner_radius.into(),
                     ..Default::default()
                 },
             },
-            handle: iced::widget::slider::Handle {
-                shape: iced::widget::slider::HandleShape::Rectangle {
+            handle: slider::Handle {
+                shape: slider::HandleShape::Rectangle {
                     width: 30,
                     border_radius: 10.0.into(),
                 },
-                background: iced::Background::Color(color),
+                background: Background::Color(color),
                 border_width: 1.0,
-                border_color: iced::Color::from_rgba(0.3, 0.3, 1.0, 1.0),
+                border_color: Color::from_rgba(0.3, 0.3, 1.0, 1.0),
             },
         }
     }

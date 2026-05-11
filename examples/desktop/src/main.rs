@@ -2,9 +2,9 @@ use std::time::{Duration, Instant};
 
 use iced::{
     Alignment, Animation, Background, Border, Color, ContentFit, Element, Font, Gradient, Length,
-    Padding, Size, Task,
+    Padding, Size, Subscription, Task, Theme,
     animation::Easing,
-    font::{self, Family, Stretch},
+    font::{self, Family, Stretch, Weight},
     gradient::Linear,
     widget::{
         Row, column, container, image, mouse_area, row,
@@ -19,14 +19,14 @@ use iced_glass::widget::{
 
 const FONT_BOLD: Font = Font {
     family: Family::Name("Noto Sans"),
-    weight: iced::font::Weight::Bold,
+    weight: Weight::Bold,
     stretch: Stretch::Normal,
     style: font::Style::Normal,
 };
 
 const FONT_NORMAL: Font = Font {
     family: Family::Name("Noto Sans"),
-    weight: iced::font::Weight::Normal,
+    weight: Weight::Normal,
     stretch: Stretch::Normal,
     style: font::Style::Normal,
 };
@@ -129,7 +129,7 @@ impl Ui {
         }
     }
 
-    pub fn subscription(&self) -> iced::Subscription<Message> {
+    pub fn subscription(&self) -> Subscription<Message> {
         let now = Instant::now();
         if self.opacity.is_animating(now)
             || self.edge_radius.is_animating(now)
@@ -137,7 +137,7 @@ impl Ui {
         {
             iced::time::every(std::time::Duration::from_millis(16)).map(|_| Message::Noop)
         } else {
-            iced::Subscription::none()
+            Subscription::none()
         }
     }
 
@@ -214,7 +214,7 @@ impl Ui {
     }
 
     fn top_bar(&self) -> Element<'_, Message> {
-        iced::widget::container(
+        container(
             row![
                 mouse_area(
                     svg(icon_path_outline("desktop"))
@@ -418,7 +418,7 @@ impl Ui {
         self.edge_radius.interpolate(0.0, 8.0, Instant::now())
     }
 
-    fn settings_glass_style(&self, _theme: &iced::Theme, index: usize) -> iced_glass::Style {
+    fn settings_glass_style(&self, _theme: &Theme, index: usize) -> iced_glass::Style {
         iced_glass::Style {
             blur_radius: self.get_blur_radius(index),
             saturation: 1.1,
@@ -589,13 +589,10 @@ impl Ui {
         .into()
     }
 
-    fn border_radius_white(
-        &self,
-        radius: f32,
-    ) -> impl Fn(&iced::Theme) -> iced::widget::container::Style {
+    fn border_radius_white(&self, radius: f32) -> impl Fn(&Theme) -> container::Style {
         let color = color_opacity(Color::WHITE, self.get_opacity());
-        move |_theme| iced::widget::container::Style {
-            border: iced::Border {
+        move |_theme| container::Style {
+            border: Border {
                 radius: radius.into(),
                 ..Default::default()
             },
@@ -604,13 +601,10 @@ impl Ui {
         }
     }
 
-    fn border_radius_blue(
-        &self,
-        radius: f32,
-    ) -> impl Fn(&iced::Theme) -> iced::widget::container::Style {
+    fn border_radius_blue(&self, radius: f32) -> impl Fn(&Theme) -> container::Style {
         let color = color_opacity(BaseColor::Blue.base(), self.get_opacity());
-        move |_theme| iced::widget::container::Style {
-            border: iced::Border {
+        move |_theme| container::Style {
+            border: Border {
                 radius: radius.into(),
                 ..Default::default()
             },
@@ -619,22 +613,22 @@ impl Ui {
         }
     }
 
-    fn svg_white(&self) -> impl Fn(&iced::Theme, svg::Status) -> svg::Style {
+    fn svg_white(&self) -> impl Fn(&Theme, svg::Status) -> svg::Style {
         let color = color_opacity(Color::WHITE, self.get_opacity());
         move |_, _| svg::Style { color: Some(color) }
     }
 
-    fn svg_blue(&self) -> impl Fn(&iced::Theme, svg::Status) -> svg::Style {
+    fn svg_blue(&self) -> impl Fn(&Theme, svg::Status) -> svg::Style {
         let color = color_opacity(BaseColor::Blue.base(), self.get_opacity());
         move |_, _| svg::Style { color: Some(color) }
     }
 
-    fn text_white(&self) -> impl Fn(&iced::Theme) -> text::Style {
+    fn text_white(&self) -> impl Fn(&Theme) -> text::Style {
         let color = color_opacity(Color::WHITE, self.get_opacity());
         move |_| text::Style { color: Some(color) }
     }
 
-    fn slider_style(&self) -> impl Fn(&iced::Theme, slider::Status) -> slider::Style {
+    fn slider_style(&self) -> impl Fn(&Theme, slider::Status) -> slider::Style {
         let color = color_opacity(Color::WHITE, self.get_opacity());
         let background_color = color_opacity(Color::from_rgb(0.3, 0.3, 0.3), self.get_opacity());
         move |_, status| {
@@ -700,9 +694,9 @@ impl BaseColor {
     }
 }
 
-fn border_radius(radius: f32) -> impl Fn(&iced::Theme) -> iced::widget::container::Style {
-    move |_theme| iced::widget::container::Style {
-        border: iced::Border {
+fn border_radius(radius: f32) -> impl Fn(&Theme) -> container::Style {
+    move |_theme| container::Style {
+        border: Border {
             radius: radius.into(),
             ..Default::default()
         },
@@ -719,7 +713,7 @@ fn icon_path_outline(name: &str) -> String {
 }
 
 #[allow(unused)]
-fn red_border(_theme: &iced::Theme) -> container::Style {
+fn red_border(_theme: &Theme) -> container::Style {
     container::Style {
         border: Border {
             color: Color::from_rgb(1.0, 0.0, 0.0),
