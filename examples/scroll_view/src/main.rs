@@ -1,16 +1,16 @@
 use std::time::Instant;
 
 use iced::{
-    Alignment, Animation, Background, Border, Color, Font, Length, Size, Task,
+    Alignment, Animation, Background, Border, Color, Element, Font, Length, Size, Subscription,
+    Task,
     font::Weight,
     widget::{
-        Column, Row, button, column, container, image, mouse_area, row, scrollable,
+        Row, button, column, container, image, mouse_area, row, scrollable,
         slider::{self, Handle, Rail},
         space, stack, svg, text, text_input,
     },
 };
 use iced_glass::widget::{container as glass_container, slider as glass_slider};
-use itertools::Itertools;
 use serde::Deserialize;
 
 #[derive(Debug, Clone)]
@@ -122,17 +122,17 @@ impl Ui {
         Task::none()
     }
 
-    pub fn subscription(&self) -> iced::Subscription<Message> {
+    pub fn subscription(&self) -> Subscription<Message> {
         // Only request frames while the animation is running
         let now = Instant::now();
         if self.opacity.is_animating(now) {
             iced::time::every(std::time::Duration::from_millis(16)).map(|_| Message::Noop)
         } else {
-            iced::Subscription::none()
+            Subscription::none()
         }
     }
 
-    pub fn view(&self) -> iced::Element<'_, Message> {
+    pub fn view(&self) -> Element<'_, Message> {
         container(column![stack![self.scroll_view(), self.glass(),],])
             .style(|_theme| container::Style {
                 background: Some(Background::Color(Color::BLACK)),
@@ -141,47 +141,49 @@ impl Ui {
             .into()
     }
 
-    fn scroll_view(&self) -> iced::Element<'_, Message> {
-        scrollable(column![
-            space().height(Length::from(100.0)),
+    fn scroll_view(&self) -> Element<'_, Message> {
+        scrollable(
             container(
-                Column::with_children(
-                    self.album_cards
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, album_card)| {
-                            album_card
-                                .title
-                                .to_lowercase()
-                                .contains(&self.search_value.to_lowercase())
-                        })
-                        // .map(|album_card| album_card.view())
-                        .chunks(4)
-                        .into_iter()
-                        .map(|chunk| {
-                            Row::from_vec(
-                                chunk
-                                    .map(|(idx, album_card)| {
-                                        album_card.view(idx, self.hover_info, &self.opacity)
-                                    })
-                                    .collect_vec(),
-                            )
-                            .spacing(20.0)
-                            .into()
-                        }),
-                )
-                .spacing(20.0),
+                column![
+                    space().height(Length::from(100.0)),
+                    self.album_list(),
+                    space().height(Length::from(150.0)),
+                ]
+                .width(200.0 * 4.0 + 20.0 * 3.0),
             )
+            .height(Length::Fill)
             .center_x(Length::Fill),
-            space().height(Length::from(150.0)),
-        ])
+        )
         .height(Length::Fill)
-        .height(Length::Fill)
+        .width(Length::Fill)
         .spacing(20.0)
         .into()
     }
 
-    fn glass(&self) -> iced::Element<'_, Message> {
+    fn album_list(&self) -> Element<'_, Message> {
+        container(
+            Row::with_children(
+                self.album_cards
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, album_card)| self.matches_search(album_card))
+                    .map(|(idx, album_card)| album_card.view(idx, self.hover_info, &self.opacity)),
+            )
+            .spacing(20.0)
+            .wrap(),
+        )
+        .width(Length::Fill)
+        .into()
+    }
+
+    fn matches_search(&self, album_card: &AlbumCard) -> bool {
+        album_card
+            .title
+            .to_lowercase()
+            .contains(&self.search_value.to_lowercase())
+    }
+
+    fn glass(&self) -> Element<'_, Message> {
         container(column![
             // space().height(Length::from(20.0)),
             self.search_bar(),
@@ -194,15 +196,14 @@ impl Ui {
         .into()
     }
 
-    fn search_bar(&self) -> iced::Element<'_, Message> {
+    fn search_bar(&self) -> Element<'_, Message> {
         glass_container(
             row![
                 svg("examples/scroll_view/assets/search.svg")
                     .width(Length::from(30.0))
                     .height(Length::from(30.0))
                     .style(|theme, _status| self.icon_style(theme)),
-                // text("Album Search").size(20.0),
-                text_input("Search", self.search_value.as_str())
+                text_input("Search...", self.search_value.as_str())
                     .style(|theme, _status| self.input_style(theme))
                     .on_input(Message::SearchValueChange)
             ]
@@ -229,36 +230,12 @@ impl Ui {
         .into()
     }
 
-    fn playback_bar(&self) -> iced::Element<'_, Message> {
-        let play_icon = if self.playing {
-            "examples/scroll_view/assets/pause.svg"
-        } else {
-            "examples/scroll_view/assets/play.svg"
-        };
+    fn playback_bar(&self) -> Element<'_, Message> {
         glass_container(
             button(
                 container(
                     row![
-                        row![
-                            svg("examples/scroll_view/assets/back.svg")
-                                .width(Length::from(20.0))
-                                .height(Length::from(20.0))
-                                .style(|theme, _status| self.icon_style(theme)),
-                            button(
-                                svg(play_icon)
-                                    .width(Length::from(30.0))
-                                    .height(Length::from(30.0))
-                                    .style(|theme, _status| self.icon_style(theme))
-                            )
-                            .on_press(Message::TogglePlayback)
-                            .style(|theme, _status| button_style(theme)),
-                            svg("examples/scroll_view/assets/forward.svg")
-                                .width(Length::from(20.0))
-                                .height(Length::from(20.0))
-                                .style(|theme, _status| self.icon_style(theme))
-                        ]
-                        .spacing(15.0)
-                        .align_y(Alignment::Center),
+                        self.navigation_buttons(),
                         self.current_album
                             .as_ref()
                             .map(|album_card| album_card.mini_view(self.playback_time))
@@ -293,6 +270,33 @@ impl Ui {
             ..Default::default()
         })
         .style(|theme| self.style(theme))
+        .into()
+    }
+
+    fn navigation_buttons(&self) -> Element<'_, Message> {
+        let play_icon = if self.playing {
+            "examples/scroll_view/assets/pause.svg"
+        } else {
+            "examples/scroll_view/assets/play.svg"
+        };
+        row![
+            svg("examples/scroll_view/assets/back.svg")
+                .width(Length::from(20.0))
+                .height(Length::from(20.0))
+                .style(|theme, _status| self.icon_style(theme)),
+            button(svg(play_icon).style(|theme, _status| self.icon_style(theme)))
+                .width(Length::from(40.0))
+                .height(Length::from(40.0))
+                .padding(0.0)
+                .on_press(Message::TogglePlayback)
+                .style(|theme, _status| button_style(theme)),
+            svg("examples/scroll_view/assets/forward.svg")
+                .width(Length::from(20.0))
+                .height(Length::from(20.0))
+                .style(|theme, _status| self.icon_style(theme))
+        ]
+        .spacing(15.0)
+        .align_y(Alignment::Center)
         .into()
     }
 
@@ -341,15 +345,39 @@ impl AlbumCard {
         idx: usize,
         hover_info: HoverInfo,
         opacity: &Animation<bool>,
-    ) -> iced::Element<'_, Message> {
-        let title = if self.title.len() > 40 {
-            self.title[..40].to_string() + "..."
-        } else {
-            self.title.clone()
-        };
+    ) -> Element<'_, Message> {
+        let overlay = self.play_button_overlay(hover_info, idx, opacity);
 
+        container(
+            mouse_area(column![stack![self.image(), overlay,], self.album_info(),])
+                .on_press(Message::SetCurrentAlbum(self.clone()))
+                .on_enter(Message::SetHoverAlbum(idx))
+                .on_exit(Message::ClearHoverAlbum),
+        )
+        .width(Length::from(200.0))
+        .center_y(Length::from(250.0))
+        .style(|theme| self.style(theme, 1.0))
+        .into()
+    }
+
+    fn image(&self) -> Element<'_, Message> {
+        image(format!(
+            "examples/scroll_view/assets/album_covers/{}",
+            self.file
+        ))
+        .width(200.0)
+        .height(200.0)
+        .into()
+    }
+
+    fn play_button_overlay(
+        &self,
+        hover_info: HoverInfo,
+        idx: usize,
+        opacity: &Animation<bool>,
+    ) -> Element<'_, Message> {
         let is_hovered = hover_info.index == idx;
-        let overlay: iced::Element<'_, Message> = if is_hovered {
+        if is_hovered {
             let opacity = opacity.interpolate(0.0, 1.0, Instant::now());
 
             container(
@@ -378,53 +406,39 @@ impl AlbumCard {
             .into()
         } else {
             space().into()
+        }
+    }
+
+    fn album_info(&self) -> Element<'_, Message> {
+        let title = if self.title.len() > 40 {
+            self.title[..40].to_string() + "..."
+        } else {
+            self.title.clone()
         };
 
-        container(
-            mouse_area(column![
-                stack![
-                    image(format!(
-                        "examples/scroll_view/assets/album_covers/{}",
-                        self.file.clone()
-                    ))
-                    .width(200.0)
-                    .height(200.0),
-                    overlay,
-                ],
-                container(column![
-                    text(title)
-                        .size(15.0)
-                        .style(|theme| self.text_style(theme))
-                        .font(BOLD),
-                    row![
-                        text(self.year.to_string())
-                            .size(12.0)
-                            .style(|theme| self.text_style_gray(theme)),
-                        text("•")
-                            .size(12.0)
-                            .style(|theme| self.text_style_gray(theme)),
-                        text(self.artist.clone())
-                            .size(12.0)
-                            .style(|theme| self.text_style_gray(theme)),
-                    ]
-                    .spacing(5.0)
-                ])
-                .height(Length::from(40.0)),
-            ])
-            .on_press(Message::SetCurrentAlbum(self.clone()))
-            .on_enter(Message::SetHoverAlbum(idx))
-            .on_exit(Message::ClearHoverAlbum),
-        )
-        .width(Length::from(200.0))
-        .center_y(Length::from(250.0))
-        // .blur_radius(50.0)
-        // .saturation(1.0)
-        // .lightness(-0.5)
-        .style(|theme| self.style(theme, 1.0))
+        container(column![
+            text(title)
+                .size(15.0)
+                .style(|theme| self.text_style(theme))
+                .font(BOLD),
+            row![
+                text(self.year.to_string())
+                    .size(12.0)
+                    .style(|theme| self.text_style_gray(theme)),
+                text("•")
+                    .size(12.0)
+                    .style(|theme| self.text_style_gray(theme)),
+                text(self.artist.clone())
+                    .size(12.0)
+                    .style(|theme| self.text_style_gray(theme)),
+            ]
+            .spacing(5.0)
+        ])
+        .height(Length::from(40.0))
         .into()
     }
 
-    fn mini_view(&self, playback_time: f32) -> iced::Element<'_, Message> {
+    fn mini_view(&self, playback_time: f32) -> Element<'_, Message> {
         let title = if self.title.len() > 25 {
             self.title[..25].to_string() + "..."
         } else {
