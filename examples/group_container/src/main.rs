@@ -94,7 +94,7 @@ impl Default for Ui {
             rim_angle: 0.0,
             opacity: 1.0,
             tint: Color::WHITE,
-            blending_factor: 1.0,
+            blending_factor: 100.0,
             start_time: Instant::now(),
         }
     }

@@ -229,6 +229,11 @@ impl<'a, Message, Theme, Renderer> iced::advanced::Widget<Message, Theme, Render
 where
     Renderer: iced::advanced::Renderer + iced_wgpu::primitive::Renderer + 'a,
 {
+    fn tag(&self) -> tree::Tag {
+        // self.content.as_widget().tag()
+        tree::Tag::of::<State>()
+    }
+
     fn state(&self) -> tree::State {
         // self.content.as_widget().state()
         tree::State::new(State {

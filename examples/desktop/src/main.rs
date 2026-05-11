@@ -2,19 +2,23 @@ use std::time::{Duration, Instant};
 
 use iced::{
     Alignment, Animation, Background, Border, Color, ContentFit, Element, Font, Gradient, Length,
-    Padding, Size, Subscription, Task, Theme,
+    Padding, Size, Subscription, Task, Theme, Vector,
     animation::Easing,
     font::{self, Family, Stretch, Weight},
     gradient::Linear,
     widget::{
         Row, column, container, image, mouse_area, row,
         slider::{self, Handle, Rail},
-        space, stack, svg, text,
+        space, stack, svg, text, text_input,
     },
 };
 
-use iced_glass::widget::{
-    EdgeType, container as glass_container, slider as glass_slider, text as glass_text,
+use iced_glass::{
+    glass_stack,
+    widget::{
+        EdgeType, InnerContent, container as glass_container, slider as glass_slider,
+        text as glass_text,
+    },
 };
 
 const FONT_BOLD: Font = Font {
@@ -36,6 +40,9 @@ pub struct Ui {
     hovered: Option<usize>,
     lightness: HoverInfo,
     opacity: Animation<bool>,
+    search_opacity: Animation<bool>,
+    search_icons: Animation<bool>,
+    search_blend: Animation<bool>,
     edge_radius: Animation<bool>,
     brightness: f32,
     volume: f32,
@@ -52,6 +59,7 @@ pub struct HoverInfo {
 pub enum Message {
     Hovered(usize),
     ClearHover,
+    KeyPress(iced::keyboard::Key),
     ToggleMenu,
     Brightness(f32),
     Volume(f32),
@@ -77,6 +85,15 @@ impl Default for Ui {
                 animation: Animation::new(false).duration(Duration::from_millis(150)),
             },
             opacity: Animation::new(false).slow(),
+            search_opacity: Animation::new(false).quick().easing(Easing::EaseOut),
+            search_icons: Animation::new(false)
+                .delay(Duration::from_millis(1000))
+                .easing(Easing::EaseOutBack)
+                .duration(Duration::from_millis(700)),
+            search_blend: Animation::new(false)
+                .delay(Duration::from_millis(1100))
+                .easing(Easing::Linear)
+                .duration(Duration::from_millis(700)),
             edge_radius: Animation::new(false)
                 .slow()
                 .delay(Duration::from_millis(100))
@@ -125,20 +142,43 @@ impl Ui {
                 self.volume = value;
                 Task::none()
             }
+            Message::KeyPress(key) => {
+                println!("Key pressed: {:?}", key);
+                if key == iced::keyboard::Key::Character("m".into()) {
+                    let new_state = !self.opacity.value();
+                    self.opacity.go_mut(new_state, Instant::now());
+                    self.edge_radius.go_mut(new_state, Instant::now());
+                }
+                if key == iced::keyboard::Key::Character("s".into()) {
+                    let new_state = !self.search_opacity.value();
+                    self.search_opacity.go_mut(new_state, Instant::now());
+                    self.search_icons.go_mut(new_state, Instant::now());
+                    self.search_blend.go_mut(new_state, Instant::now());
+                }
+                Task::none()
+            }
             Message::Noop => Task::none(),
         }
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
         let now = Instant::now();
-        if self.opacity.is_animating(now)
+        let animation = if self.opacity.is_animating(now)
             || self.edge_radius.is_animating(now)
             || self.lightness.animation.is_animating(now)
+            || self.search_opacity.is_animating(now)
+            || self.search_icons.is_animating(now)
+            || self.search_blend.is_animating(now)
         {
             iced::time::every(std::time::Duration::from_millis(16)).map(|_| Message::Noop)
         } else {
             Subscription::none()
-        }
+        };
+        let keyboard = iced::keyboard::listen().filter_map(|event| match event {
+            iced::keyboard::Event::KeyPressed { key, .. } => Some(Message::KeyPress(key)),
+            _ => None,
+        });
+        Subscription::batch(vec![animation, keyboard])
     }
 
     pub fn view(&self) -> Element<'_, Message> {
@@ -162,11 +202,18 @@ impl Ui {
     fn desktop_elements(&self) -> Element<'_, Message> {
         column![
             self.top_bar(),
-            if self.get_opacity() > 0.0 {
-                self.settings()
-            } else {
-                space().into()
-            },
+            row![
+                if self.get_search_opacity() > 0.0 {
+                    self.search_bar()
+                } else {
+                    space().width(Length::FillPortion(1)).into()
+                },
+                if self.get_opacity() > 0.0 {
+                    self.settings()
+                } else {
+                    space().width(Length::FillPortion(1)).into()
+                },
+            ],
             space().height(Length::FillPortion(1)),
             self.dock(),
         ]
@@ -231,6 +278,125 @@ impl Ui {
         .padding(5.0)
         .height(40.0)
         .align_x(Alignment::End)
+        .into()
+    }
+
+    fn search_bar(&self) -> Element<'_, Message> {
+        let opacity = self.get_search_opacity();
+        let icons_opacity = self.get_search_icons_value();
+        let icons_blend = self.get_search_blend_value();
+        let b = (1.0 - (-40.0 * icons_blend).exp()) * (1.0 - (-2.0 * (1.0 - icons_blend)).exp());
+        container(
+            glass_stack![
+                InnerContent {
+                    container: container(
+                        row![
+                            svg(icon_path_outline("search"))
+                                .opacity(self.get_search_opacity())
+                                .style(self.svg_white())
+                                .width(30.0)
+                                .height(30.0),
+                            text_input("Search...", "").width(Length::Fill).style(
+                                |_theme, _status| text_input::Style {
+                                    border: Border {
+                                        color: color_opacity(
+                                            Color::WHITE,
+                                            self.get_search_opacity()
+                                        ),
+                                        width: 0.0,
+                                        radius: 50.0.into(),
+                                    },
+                                    background: Background::Color(Color::TRANSPARENT),
+                                    icon: Color::WHITE,
+                                    placeholder: color_opacity(
+                                        Color::WHITE,
+                                        self.get_search_opacity()
+                                    ),
+                                    value: color_opacity(Color::WHITE, self.get_search_opacity()),
+                                    selection: color_opacity(
+                                        Color::WHITE,
+                                        self.get_search_opacity()
+                                    ),
+                                }
+                            ),
+                        ]
+                        .padding(10.0)
+                    )
+                    .width(640.0 - icons_opacity * 200.0 - 40.0 * opacity)
+                    // .height(100.0)
+                    .into(),
+                    offset: Vector::new(0.0, 0.0),
+                },
+                InnerContent {
+                    container: container(
+                        svg(icon_path_outline("camera"))
+                            .style(self.svg_white())
+                            .opacity(icons_opacity * opacity)
+                            .width(30.0)
+                            .height(30.0)
+                    )
+                    .center(50.0)
+                    .into(),
+                    offset: Vector::new(410.0, 0.0),
+                },
+                InnerContent {
+                    container: container(
+                        svg(icon_path_outline("airplane"))
+                            .style(self.svg_white())
+                            .opacity(icons_opacity * opacity)
+                            .width(30.0)
+                            .height(30.0)
+                    )
+                    .center(50.0)
+                    .into(),
+                    offset: Vector::new(410.0 + icons_opacity * 60.0, 0.0),
+                },
+                InnerContent {
+                    container: container(
+                        svg(icon_path_outline("sunny"))
+                            .style(self.svg_white())
+                            .opacity(icons_opacity * opacity)
+                            .width(30.0)
+                            .height(30.0)
+                    )
+                    .center(50.0)
+                    .into(),
+                    offset: Vector::new(410.0 + icons_opacity * 120.0, 0.0),
+                },
+                InnerContent {
+                    container: container(
+                        svg(icon_path_outline("terminal"))
+                            .style(self.svg_white())
+                            .opacity(icons_opacity * opacity)
+                            .width(30.0)
+                            .height(30.0)
+                    )
+                    .center(50.0)
+                    .into(),
+                    offset: Vector::new(410.0 + icons_opacity * 180.0, 0.0),
+                }
+            ]
+            .width(700.0)
+            .height(50.0)
+            .glass_style(|_theme| iced_glass::Style {
+                blur_radius: 200.0,
+                edge_radius: 25.0,
+                edge_height: 150.0,
+                rim_width: 1.0,
+                rim_angle: 1.0,
+                opacity: self.get_search_opacity(),
+                lightness: -2.0,
+                ..Default::default()
+            })
+            .blending_factor(40.0 * b)
+            .corner_radius(25.0),
+        )
+        .padding(Padding {
+            top: 200.0,
+            right: 0.0,
+            bottom: 0.0,
+            left: 200.0 + 20.0 * opacity,
+        })
         .into()
     }
 
@@ -412,6 +578,18 @@ impl Ui {
 
     fn get_opacity(&self) -> f32 {
         self.opacity.interpolate(0.0, 1.0, Instant::now())
+    }
+
+    fn get_search_opacity(&self) -> f32 {
+        self.search_opacity.interpolate(0.0, 1.0, Instant::now())
+    }
+
+    fn get_search_icons_value(&self) -> f32 {
+        self.search_icons.interpolate(0.0, 1.0, Instant::now())
+    }
+
+    fn get_search_blend_value(&self) -> f32 {
+        self.search_blend.interpolate(0.0, 1.0, Instant::now())
     }
 
     fn get_edge_radius(&self) -> f32 {
