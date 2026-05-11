@@ -401,6 +401,7 @@ where
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     fn draw(
         &self,
         tree: &Tree,
@@ -506,7 +507,9 @@ where
                         tint,
                         content_scale: (1.0, 1.0),
                         edge_type: glass_style.edge_type,
+                        num_children: 0,
                     },
+                    children: vec![],
                 },
             );
         } else {

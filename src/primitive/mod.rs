@@ -1,15 +1,16 @@
 use crate::{
     pipeline::{Pipeline, instance::Instance},
-    uniforms::Uniforms,
+    uniforms::{ChildRaw, Uniforms},
 };
 
 #[cfg(feature = "text")]
 pub mod text;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Primitive {
     pub id: u64,
     pub uniforms: Uniforms,
+    pub children: Vec<ChildRaw>,
 }
 
 impl iced::widget::shader::Primitive for Primitive {
@@ -28,6 +29,16 @@ impl iced::widget::shader::Primitive for Primitive {
         let height = (bounds.height * scale) as u32;
         let size = iced::Size::new(width, height);
         pipeline.prepare_instance(device, queue, self.id, size, scale, &self.uniforms);
+        let instance = pipeline.instance(self.id);
+        let scaled: Vec<ChildRaw> = self
+            .children
+            .iter()
+            .map(|c| ChildRaw {
+                center: [c.center[0] * scale, c.center[1] * scale],
+                half_size: [c.half_size[0] * scale, c.half_size[1] * scale],
+            })
+            .collect();
+        queue.write_buffer(&instance.children, 0, bytemuck::cast_slice(&scaled));
     }
 
     fn render(
@@ -274,5 +285,6 @@ fn fragment_pass(
     pass.set_pipeline(&pipeline.fragment);
     pass.set_bind_group(0, &instance.tex_a_bg[0], &[]);
     pass.set_bind_group(1, &instance.uniform_bg_h, &[]);
+    pass.set_bind_group(2, &instance.children_bg, &[]);
     pass.draw(0..6, 0..1);
 }

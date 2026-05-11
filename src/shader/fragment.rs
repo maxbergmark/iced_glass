@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::shader::uniforms_bind_group_layout;
+use crate::shader::{children_bind_group_layout, uniforms_bind_group_layout};
 
 #[derive(Debug, Clone, Copy)]
 pub struct FragmentShader;
@@ -16,6 +16,7 @@ impl FragmentShader {
             bind_group_layouts: &[
                 &Self::create_bind_group_layout(device),
                 &uniforms_bind_group_layout(device),
+                &children_bind_group_layout(device),
             ],
             push_constant_ranges: &[],
         });

@@ -14,7 +14,19 @@ struct Uniforms {
     edge_type: i32,
     chromatic_aberration: f32,
     rim_angle: f32,
+    num_children: u32,
+    _pad: f32,
+    _pad2: f32,
+    _pad3: f32,
 };
+
+struct Child {
+    center: vec2<f32>,
+    half_size: vec2<f32>,
+};
+
+@group(2) @binding(0)
+var<storage, read> children: array<Child>;
 
 @group(1)
 @binding(0)
@@ -107,7 +119,8 @@ fn physical_sampling(input: FragInput, refractive_index: f32) -> vec4<f32> {
     // let angle = atan2(p.y, p.x);
 
     let r = clamp_radius(uniforms.corner_radius, dimensions);
-    let sdf_gradient = sdg_rounded_box(p, dimensions / 2.0, r);
+    // let sdf_gradient = sdg_rounded_box(p, dimensions / 2.0, r);
+    let sdf_gradient = sdf(p, dimensions, r);
     let gradient = sdf_gradient.yz;
     let sdf = sdf_gradient.x;
 
@@ -129,6 +142,48 @@ fn physical_sampling(input: FragInput, refractive_index: f32) -> vec4<f32> {
     color = srgb_to_linear(color);
     color.a *= (1.0 - outside_factor);
     return color;
+}
+
+fn sdf(p: vec2<f32>, dimensions: vec2<f32>, r: f32) -> vec3<f32> {
+    if uniforms.num_children > 0 {
+        return rounded_group_sdf(p, r);
+    } else {
+        return sdg_rounded_box(p, dimensions / 2.0, r);
+    }   
+}
+
+fn rounded_group_sdf(p: vec2<f32>, r: f32) -> vec3<f32> {
+    let dis_gra = group_sdf(p, r);
+    return vec3<f32>(dis_gra.x - r, dis_gra.y, dis_gra.z);
+}
+
+fn group_sdf(p: vec2<f32>, r: f32) -> vec3<f32> {
+    var best_sdf = 1e20;
+    var best_grad = vec2<f32>(0.0);
+    let k = uniforms.corner_radius; // add this; in pixels. Try ~40-100 for "soft" merging.
+    let n = uniforms.num_children;
+    for (var i: u32 = 0u; i < n; i = i + 1u) {
+        let c = children[i];
+        let local_p = p - c.center;
+        let sdg = sdg_box(local_p, c.half_size - r);
+        let s = smin(best_sdf, sdg.x, k);
+        best_sdf  = s.x;
+        best_grad = mix(best_grad, sdg.yz, s.y);
+    }
+    return vec3<f32>(best_sdf, best_grad);
+}
+
+// Returns (smoothed_sdf, t) where t in [0,1] is the blend factor for `b`.
+// k > 0. With k -> 0 this reduces to min(a,b) with t = step(b, a).
+fn smin(a: f32, b: f32, k: f32) -> vec2<f32> {
+    let h = max(k - abs(a - b), 0.0) / k;
+    let m = h * h * 0.5;
+    let s = m * k * 0.5;
+    if (a < b) {
+        return vec2<f32>(a - s, m);
+    } else {
+        return vec2<f32>(b - s, 1.0 - m);
+    }
 }
 
 fn edge_highlight(color: vec4<f32>, sdf: f32, sdf_gradient: vec2<f32>) -> vec4<f32> {

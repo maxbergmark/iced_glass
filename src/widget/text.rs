@@ -514,6 +514,7 @@ where
                     tint,
                     content_scale: content_scale(bounds.size()),
                     edge_type: glass_style.edge_type,
+                    num_children: 0,
                 },
             },
         );

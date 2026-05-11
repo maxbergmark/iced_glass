@@ -16,6 +16,7 @@ pub struct Uniforms {
     pub tint: iced::Color,
     pub content_scale: (f32, f32),
     pub edge_type: EdgeType,
+    pub num_children: u32,
 }
 
 impl Uniforms {
@@ -40,6 +41,10 @@ impl Uniforms {
                 EdgeType::SoftEdge => 1,
             },
             content_scale: [self.content_scale.0, self.content_scale.1],
+            num_children: self.num_children,
+            _pad: 0.0,
+            _pad2: 0.0,
+            _pad3: 0.0,
         }
     }
 
@@ -81,4 +86,18 @@ pub struct Raw {
     pub edge_type: i32,
     pub chromatic_aberration: f32,
     pub rim_angle: f32,
+
+    pub num_children: u32,
+    pub _pad: f32,
+    pub _pad2: f32,
+    pub _pad3: f32,
+}
+
+#[derive(Debug, Default, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+#[repr(C)]
+pub struct ChildRaw {
+    pub center: [f32; 2], // in pixels, relative to the group's bounds
+    pub half_size: [f32; 2],
+    // pub corner_radius: f32,
+    // pub _pad: [f32; 3], // pad to 32 bytes (multiple of 16)
 }
