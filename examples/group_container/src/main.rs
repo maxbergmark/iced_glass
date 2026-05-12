@@ -244,8 +244,8 @@ impl Ui {
             .mouse_position
             .map(|point| (point.y - self.height / 2.0).clamp(0.0, window_size.height - self.height))
             .unwrap_or(0.0);
-        let elapsed = self.start_time.elapsed().as_secs_f32();
-        // tracing::info!("offset_x: {}, offset_y: {}", offset_x, offset_y);
+        let t = self.start_time.elapsed().as_secs_f32();
+
         container(
             glass_stack![
                 container(
@@ -256,17 +256,17 @@ impl Ui {
                 .center(400.0)
                 .padding(20.0)
                 .with_offset(Vector::new(
-                    1200.0 + f32::sin(elapsed * 2.0) * 100.0,
-                    300.0 + f32::cos(elapsed * 2.0) * 100.0,
+                    1200.0 + (2.0 * t).sin() * 100.0,
+                    300.0 + (2.0 * t).cos() * 100.0,
                 )),
                 space()
                     .width(200.0)
                     .height(200.0)
-                    .with_offset(Vector::new(1300.0 + f32::sin(elapsed * 2.2) * 300.0, 400.0)),
+                    .with_offset(Vector::new(1300.0 + (2.2 * t).sin() * 300.0, 400.0)),
                 space()
                     .width(300.0)
                     .height(300.0)
-                    .with_offset(Vector::new(1250.0, 350.0 + f32::cos(elapsed * 2.4) * 300.0)),
+                    .with_offset(Vector::new(1250.0, 350.0 + (2.4 * t).cos() * 300.0)),
                 self.inner_content()
                     .with_offset(Vector::new(offset_x, offset_y)),
             ]
@@ -505,11 +505,7 @@ impl Ui {
             ..Default::default()
         })
         .style(|_theme| container::Style {
-            shadow: Shadow {
-                color: Color::from_rgba(0.0, 0.0, 0.0, 0.25 * 0.0),
-                offset: Vector::new(0.0, 12.0),
-                blur_radius: 40.0 * 0.0,
-            },
+            shadow: Shadow::default(),
             border: Border {
                 radius: 20.0.into(),
                 ..Default::default()
@@ -517,23 +513,6 @@ impl Ui {
             ..Default::default()
         })
         .into()
-    }
-
-    #[allow(unused)]
-    fn style(&self, _theme: &Theme) -> container::Style {
-        container::Style {
-            shadow: Shadow {
-                color: Color::from_rgba(0.0, 0.0, 0.0, 0.25 * 0.0),
-                offset: Vector::new(0.0, 12.0),
-                blur_radius: 40.0 * 0.0,
-            },
-            border: Border {
-                radius: self.corner_radius.into(),
-                ..Default::default()
-            },
-            background: Some(Background::Color(self.tint)),
-            ..Default::default()
-        }
     }
 
     fn glass_style(&self, _theme: &Theme) -> iced_glass::Style {

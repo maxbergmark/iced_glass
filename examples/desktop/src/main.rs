@@ -125,7 +125,6 @@ impl Ui {
             Message::ClearHover => {
                 self.lightness.is_hovered = false;
                 self.lightness.animation.go_mut(false, Instant::now());
-                // self.hover_info.event_time = Instant::now();
                 Task::none()
             }
             Message::ToggleMenu => {
@@ -143,7 +142,6 @@ impl Ui {
                 Task::none()
             }
             Message::KeyPress(key) => {
-                println!("Key pressed: {:?}", key);
                 if key == iced::keyboard::Key::Character("m".into()) {
                     let new_state = !self.opacity.value();
                     self.opacity.go_mut(new_state, Instant::now());
@@ -863,16 +861,4 @@ fn icon_path_filled(name: &str) -> String {
 
 fn icon_path_outline(name: &str) -> String {
     format!("examples/desktop/assets/{name}-outline.svg")
-}
-
-#[allow(unused)]
-fn red_border(_theme: &Theme) -> container::Style {
-    container::Style {
-        border: Border {
-            color: Color::from_rgb(1.0, 0.0, 0.0),
-            width: 1.0,
-            radius: 0.0.into(),
-        },
-        ..Default::default()
-    }
 }

@@ -2,16 +2,16 @@ use iced::{Element, Vector};
 
 use crate::widget::InnerContent;
 
-/// Creates a [`GlassStack`] with the given children.
+/// Creates a [`Stack`] with the given children.
 ///
-/// [`GlassStack`]: crate::GlassStack
+/// [`Stack`]: crate::widget::Stack
 #[macro_export]
 macro_rules! glass_stack {
     () => (
-        $crate::GlassStack::new()
+        $crate::widget::Stack::new()
     );
     ($($x:expr),+ $(,)?) => (
-        $crate::widget::GlassStack::with_children([$($crate::widget::InnerContent::from($x)),+])
+        $crate::widget::Stack::with_children([$($crate::widget::InnerContent::from($x)),+])
     );
 }
 
@@ -19,7 +19,7 @@ macro_rules! glass_stack {
 pub trait StackOffset<'a, Message, Theme, Renderer> {
     /// Creates a new [`InnerContent`] with the given offset.
     ///
-    /// [`InnerContent`]: crate::InnerContent
+    /// [`InnerContent`]: crate::widget::InnerContent
     fn with_offset(self, offset: Vector) -> InnerContent<'a, Message, Theme, Renderer>;
 }
 

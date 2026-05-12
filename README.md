@@ -118,6 +118,7 @@ The library exposes two custom Iced widgets:
 | `iced_glass::widget::container` | A drop-in container with glass effect. Supports all standard container properties (padding, alignment, clipping) plus glass parameters: `blur_radius`, `saturation`, `lightness`, `edge_radius`, `edge_height`, `refractive_index`, `rim_width`, `opacity`. |
 | `iced_glass::widget::slider` | An Iced-compatible slider whose handle renders with the glass primitive while dragging. Exposes `edge_radius`, `edge_height`, and `refractive_index` for the handle effect. |
 | `iced_glass::widget::text` | A drop-in text widget that renders glyphs using MSDF (Multi-channel Signed Distance Field) textures and the same glass shader pipeline as the container. Supports all standard text properties (`size`, `font`, `line_height`, `shaping`, `wrapping`, alignment) plus glass parameters: `blur_radius`, `saturation`, `lightness`, `edge_radius`, `edge_height`, `refractive_index`, `rim_width`, `opacity`. |
+| `iced_glass::widget::stack` | A drop-in replacement for the `stack` widget with a glass effect. Makes it possible to blend multiple elements together with a coherent glass effect. |
 
 
 More widgets are planned to be added.

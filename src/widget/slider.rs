@@ -15,22 +15,23 @@ use iced::{
     window,
 };
 
-/// Creates a new [`GlassSlider`] with the given range, value, and `on_change` function.
+/// Creates a new [`Slider`] with the given range, value, and `on_change` function.
 pub fn glass_slider<'a, T, Message, Theme>(
     range: RangeInclusive<T>,
     value: T,
     on_change: impl Fn(T) -> Message + 'a,
-) -> GlassSlider<'a, T, Message, Theme>
+) -> Slider<'a, T, Message, Theme>
 where
     T: Copy + From<u8> + std::cmp::PartialOrd,
     Message: Clone,
     Theme: slider::Catalog + 'a,
 {
-    GlassSlider::new(range, value, on_change)
+    Slider::new(range, value, on_change)
 }
 
+/// A slider widget with a glass effect.
 #[must_use]
-pub struct GlassSlider<'a, T, Message, Theme = iced::Theme>
+pub struct Slider<'a, T, Message, Theme = iced::Theme>
 where
     Theme: Catalog,
 {
@@ -48,13 +49,13 @@ where
     glass_style: crate::StyleFn<'a, Theme>,
 }
 
-impl<T, Message, Theme> std::fmt::Debug for GlassSlider<'_, T, Message, Theme>
+impl<T, Message, Theme> std::fmt::Debug for Slider<'_, T, Message, Theme>
 where
     T: std::fmt::Debug,
     Theme: Catalog,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("GlassSlider")
+        f.debug_struct("Slider")
             .field("range", &self.range)
             .field("value", &self.value)
             .field("width", &self.width)
@@ -71,7 +72,7 @@ struct State {
 
 static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1_000_000);
 
-impl<'a, T, Message, Theme> GlassSlider<'a, T, Message, Theme>
+impl<'a, T, Message, Theme> Slider<'a, T, Message, Theme>
 where
     T: Copy + From<u8> + PartialOrd,
     Message: Clone,
@@ -104,7 +105,7 @@ where
             *range.end()
         };
 
-        GlassSlider {
+        Slider {
             value,
             default: None,
             range,
@@ -132,8 +133,7 @@ where
     /// This is called when the mouse is released from the slider.
     ///
     /// Typically, the user's interaction with the slider is finished when this message is produced.
-    /// This is useful if you need to spawn a long-running task from the slider's result, where
-    /// the default [`on_change`] message could create too many events.
+    /// This is useful if you need to spawn a long-running task from the slider's result.
     pub fn on_release(mut self, on_release: Message) -> Self {
         self.on_release = Some(on_release);
         self
@@ -189,8 +189,7 @@ where
     }
 }
 
-impl<T, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for GlassSlider<'_, T, Message, Theme>
+impl<T, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for Slider<'_, T, Message, Theme>
 where
     T: Copy + Into<f64> + num_traits::FromPrimitive,
     Message: Clone,
@@ -564,7 +563,7 @@ where
     }
 }
 
-impl<'a, T, Message, Theme, Renderer> From<GlassSlider<'a, T, Message, Theme>>
+impl<'a, T, Message, Theme, Renderer> From<Slider<'a, T, Message, Theme>>
     for Element<'a, Message, Theme, Renderer>
 where
     T: Copy + Into<f64> + num_traits::FromPrimitive + 'a,
@@ -572,7 +571,7 @@ where
     Theme: Catalog + 'a,
     Renderer: iced::advanced::Renderer + iced_wgpu::primitive::Renderer + 'a,
 {
-    fn from(slider: GlassSlider<'a, T, Message, Theme>) -> Self {
+    fn from(slider: Slider<'a, T, Message, Theme>) -> Self {
         Element::new(slider)
     }
 }

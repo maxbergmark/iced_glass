@@ -9,4 +9,3 @@ publish = false
 iced_glass.workspace = true
 iced.workspace = true
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-tracing = { version = "0.1.44", features = ["log"] }

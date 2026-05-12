@@ -11,16 +11,16 @@ use crate::uniforms::ChildRaw;
 
 /// A container that displays children on top of each other.
 ///
-/// The first [`Element`] dictates the intrinsic [`Size`] of a [`GlassGroup`] and
+/// The first [`Element`] dictates the intrinsic [`Size`] of a [`Stack`] and
 /// will be displayed as the base layer. Every consecutive [`Element`] will be
 /// rendered on top; on its own layer.
 ///
 /// You can use [`push_under`](Self::push_under) to push an [`Element`] under
-/// the current [`GlassGroup`] without affecting its intrinsic [`Size`].
+/// the current [`Stack`] without affecting its intrinsic [`Size`].
 ///
 /// Keep in mind that too much layering will normally produce bad UX as well as
 /// introduce certain rendering overhead. Use this widget sparingly!
-pub struct GlassStack<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer> {
+pub struct Stack<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer> {
     width: Length,
     height: Length,
     children: Vec<InnerContent<'a, Message, Theme, Renderer>>,
@@ -32,20 +32,20 @@ pub struct GlassStack<'a, Message, Theme = iced::Theme, Renderer = iced::Rendere
     blending_factor: f32,
 }
 
-/// A container that displays a child element on top of the current [`GlassGroup`].
+/// A container that displays a child element on top of the current [`Stack`].
 pub struct InnerContent<'a, Message, Theme, Renderer> {
-    /// The element to display on top of the [`GlassGroup`].
+    /// The element to display on top of the [`Stack`].
     pub container: Element<'a, Message, Theme, Renderer>,
-    /// The offset of the [`InnerContent`] relative to the [`GlassGroup`].
+    /// The offset of the [`InnerContent`] relative to the [`Stack`].
     pub offset: Vector,
 }
 
-impl<Message, Theme, Renderer> std::fmt::Debug for GlassStack<'_, Message, Theme, Renderer>
+impl<Message, Theme, Renderer> std::fmt::Debug for Stack<'_, Message, Theme, Renderer>
 where
     Renderer: iced::advanced::Renderer,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("GlassGroup")
+        f.debug_struct("Stack")
             .field("width", &self.width)
             .field("height", &self.height)
             .finish_non_exhaustive()
@@ -58,14 +58,8 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("InnerContent")
-            .field(
-                "container width: {}",
-                &self.container.as_widget().size_hint().width,
-            )
-            .field(
-                "container height: {}",
-                &self.container.as_widget().size_hint().height,
-            )
+            .field("width", &self.container.as_widget().size_hint().width)
+            .field("height", &self.container.as_widget().size_hint().height)
             .field("offset", &self.offset)
             .finish_non_exhaustive()
     }
@@ -76,23 +70,23 @@ struct State {
 }
 static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1000);
 
-impl<'a, Message, Theme, Renderer> GlassStack<'a, Message, Theme, Renderer>
+impl<'a, Message, Theme, Renderer> Stack<'a, Message, Theme, Renderer>
 where
     Renderer: iced::advanced::Renderer,
 {
-    /// Creates an empty [`GlassGroup`].
+    /// Creates an empty [`Stack`].
     #[must_use]
     pub fn new() -> Self {
         Self::from_vec(Vec::new())
     }
 
-    /// Creates a [`GlassGroup`] with the given capacity.
+    /// Creates a [`Stack`] with the given capacity.
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         Self::from_vec(Vec::with_capacity(capacity))
     }
 
-    /// Creates a [`GlassGroup`] with the given elements.
+    /// Creates a [`Stack`] with the given elements.
     pub fn with_children(
         children: impl IntoIterator<Item = InnerContent<'a, Message, Theme, Renderer>>,
     ) -> Self {
@@ -101,13 +95,13 @@ where
         Self::with_capacity(iterator.size_hint().0).extend(iterator)
     }
 
-    /// Creates a [`GlassGroup`] from an already allocated [`Vec`].
+    /// Creates a [`Stack`] from an already allocated [`Vec`].
     ///
-    /// Keep in mind that the [`GlassGroup`] will not inspect the [`Vec`], which means
+    /// Keep in mind that the [`Stack`] will not inspect the [`Vec`], which means
     /// it won't automatically adapt to the sizing strategy of its contents.
     ///
     /// If any of the children have a [`Length::Fill`] strategy, you will need to
-    /// call [`GlassGroup::width`] or [`GlassGroup::height`] accordingly.
+    /// call [`Stack::width`] or [`Stack::height`] accordingly.
     #[must_use]
     pub fn from_vec(children: Vec<InnerContent<'a, Message, Theme, Renderer>>) -> Self {
         Self {
@@ -123,21 +117,21 @@ where
         }
     }
 
-    /// Sets the width of the [`GlassGroup`].
+    /// Sets the width of the [`Stack`].
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Sets the height of the [`GlassGroup`].
+    /// Sets the height of the [`Stack`].
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
         self
     }
 
-    /// Adds an element on top of the [`GlassGroup`].
+    /// Adds an element on top of the [`Stack`].
     #[must_use]
     pub fn push(mut self, child: impl Into<InnerContent<'a, Message, Theme, Renderer>>) -> Self {
         let child = child.into();
@@ -155,7 +149,7 @@ where
         self
     }
 
-    /// Adds an element under the [`GlassGroup`].
+    /// Adds an element under the [`Stack`].
     #[must_use]
     pub fn push_under(
         mut self,
@@ -166,16 +160,16 @@ where
         self
     }
 
-    /// Extends the [`GlassGroup`] with the given children.
+    /// Extends the [`Stack`] with the given children.
     #[must_use]
     pub fn extend(
         self,
         children: impl IntoIterator<Item = InnerContent<'a, Message, Theme, Renderer>>,
     ) -> Self {
-        children.into_iter().fold(self, GlassStack::push)
+        children.into_iter().fold(self, Stack::push)
     }
 
-    /// Sets whether the [`GlassGroup`] should clip overflowing content.
+    /// Sets whether the [`Stack`] should clip overflowing content.
     ///
     /// It has a slight performance overhead during presentation.
     ///
@@ -186,28 +180,28 @@ where
         self
     }
 
-    /// Sets the glass style of the [`Container`].
+    /// Sets the glass style of the [`Stack`].
     #[must_use]
     pub fn glass_style(mut self, style: impl Fn(&Theme) -> crate::Style + 'a) -> Self {
         self.glass_style = Box::new(style) as crate::StyleFn<'a, Theme>;
         self
     }
 
-    /// Sets the corner radius of the [`Container`].
+    /// Sets the corner radius of the [`Stack`].
     #[must_use]
     pub const fn corner_radius(mut self, corner_radius: f32) -> Self {
         self.corner_radius = corner_radius;
         self
     }
 
-    /// Sets the tint of the [`Container`].
+    /// Sets the tint of the [`Stack`].
     #[must_use]
     pub const fn tint(mut self, tint: Color) -> Self {
         self.tint = tint;
         self
     }
 
-    /// Sets the blending factor of the [`Container`].
+    /// Sets the blending factor of the [`Stack`].
     #[must_use]
     pub const fn blending_factor(mut self, blending_factor: f32) -> Self {
         self.blending_factor = blending_factor;
@@ -215,7 +209,7 @@ where
     }
 }
 
-impl<Message, Theme, Renderer> Default for GlassStack<'_, Message, Theme, Renderer>
+impl<Message, Theme, Renderer> Default for Stack<'_, Message, Theme, Renderer>
 where
     Renderer: iced::advanced::Renderer,
 {
@@ -225,7 +219,7 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> iced::advanced::Widget<Message, Theme, Renderer>
-    for GlassStack<'a, Message, Theme, Renderer>
+    for Stack<'a, Message, Theme, Renderer>
 where
     Renderer: iced::advanced::Renderer + iced_wgpu::primitive::Renderer + 'a,
 {
@@ -581,14 +575,14 @@ where
     }
 }
 
-impl<'a, Message, Theme, Renderer> From<GlassStack<'a, Message, Theme, Renderer>>
+impl<'a, Message, Theme, Renderer> From<Stack<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
     Theme: 'a,
     Renderer: iced::advanced::Renderer + iced_wgpu::primitive::Renderer + 'a,
 {
-    fn from(stack: GlassStack<'a, Message, Theme, Renderer>) -> Self {
+    fn from(stack: Stack<'a, Message, Theme, Renderer>) -> Self {
         Self::new(stack)
     }
 }

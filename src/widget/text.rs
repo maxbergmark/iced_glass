@@ -20,7 +20,7 @@ use crate::pipeline::{text::content_scale, text_atlas::GlyphId};
 
 /// A widget that renders text with a glass effect.
 #[must_use]
-pub struct GlassText<'a, Renderer, Theme = iced::Theme>
+pub struct Text<'a, Renderer, Theme = iced::Theme>
 where
     Theme: Catalog,
     Renderer: iced::advanced::text::Renderer,
@@ -32,14 +32,14 @@ where
     glass_style: crate::StyleFn<'a, Theme>,
 }
 
-impl<Renderer, Theme> std::fmt::Debug for GlassText<'_, Renderer, Theme>
+impl<Renderer, Theme> std::fmt::Debug for Text<'_, Renderer, Theme>
 where
     Theme: Catalog,
     Renderer: iced::advanced::text::Renderer,
     Renderer::Font: std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("GlassText")
+        f.debug_struct("Text")
             .field("format", &self.format)
             .finish_non_exhaustive()
     }
@@ -79,15 +79,15 @@ impl<Font> Default for Format<Font> {
     }
 }
 
-/// Creates a new [`GlassText`] with the given content.
+/// Creates a new [`Text`] with the given content.
 pub fn glass_text<'a, Renderer, Theme>(
     content: impl text::IntoFragment<'a>,
-) -> GlassText<'a, Renderer, Theme>
+) -> Text<'a, Renderer, Theme>
 where
     Theme: Catalog + 'a,
     Renderer: iced::advanced::text::Renderer<Font = iced::Font>,
 {
-    GlassText::new(content)
+    Text::new(content)
 }
 
 struct FontData {
@@ -190,7 +190,7 @@ impl FontData {
     }
 }
 
-impl<'a, Renderer, Theme> GlassText<'a, Renderer, Theme>
+impl<'a, Renderer, Theme> Text<'a, Renderer, Theme>
 where
     Theme: Catalog,
     Renderer: iced::advanced::text::Renderer<Font = iced::Font>,
@@ -266,7 +266,7 @@ where
         glyphs
     }
 
-    /// Sets the [`widget::Id`] of the [`Container`].
+    /// Sets the [`widget::Id`] of the [`Text`].
     pub fn id(mut self, id: impl Into<widget::Id>) -> Self {
         self.id = Some(id.into());
         self
@@ -286,7 +286,7 @@ where
 
     /// Sets the [`Font`] of the [`Text`].
     ///
-    /// [`Font`]: crate::text::Renderer::Font
+    /// [`Font`]: iced::advanced::text::Renderer::Font
     pub fn font(mut self, font: impl Into<Renderer::Font>) -> Self {
         self.format.font = Some(font.into());
         self
@@ -294,7 +294,7 @@ where
 
     /// Sets the [`Font`] of the [`Text`], if `Some`.
     ///
-    /// [`Font`]: crate::text::Renderer::Font
+    /// [`Font`]: iced::advanced::text::Renderer::Font
     pub fn font_maybe(mut self, font: Option<impl Into<Renderer::Font>>) -> Self {
         self.format.font = font.map(Into::into);
         self
@@ -391,7 +391,7 @@ struct State<P: iced::advanced::text::Paragraph> {
 static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 impl<Message, Theme, Renderer> iced::advanced::Widget<Message, Theme, Renderer>
-    for GlassText<'_, Renderer, Theme>
+    for Text<'_, Renderer, Theme>
 where
     Theme: Catalog,
     Renderer: iced::advanced::text::Renderer<Font = iced::Font> + iced_wgpu::primitive::Renderer,
@@ -522,14 +522,14 @@ where
     }
 }
 
-impl<'a, Message, Theme, Renderer> From<GlassText<'a, Renderer, Theme>>
+impl<'a, Message, Theme, Renderer> From<Text<'a, Renderer, Theme>>
     for Element<'a, Message, Theme, Renderer>
 where
     Theme: Catalog + 'a,
     Renderer:
         iced::advanced::text::Renderer<Font = iced::Font> + iced_wgpu::primitive::Renderer + 'a,
 {
-    fn from(text: GlassText<'a, Renderer, Theme>) -> Self {
+    fn from(text: Text<'a, Renderer, Theme>) -> Self {
         Element::new(text)
     }
 }
