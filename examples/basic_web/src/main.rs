@@ -5,7 +5,10 @@ use iced::{
     Subscription, Task, Theme, Vector,
     widget::{column, container, image, mouse_area, responsive, row, slider, space, stack, text},
 };
-use iced_glass::widget::{EdgeType, container as glass_container, slider as glass_slider};
+use iced_glass::{
+    glass_stack,
+    widget::{EdgeType, StackOffset, container as glass_container, slider as glass_slider},
+};
 
 #[derive(Debug, Clone)]
 pub struct Ui {
@@ -76,13 +79,13 @@ fn main() -> iced::Result {
 impl Default for Ui {
     fn default() -> Self {
         Self {
-            width: 1440.0,
-            height: 500.0,
+            width: 800.0,
+            height: 300.0,
             blur_radius: 500.0,
             corner_radius: 100.0,
             saturation: 1.1,
             lightness: 0.0,
-            mouse_position: Some(Point::new(1400.0, 800.0)),
+            mouse_position: Some(Point::new(400.0, 300.0)),
             moving: false,
             edge_radius: 30.0,
             edge_height: 300.0,
@@ -224,37 +227,41 @@ impl Ui {
     }
 
     fn glass(&self, window_size: Size) -> Element<'_, Message> {
+        let x = self
+            .mouse_position
+            .map(|point| {
+                (point.x - self.width / 2.0)
+                    .max(0.0)
+                    .min(window_size.width - self.width)
+            })
+            .unwrap_or(0.0);
+
+        let y = self
+            .mouse_position
+            .map(|point| {
+                (point.y - self.height / 2.0)
+                    .max(0.0)
+                    .min(window_size.height - self.height)
+            })
+            .unwrap_or(0.0);
+
         container(
-            glass_container(self.inner_content())
-                .width(Length::from(self.width))
-                .height(Length::from(self.height))
-                .center_y(Length::from(self.height))
-                .glass_style(|theme| self.glass_style(theme))
-                .style(|theme| self.style(theme)),
+            glass_stack![
+                container(self.inner_content())
+                    .width(Length::from(self.width))
+                    .height(Length::from(self.height))
+                    .center_y(Length::from(self.height))
+                    .style(|theme| self.style(theme))
+                    .with_offset(x, y),
+                space().width(100.0).height(100.0).with_offset(0.0, 0.0),
+            ]
+            .glass_style(|theme| self.glass_style(theme))
+            .tint(self.tint)
+            .blending_factor(100.0),
         )
         // .center(Length::Fill)
         .align_left(Length::Fill)
         .align_top(Length::Fill)
-        .padding(Padding {
-            top: self
-                .mouse_position
-                .map(|point| {
-                    (point.y - self.height / 2.0)
-                        .max(0.0)
-                        .min(window_size.height - self.height)
-                })
-                .unwrap_or(0.0),
-            left: self
-                .mouse_position
-                .map(|point| {
-                    (point.x - self.width / 2.0)
-                        .max(0.0)
-                        .min(window_size.width - self.width)
-                })
-                .unwrap_or(0.0),
-            bottom: 0.0,
-            right: 0.0,
-        })
         .into()
     }
 
@@ -266,95 +273,95 @@ impl Ui {
                     self.styled_text(
                         "Rim Width: ",
                         self.rim_width,
-                        200.0,
+                        100.0,
                         0.0..=5.0,
                         Message::SetRimWidth
                     ),
                     self.styled_text(
                         "Rim Angle: ",
                         self.rim_angle,
-                        200.0,
+                        100.0,
                         0.0..=std::f32::consts::PI,
                         Message::SetRimAngle
                     ),
                     self.styled_text(
                         "Blur Radius: ",
                         self.blur_radius.sqrt(),
-                        200.0,
+                        100.0,
                         0.0..=100.0,
                         |v| Message::SetBlurRadius(v * v)
                     ),
                     self.styled_text(
                         "Corner Radius: ",
                         self.corner_radius,
-                        200.0,
+                        100.0,
                         0.0..=150.0,
                         Message::SetCornerRadius
                     ),
                     self.styled_text(
                         "Saturation: ",
                         self.saturation,
-                        200.0,
+                        100.0,
                         0.0..=2.0,
                         Message::SetSaturation
                     ),
                     self.color_picker("Tint: ", self.tint),
                 ]
-                .spacing(20.0)
-                .padding(20.0),
+                .spacing(10.0)
+                .padding(10.0),
                 row![
                     self.styled_text(
                         "Lightness: ",
                         self.lightness,
-                        200.0,
+                        100.0,
                         -4.0..=2.0,
                         Message::SetLightness
                     ),
                     self.styled_text(
                         "Edge Radius: ",
                         self.edge_radius,
-                        200.0,
+                        100.0,
                         0.0..=100.0,
                         Message::SetEdgeRadius
                     ),
                     self.styled_text(
                         "Edge Height: ",
                         self.edge_height,
-                        200.0,
+                        100.0,
                         0.0..=1000.0,
                         Message::SetEdgeHeight
                     ),
                     self.styled_text(
                         "Refractive Index: ",
                         self.refractive_index,
-                        200.0,
+                        100.0,
                         1.0..=10.0,
                         Message::SetRefractiveIndex
                     ),
                     self.styled_text(
                         "Aberration: ",
                         self.chromatic_aberration,
-                        200.0,
+                        100.0,
                         0.0..=1.0,
                         Message::SetChromaticAberration
                     ),
                     self.styled_text(
                         "Opacity: ",
                         self.opacity,
-                        200.0,
+                        100.0,
                         0.0..=1.0,
                         Message::SetOpacity
                     ),
                 ]
-                .spacing(20.0)
-                .padding(20.0)
+                .spacing(10.0)
+                .padding(10.0)
             ])
             .center_y(Length::Fill)
             .center_x(Length::Fill)
         ])
         .width(Length::Fill)
         .height(Length::Fill)
-        .padding(50.0)
+        .padding(25.0)
         .into()
     }
 
@@ -370,11 +377,12 @@ impl Ui {
         glass_container(
             column![
                 row![
-                    text(s).size(15.0).center(),
-                    text(format!("{value:.2}")).size(15.0).center(),
+                    text(s).size(10.0).center(),
+                    text(format!("{value:.2}")).size(10.0).center(),
                 ],
                 glass_slider(range, value, message)
                     .step(0.01_f32)
+                    .height(5.0)
                     .style(|theme, status| self.slider_style(theme, status)),
             ]
             .align_x(Alignment::Center)
@@ -382,8 +390,8 @@ impl Ui {
             .padding(Padding::default().horizontal(15.0)),
         )
         .center_x(Length::from(width))
-        .center_y(Length::from(100.0))
-        .padding(10.0)
+        .center_y(Length::from(60.0))
+        .padding(5.0)
         .glass_style(|_theme| iced_glass::Style {
             blur_radius: 50.0,
             saturation: self.saturation,
@@ -400,7 +408,7 @@ impl Ui {
                 blur_radius: 40.0,
             },
             border: Border {
-                radius: 20.0.into(),
+                radius: 10.0.into(),
                 ..Default::default()
             },
             ..Default::default()
@@ -413,9 +421,9 @@ impl Ui {
         glass_container(
             column![
                 row![
-                    text(s).size(15.0).center(),
+                    text(s).size(10.0).center(),
                     container(space())
-                        .center(Length::from(15.0))
+                        .center(Length::from(10.0))
                         .style(move |_theme| container::Style {
                             background: Some(Background::Color(value)),
                             ..Default::default()
@@ -428,6 +436,7 @@ impl Ui {
                         value
                     ))
                     .step(0.01_f32)
+                    .height(5.0)
                     .style(|theme, status| self.colored_slider_style(
                         theme,
                         status,
@@ -438,6 +447,7 @@ impl Ui {
                         value
                     ))
                     .step(0.01_f32)
+                    .height(5.0)
                     .style(|theme, status| self.colored_slider_style(
                         theme,
                         status,
@@ -448,6 +458,7 @@ impl Ui {
                         value
                     ))
                     .step(0.01_f32)
+                    .height(5.0)
                     .style(|theme, status| self.colored_slider_style(
                         theme,
                         status,
@@ -460,15 +471,15 @@ impl Ui {
             .spacing(5.0)
             .padding(Padding {
                 top: 0.0,
-                right: 15.0,
+                right: 10.0,
                 bottom: 0.0,
-                left: 15.0,
+                left: 10.0,
             }),
         )
         // .style(|theme| self.style(theme))
-        .center_x(Length::from(260.0))
-        .center_y(Length::from(100.0))
-        .padding(10.0)
+        .center_x(Length::from(100.0))
+        .center_y(Length::from(60.0))
+        .padding(5.0)
         .glass_style(|_theme| iced_glass::Style {
             blur_radius: 50.0,
             saturation: self.saturation,
@@ -501,7 +512,6 @@ impl Ui {
                 radius: self.corner_radius.into(),
                 ..Default::default()
             },
-            background: Some(Background::Color(self.tint)),
             ..Default::default()
         }
     }
@@ -529,7 +539,7 @@ impl Ui {
                     Background::Color(Color::from_rgba(0.3, 0.3, 1.0, 1.0)),
                     Background::Color(Color::WHITE),
                 ),
-                width: 5.0,
+                width: 2.5,
                 border: Border {
                     radius: self.corner_radius.into(),
                     ..Default::default()
@@ -537,8 +547,8 @@ impl Ui {
             },
             handle: slider::Handle {
                 shape: slider::HandleShape::Rectangle {
-                    width: 30,
-                    border_radius: 10.0.into(),
+                    width: 15,
+                    border_radius: 5.0.into(),
                 },
                 background: Background::Color(Color::from_rgba(0.3, 0.3, 1.0, 1.0)),
                 border_width: 1.0,
@@ -556,7 +566,7 @@ impl Ui {
         slider::Style {
             rail: slider::Rail {
                 backgrounds: (Background::Color(color), Background::Color(Color::WHITE)),
-                width: 5.0,
+                width: 2.5,
                 border: Border {
                     radius: self.corner_radius.into(),
                     ..Default::default()
@@ -564,8 +574,8 @@ impl Ui {
             },
             handle: slider::Handle {
                 shape: slider::HandleShape::Rectangle {
-                    width: 30,
-                    border_radius: 10.0.into(),
+                    width: 15,
+                    border_radius: 5.0.into(),
                 },
                 background: Background::Color(color),
                 border_width: 1.0,
