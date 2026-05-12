@@ -1,6 +1,11 @@
-use iced::{Element, Vector};
+use std::ops::RangeInclusive;
 
-use crate::widget::InnerContent;
+use iced::{
+    Element, Vector,
+    widget::{container, slider, text},
+};
+
+use crate::widget::{InnerContent, container::Container, slider::Slider, text::Text};
 
 /// Creates a [`Stack`] with the given children.
 ///
@@ -33,4 +38,40 @@ where
             offset,
         }
     }
+}
+
+/// Creates a new [`Container`] with the given content.
+pub fn glass_container<'a, Message, Theme, Renderer>(
+    content: impl Into<Element<'a, Message, Theme, Renderer>>,
+) -> Container<'a, Message, Theme, Renderer>
+where
+    Theme: container::Catalog + 'a,
+    Renderer: iced::advanced::Renderer,
+{
+    Container::new(content)
+}
+
+/// Creates a new [`Slider`] with the given range, value, and `on_change` function.
+pub fn glass_slider<'a, T, Message, Theme>(
+    range: RangeInclusive<T>,
+    value: T,
+    on_change: impl Fn(T) -> Message + 'a,
+) -> Slider<'a, T, Message, Theme>
+where
+    T: Copy + From<u8> + std::cmp::PartialOrd,
+    Message: Clone,
+    Theme: slider::Catalog + 'a,
+{
+    Slider::new(range, value, on_change)
+}
+
+/// Creates a new [`Text`] with the given content.
+pub fn glass_text<'a, Renderer, Theme>(
+    content: impl text::IntoFragment<'a>,
+) -> Text<'a, Renderer, Theme>
+where
+    Theme: text::Catalog + 'a,
+    Renderer: iced::advanced::text::Renderer<Font = iced::Font>,
+{
+    Text::new(content)
 }

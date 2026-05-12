@@ -7,7 +7,7 @@ use iced::{
     alignment,
     widget::{
         self,
-        container::{self, Catalog, Style, StyleFn},
+        container::{Catalog, Style, StyleFn},
     },
 };
 
@@ -43,17 +43,6 @@ where
             .field("height", &self.height)
             .finish_non_exhaustive()
     }
-}
-
-/// Creates a new [`Container`] with the given content.
-pub fn glass_container<'a, Message, Theme, Renderer>(
-    content: impl Into<Element<'a, Message, Theme, Renderer>>,
-) -> Container<'a, Message, Theme, Renderer>
-where
-    Theme: container::Catalog + 'a,
-    Renderer: iced::advanced::Renderer,
-{
-    Container::new(content)
 }
 
 impl<'a, Message, Theme, Renderer> Container<'a, Message, Theme, Renderer>

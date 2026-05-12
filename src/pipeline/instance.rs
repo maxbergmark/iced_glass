@@ -6,6 +6,8 @@ use crate::{
     uniforms::Uniforms,
 };
 
+pub const CHILDREN_CAPACITY: usize = 100;
+
 #[derive(Debug)]
 pub struct Instance {
     pub tex_a: wgpu::Texture,
@@ -47,7 +49,7 @@ impl Instance {
 
         let uniform_bg_h = uniforms_bind_group(device, &bg_data.bgl_uniforms, &uniforms_h);
         let uniform_bg_v = uniforms_bind_group(device, &bg_data.bgl_uniforms, &uniforms_v);
-        let (children, _children_capacity, children_bg) = child_data(device);
+        let (children, children_bg) = child_data(device);
 
         Self {
             tex_a,
@@ -83,15 +85,14 @@ impl Instance {
     }
 }
 
-fn child_data(device: &wgpu::Device) -> (wgpu::Buffer, usize, wgpu::BindGroup) {
+fn child_data(device: &wgpu::Device) -> (wgpu::Buffer, wgpu::BindGroup) {
     let children = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("children"),
-        // TODO: make this dynamic
-        size: std::mem::size_of::<crate::uniforms::ChildRaw>() as u64 * 100,
+        // This is hard-coded for now, but we could make it dynamic in the future.
+        size: std::mem::size_of::<crate::uniforms::ChildRaw>() as u64 * CHILDREN_CAPACITY as u64,
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
-    let children_capacity = 1000;
     let children_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("children_bg"),
         layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -112,5 +113,5 @@ fn child_data(device: &wgpu::Device) -> (wgpu::Buffer, usize, wgpu::BindGroup) {
             resource: wgpu::BindingResource::Buffer(children.as_entire_buffer_binding()),
         }],
     });
-    (children, children_capacity, children_bg)
+    (children, children_bg)
 }

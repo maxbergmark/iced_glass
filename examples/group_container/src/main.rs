@@ -40,7 +40,6 @@ pub struct Ui {
     start_time: Instant,
 }
 
-#[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub enum Message {
     SetScale(f32),
@@ -396,7 +395,6 @@ impl Ui {
         range: RangeInclusive<f32>,
         message: impl Fn(f32) -> Message + 'static,
     ) -> Element<'_, Message> {
-        // container(
         glass_container(
             column![
                 row![
@@ -421,8 +419,6 @@ impl Ui {
             rim_width: 1.0,
             ..Default::default()
         })
-        // .edge_radius(self.edge_radius)
-        // .edge_height(self.edge_height)
         .style(|_theme| container::Style {
             shadow: Shadow {
                 color: Color::from_rgba(0.0, 0.0, 0.0, 0.25),
@@ -494,7 +490,6 @@ impl Ui {
                 left: 15.0,
             }),
         )
-        // .style(|theme| self.style(theme))
         .center_x(Length::from(260.0))
         .center_y(Length::from(100.0))
         .padding(10.0)

@@ -430,7 +430,6 @@ where
         let state = tree.state.downcast_ref::<State>();
         let bounds = layout.bounds();
         let glass_style = (self.glass_style)(theme);
-        // info!("bounds: {:?}", bounds);
 
         let half_w = bounds.width * 0.5;
         let half_h = bounds.height * 0.5;

@@ -116,10 +116,7 @@ fn physical_sampling(input: FragInput, refractive_index: f32) -> vec4<f32> {
     let dimensions = vec2<f32>(textureDimensions(image));
     let p = ixy * dimensions;
 
-    // let angle = atan2(p.y, p.x);
-
     let r = clamp_radius(uniforms.corner_radius, dimensions);
-    // let sdf_gradient = sdg_rounded_box(p, dimensions / 2.0, r);
     let sdf_gradient = sdf(p, dimensions, r);
     let gradient = sdf_gradient.yz;
     let sdf = sdf_gradient.x;
@@ -168,23 +165,6 @@ fn rounded_group_sdf(p: vec2<f32>, r: f32) -> vec3<f32> {
         best_grad = mix(best_grad, sdg.yz, s.y); 
     }
     return vec3<f32>(best_sdf, best_grad); 
-} 
-
-fn group_sdf2(p: vec2<f32>, r: f32) -> vec3<f32> {
-    var best_sdf = 1e20;
-    var best_grad = vec2<f32>(0.0);
-    let k = uniforms.blending_factor; // add this; in pixels. Try ~40-100 for "soft" merging.
-    let n = uniforms.num_children;
-    for (var i: u32 = 0u; i < n; i = i + 1u) {
-        let c = children[i];
-        let local_p = p - c.center;
-        let r_clamp = clamp_radius(r, c.half_size * 2.0);
-        let sdg = sdg_box(local_p, c.half_size - r_clamp);
-        let s = smin(best_sdf, sdg.x, k);
-        best_sdf  = s.x;
-        best_grad = mix(best_grad, sdg.yz, s.y);
-    }
-    return vec3<f32>(best_sdf, best_grad);
 }
 
 // Returns (smoothed_sdf, t) where t in [0,1] is the blend factor for `b`.

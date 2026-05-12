@@ -11,23 +11,9 @@ use iced::{
     },
     keyboard::{self, Key, key},
     touch,
-    widget::slider::{self, Catalog, HandleShape, Status, Style, StyleFn},
+    widget::slider::{Catalog, HandleShape, Status, Style, StyleFn},
     window,
 };
-
-/// Creates a new [`Slider`] with the given range, value, and `on_change` function.
-pub fn glass_slider<'a, T, Message, Theme>(
-    range: RangeInclusive<T>,
-    value: T,
-    on_change: impl Fn(T) -> Message + 'a,
-) -> Slider<'a, T, Message, Theme>
-where
-    T: Copy + From<u8> + std::cmp::PartialOrd,
-    Message: Clone,
-    Theme: slider::Catalog + 'a,
-{
-    Slider::new(range, value, on_change)
-}
 
 /// A slider widget with a glass effect.
 #[must_use]

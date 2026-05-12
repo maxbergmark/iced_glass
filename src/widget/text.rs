@@ -79,17 +79,6 @@ impl<Font> Default for Format<Font> {
     }
 }
 
-/// Creates a new [`Text`] with the given content.
-pub fn glass_text<'a, Renderer, Theme>(
-    content: impl text::IntoFragment<'a>,
-) -> Text<'a, Renderer, Theme>
-where
-    Theme: Catalog + 'a,
-    Renderer: iced::advanced::text::Renderer<Font = iced::Font>,
-{
-    Text::new(content)
-}
-
 struct FontData {
     font_system: RefCell<FontSystem>,
     metrics: Metrics,
