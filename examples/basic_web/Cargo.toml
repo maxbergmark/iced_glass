@@ -13,6 +13,7 @@ iced = { workspace = true }
 iced = { workspace = true, features = ["webgl", "fira-sans"] }
 console_error_panic_hook = "0.1"
 console_log = "1.0"
+log = "0.4"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }

@@ -2,10 +2,15 @@ use std::ops::RangeInclusive;
 
 use iced::{
     Element, Vector,
-    widget::{container, slider, text},
+    widget::{container, slider},
 };
 
-use crate::widget::{InnerContent, container::Container, slider::Slider, text::Text};
+#[cfg(feature = "text")]
+use iced::widget::text;
+
+#[cfg(feature = "text")]
+use crate::widget::text::Text;
+use crate::widget::{InnerContent, container::Container, slider::Slider};
 
 /// Creates a [`Stack`] with the given children.
 ///
@@ -66,6 +71,7 @@ where
 }
 
 /// Creates a new [`Text`] with the given content.
+#[cfg(feature = "text")]
 pub fn glass_text<'a, Renderer, Theme>(
     content: impl text::IntoFragment<'a>,
 ) -> Text<'a, Renderer, Theme>
