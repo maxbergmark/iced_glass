@@ -21,7 +21,6 @@ pub struct Instance {
     pub size: wgpu::Extent3d,
 
     pub children: wgpu::Buffer,
-    // pub children_capacity: usize,
     pub children_bg: wgpu::BindGroup,
 }
 
@@ -66,7 +65,6 @@ impl Instance {
                 depth_or_array_layers: 1,
             },
             children,
-            // children_capacity,
             children_bg,
         }
     }

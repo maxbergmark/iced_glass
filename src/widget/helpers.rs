@@ -25,17 +25,17 @@ pub trait StackOffset<'a, Message, Theme, Renderer> {
     /// Creates a new [`InnerContent`] with the given offset.
     ///
     /// [`InnerContent`]: crate::widget::InnerContent
-    fn with_offset(self, offset: Vector) -> InnerContent<'a, Message, Theme, Renderer>;
+    fn with_offset(self, x: f32, y: f32) -> InnerContent<'a, Message, Theme, Renderer>;
 }
 
 impl<'a, T, Message, Theme, Renderer> StackOffset<'a, Message, Theme, Renderer> for T
 where
     T: Into<Element<'a, Message, Theme, Renderer>>,
 {
-    fn with_offset(self, offset: Vector) -> InnerContent<'a, Message, Theme, Renderer> {
+    fn with_offset(self, x: f32, y: f32) -> InnerContent<'a, Message, Theme, Renderer> {
         InnerContent {
             container: self.into(),
-            offset,
+            offset: Vector::new(x, y),
         }
     }
 }

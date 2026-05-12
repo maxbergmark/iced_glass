@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use iced::{
     Alignment, Animation, Background, Border, Color, ContentFit, Element, Font, Gradient, Length,
-    Padding, Size, Subscription, Task, Theme, Vector,
+    Padding, Size, Subscription, Task, Theme,
     animation::Easing,
     font::{self, Family, Stretch, Weight},
     gradient::Linear,
@@ -311,7 +311,7 @@ impl Ui {
                     .padding(10.0)
                 )
                 .width(640.0 - icons_opacity * 200.0 - 40.0 * opacity)
-                .with_offset(Vector::new(0.0, 0.0)),
+                .with_offset(0.0, 0.0),
                 container(
                     svg(icon_path_outline("camera"))
                         .style(self.svg_white())
@@ -320,7 +320,7 @@ impl Ui {
                         .height(30.0)
                 )
                 .center(50.0)
-                .with_offset(Vector::new(410.0, 0.0)),
+                .with_offset(410.0, 0.0),
                 container(
                     svg(icon_path_outline("airplane"))
                         .style(self.svg_white())
@@ -329,7 +329,7 @@ impl Ui {
                         .height(30.0)
                 )
                 .center(50.0)
-                .with_offset(Vector::new(410.0 + icons_opacity * 60.0, 0.0)),
+                .with_offset(410.0 + icons_opacity * 60.0, 0.0),
                 container(
                     svg(icon_path_outline("sunny"))
                         .style(self.svg_white())
@@ -338,7 +338,7 @@ impl Ui {
                         .height(30.0)
                 )
                 .center(50.0)
-                .with_offset(Vector::new(410.0 + icons_opacity * 120.0, 0.0)),
+                .with_offset(410.0 + icons_opacity * 120.0, 0.0),
                 container(
                     svg(icon_path_outline("terminal"))
                         .style(self.svg_white())
@@ -347,7 +347,7 @@ impl Ui {
                         .height(30.0)
                 )
                 .center(50.0)
-                .with_offset(Vector::new(410.0 + icons_opacity * 180.0, 0.0)),
+                .with_offset(410.0 + icons_opacity * 180.0, 0.0),
             ]
             .width(700.0)
             .height(50.0)

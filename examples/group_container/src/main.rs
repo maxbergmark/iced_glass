@@ -254,20 +254,19 @@ impl Ui {
                 )
                 .center(400.0)
                 .padding(20.0)
-                .with_offset(Vector::new(
+                .with_offset(
                     1200.0 + (2.0 * t).sin() * 100.0,
                     300.0 + (2.0 * t).cos() * 100.0,
-                )),
+                ),
                 space()
                     .width(200.0)
                     .height(200.0)
-                    .with_offset(Vector::new(1300.0 + (2.2 * t).sin() * 300.0, 400.0)),
+                    .with_offset(1300.0 + (2.2 * t).sin() * 300.0, 400.0),
                 space()
                     .width(300.0)
                     .height(300.0)
-                    .with_offset(Vector::new(1250.0, 350.0 + (2.4 * t).cos() * 300.0)),
-                self.inner_content()
-                    .with_offset(Vector::new(offset_x, offset_y)),
+                    .with_offset(1250.0, 350.0 + (2.4 * t).cos() * 300.0),
+                self.inner_content().with_offset(offset_x, offset_y),
             ]
             .width(2560.0)
             .height(1440.0)

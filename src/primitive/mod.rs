@@ -1,5 +1,8 @@
 use crate::{
-    pipeline::{Pipeline, instance::Instance},
+    pipeline::{
+        Pipeline,
+        instance::{CHILDREN_CAPACITY, Instance},
+    },
     uniforms::{ChildRaw, Uniforms},
 };
 
@@ -33,6 +36,7 @@ impl iced::widget::shader::Primitive for Primitive {
         let scaled: Vec<ChildRaw> = self
             .children
             .iter()
+            .take(CHILDREN_CAPACITY) // limit the number of children to the capacity
             .map(|c| ChildRaw {
                 center: [c.center[0] * scale, c.center[1] * scale],
                 half_size: [c.half_size[0] * scale, c.half_size[1] * scale],

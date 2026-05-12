@@ -1,4 +1,3 @@
-// use iced::advanced::Renderer as _;
 use cosmic_text::{Attrs, Buffer, FontSystem, LayoutGlyph, Metrics};
 use iced::{
     Color, Element, Length, Pixels, Rectangle, Size,
@@ -106,22 +105,12 @@ impl FontData {
     }
 }
 
-// #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
-// pub struct FontKey {
-//     pub font_id: cosmic_text::fontdb::ID,
-//     pub style: cosmic_text::fontdb::Style,
-//     pub weight: cosmic_text::fontdb::Weight,
-// }
-
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct GlyphData {
     pub glyph_id: GlyphId,
     pub font_id: cosmic_text::fontdb::ID,
     pub x: f32,
-    // pub y: f32,
     pub run_line_y: f32,
-    // pub w: f32,
-    // pub y_offset: f32,
 }
 
 impl GlyphData {
