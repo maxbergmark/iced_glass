@@ -6,6 +6,8 @@ use crate::{
     uniforms::Uniforms,
 };
 
+pub const CHILDREN_CAPACITY: usize = 100;
+
 #[derive(Debug)]
 pub struct Instance {
     pub tex_a: wgpu::Texture,
@@ -17,6 +19,9 @@ pub struct Instance {
     pub tex_a_bg: Vec<wgpu::BindGroup>,
     pub tex_b_bg: Vec<wgpu::BindGroup>,
     pub size: wgpu::Extent3d,
+
+    pub children: wgpu::Buffer,
+    pub children_bg: wgpu::BindGroup,
 }
 
 impl Instance {
@@ -43,6 +48,7 @@ impl Instance {
 
         let uniform_bg_h = uniforms_bind_group(device, &bg_data.bgl_uniforms, &uniforms_h);
         let uniform_bg_v = uniforms_bind_group(device, &bg_data.bgl_uniforms, &uniforms_v);
+        let (children, children_bg) = child_data(device);
 
         Self {
             tex_a,
@@ -58,6 +64,8 @@ impl Instance {
                 height: size.height.max(1),
                 depth_or_array_layers: 1,
             },
+            children,
+            children_bg,
         }
     }
 
@@ -73,4 +81,35 @@ impl Instance {
             bytemuck::bytes_of(&uniforms.to_raw([0.0, 1.0], scale)),
         );
     }
+}
+
+fn child_data(device: &wgpu::Device) -> (wgpu::Buffer, wgpu::BindGroup) {
+    let children = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("children"),
+        // This is hard-coded for now, but we could make it dynamic in the future.
+        size: std::mem::size_of::<crate::uniforms::ChildRaw>() as u64 * CHILDREN_CAPACITY as u64,
+        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    let children_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("children_bg"),
+        layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("children_bg_layout"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        }),
+        entries: &[wgpu::BindGroupEntry {
+            binding: 0,
+            resource: wgpu::BindingResource::Buffer(children.as_entire_buffer_binding()),
+        }],
+    });
+    (children, children_bg)
 }

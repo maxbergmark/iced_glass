@@ -14,6 +14,10 @@ struct Uniforms {
     edge_type: i32,
     chromatic_aberration: f32,
     rim_angle: f32,
+    num_children: u32,
+    blending_factor: f32,
+    _pad: f32,
+    _pad2: f32,
 };
 
 @group(1)

@@ -7,12 +7,13 @@ use iced::{
     alignment,
     widget::{
         self,
-        container::{self, Catalog, Style, StyleFn},
+        container::{Catalog, Style, StyleFn},
     },
 };
 
+/// A container widget with a glass effect.
 #[must_use]
-pub struct GlassContainer<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
+pub struct Container<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
 where
     Theme: Catalog,
     Renderer: iced::advanced::Renderer,
@@ -31,31 +32,20 @@ where
     glass_style: crate::StyleFn<'a, Theme>,
 }
 
-impl<Message, Theme, Renderer> std::fmt::Debug for GlassContainer<'_, Message, Theme, Renderer>
+impl<Message, Theme, Renderer> std::fmt::Debug for Container<'_, Message, Theme, Renderer>
 where
     Theme: Catalog,
     Renderer: iced::advanced::Renderer,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("GlassContainer")
+        f.debug_struct("Container")
             .field("width", &self.width)
             .field("height", &self.height)
             .finish_non_exhaustive()
     }
 }
 
-/// Creates a new [`GlassContainer`] with the given content.
-pub fn glass_container<'a, Message, Theme, Renderer>(
-    content: impl Into<Element<'a, Message, Theme, Renderer>>,
-) -> GlassContainer<'a, Message, Theme, Renderer>
-where
-    Theme: container::Catalog + 'a,
-    Renderer: iced::advanced::Renderer,
-{
-    GlassContainer::new(content)
-}
-
-impl<'a, Message, Theme, Renderer> GlassContainer<'a, Message, Theme, Renderer>
+impl<'a, Message, Theme, Renderer> Container<'a, Message, Theme, Renderer>
 where
     Theme: Catalog,
     Renderer: iced::advanced::Renderer,
@@ -65,7 +55,7 @@ where
         let content = content.into();
         let size = content.as_widget().size_hint();
 
-        GlassContainer {
+        Container {
             id: None,
             padding: Padding::ZERO,
             width: size.width.fluid(),
@@ -207,7 +197,7 @@ struct State {
 static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 impl<Message, Theme, Renderer> iced::advanced::Widget<Message, Theme, Renderer>
-    for GlassContainer<'_, Message, Theme, Renderer>
+    for Container<'_, Message, Theme, Renderer>
 where
     Theme: Catalog,
     Renderer: iced::advanced::Renderer + iced_wgpu::primitive::Renderer,
@@ -368,7 +358,10 @@ where
                     tint,
                     content_scale: (1.0, 1.0),
                     edge_type: glass_style.edge_type,
+                    num_children: 0,
+                    blending_factor: 1.0,
                 },
+                children: vec![],
             },
         );
 
@@ -417,14 +410,14 @@ where
     }
 }
 
-impl<'a, Message, Theme, Renderer> From<GlassContainer<'a, Message, Theme, Renderer>>
+impl<'a, Message, Theme, Renderer> From<Container<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
     Theme: Catalog + 'a,
     Renderer: iced::advanced::Renderer + iced_wgpu::primitive::Renderer + 'a,
 {
-    fn from(container: GlassContainer<'a, Message, Theme, Renderer>) -> Self {
+    fn from(container: Container<'a, Message, Theme, Renderer>) -> Self {
         Element::new(container)
     }
 }
