@@ -75,10 +75,7 @@ const SMOOTH_EDGE: i32 = 1;
 @fragment
 fn fs_main(input: FragInput) -> @location(0) vec4<f32> {
     if uniforms.edge_type == GLASS_EDGE {
-        var color_red = physical_sampling(input, uniforms.refractive_index - uniforms.chromatic_aberration);
-        var color_green = physical_sampling(input, uniforms.refractive_index);
-        var color_blue = physical_sampling(input, uniforms.refractive_index + uniforms.chromatic_aberration);
-        var color = vec4<f32>(color_red.r, color_green.g, color_blue.b, color_green.a);
+        var color = physical_sampling(input);
         color.a *= uniforms.opacity;
         return linear_to_srgb(color);
     } else {
@@ -94,7 +91,8 @@ fn soft_edge_sampling(input: FragInput) -> vec4<f32> {
     let p = ixy * dimensions;
 
     let r = clamp_radius(uniforms.corner_radius, dimensions);
-    let sdf_gradient = sdg_rounded_box(p, dimensions / 2.0, r);
+    // let sdf_gradient = sdg_rounded_box(p, dimensions / 2.0, r);
+    let sdf_gradient = sdf(p, dimensions, r);
     let gradient = sdf_gradient.yz;
     let sdf = sdf_gradient.x;
 
@@ -111,7 +109,7 @@ fn soft_edge_sampling(input: FragInput) -> vec4<f32> {
 }
 
 // returns linear color
-fn physical_sampling(input: FragInput, refractive_index: f32) -> vec4<f32> {
+fn physical_sampling(input: FragInput) -> vec4<f32> {
     let ixy = input.uv - vec2<f32>(0.5);
     let dimensions = vec2<f32>(textureDimensions(image));
     let p = ixy * dimensions;
@@ -122,21 +120,33 @@ fn physical_sampling(input: FragInput, refractive_index: f32) -> vec4<f32> {
     let sdf = sdf_gradient.x;
 
     let h = uniforms.height;
-    let n = max(refractive_index, 1.0);
+    let n_r = max(uniforms.refractive_index - uniforms.chromatic_aberration, 1.0);
+    let n_g = max(uniforms.refractive_index, 1.0);
+    let n_b = max(uniforms.refractive_index + uniforms.chromatic_aberration, 1.0);
     let r_edge = clamp_radius(uniforms.edge_radius, dimensions);
+
+    var red = sample_color_channel(p, sdf, gradient, r_edge, n_r, h, dimensions);
+    var green = sample_color_channel(p, sdf, gradient, r_edge, n_g, h, dimensions);
+    var blue = sample_color_channel(p, sdf, gradient, r_edge, n_b, h, dimensions);
+    var color = vec4<f32>(red.r, green.g, blue.b, green.a);
+
+    return color;
+}
+
+fn sample_color_channel(p: vec2<f32>, sdf: f32, gradient: vec2<f32>, r_edge: f32, n: f32, h: f32, dimensions: vec2<f32>) -> vec4<f32> {
     let dx = select(0.0, refract(sdf, r_edge, n, h), sdf > -r_edge);
     let offset = gradient * dx;
 
     let sample_uv = (p + offset) / dimensions + vec2<f32>(0.5);
 
     var color = textureSample(image, image_sampler, sample_uv);
+    color = srgb_to_linear(color);
     color = saturate(color);
     color *= uniforms.tint;
     color = edge_highlight(color, sdf, gradient);
 
     let aa = fwidth(sdf);
     let outside_factor = smoothstep(-aa, aa, sdf);
-    color = srgb_to_linear(color);
     color.a *= (1.0 - outside_factor);
     return color;
 }
@@ -146,25 +156,25 @@ fn sdf(p: vec2<f32>, dimensions: vec2<f32>, r: f32) -> vec3<f32> {
         return rounded_group_sdf(p, r);
     } else {
         return sdg_rounded_box(p, dimensions / 2.0, r);
-    }   
+    }
 }
 
-fn rounded_group_sdf(p: vec2<f32>, r: f32) -> vec3<f32> { 
-    var best_sdf = 1e20; 
-    var best_grad = vec2<f32>(0.0); 
-    let k = uniforms.blending_factor; 
-    let n = uniforms.num_children; 
-    for (var i: u32 = 0u; i < n; i = i + 1u) { 
-        let c = children[i]; 
-        let local_p = p - c.center; 
-        let r_i = min(r, min(c.half_size.x, c.half_size.y)); 
-        let sdg = sdg_box(local_p, c.half_size - r_i); 
+fn rounded_group_sdf(p: vec2<f32>, r: f32) -> vec3<f32> {
+    var best_sdf = 1e20;
+    var best_grad = vec2<f32>(0.0);
+    let k = uniforms.blending_factor;
+    let n = uniforms.num_children;
+    for (var i: u32 = 0u; i < n; i = i + 1u) {
+        let c = children[i];
+        let local_p = p - c.center;
+        let r_i = min(r, min(c.half_size.x, c.half_size.y));
+        let sdg = sdg_box(local_p, c.half_size - r_i);
         let d = sdg.x - r_i; // <-- per-child inflate 
-        let s = smin(best_sdf, d, k); 
-        best_sdf = s.x; 
-        best_grad = mix(best_grad, sdg.yz, s.y); 
+        let s = smin(best_sdf, d, k);
+        best_sdf = s.x;
+        best_grad = mix(best_grad, sdg.yz, s.y);
     }
-    return vec3<f32>(best_sdf, best_grad); 
+    return vec3<f32>(best_sdf, best_grad);
 }
 
 // Returns (smoothed_sdf, t) where t in [0,1] is the blend factor for `b`.
@@ -173,7 +183,7 @@ fn smin(a: f32, b: f32, k: f32) -> vec2<f32> {
     let h = max(k - abs(a - b), 0.0) / max(k, 1e-6);
     let m = h * h * 0.5;
     let s = m * k * 0.5;
-    if (a < b) {
+    if a < b {
         return vec2<f32>(a - s, m);
     } else {
         return vec2<f32>(b - s, 1.0 - m);
@@ -291,11 +301,11 @@ fn linear_to_srgb(c: vec4<f32>) -> vec4<f32> {
 // exposure offset (`ev_stops`, negative = darker). All physics happens in
 // linear-light space.
 fn apply_glass_exposure(
-    srgb_in: vec4<f32>,
+    lin: vec4<f32>,
     tint: vec4<f32>,
     ev_stops: f32,
 ) -> vec4<f32> {
-    let lin = srgb_to_linear(srgb_in);
+    // let lin = srgb_to_linear(srgb_in);
     let filtered = lin * tint * exp2(ev_stops);
-    return linear_to_srgb(clamp(filtered, vec4<f32>(0.0), vec4<f32>(1.0)));
+    return clamp(filtered, vec4<f32>(0.0), vec4<f32>(1.0));
 }

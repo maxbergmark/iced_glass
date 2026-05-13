@@ -377,7 +377,7 @@ impl Ui {
                         0.0..=200.0,
                         Message::SetBlendingFactor
                     ),
-                    self.styled_text("#Boxes: ", self.number_of_boxes as f32, 1.0..=20.0, |v| {
+                    self.styled_text("#Boxes: ", self.number_of_boxes as f32, 1.0..=100.0, |v| {
                         Message::SetNumberOfBoxes(v.round() as usize)
                     }),
                 ]
