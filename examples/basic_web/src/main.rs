@@ -1,4 +1,5 @@
-use std::{ops::RangeInclusive, time::Instant};
+use iced::time::Instant;
+use std::{ops::RangeInclusive, time::Duration};
 
 use iced::{
     Alignment, Background, Border, Color, Element, Length, Padding, Point, Shadow, Size,
@@ -55,6 +56,7 @@ pub enum Message {
     MouseState(bool),
     SetTint(ColorChannel, f32),
     SetOpacity(f32),
+    Noop,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -68,7 +70,7 @@ fn main() -> iced::Result {
     #[cfg(target_arch = "wasm32")]
     {
         console_error_panic_hook::set_once();
-        let _ = console_log::init_with_level(log::Level::Debug);
+        let _ = console_log::init_with_level(log::Level::Warn);
     }
 
     iced::application(Ui::boot, Ui::update, Ui::view)
@@ -177,12 +179,13 @@ impl Ui {
                 ColorChannel::Green => self.tint.g = value,
                 ColorChannel::Blue => self.tint.b = value,
             },
+            Message::Noop => {}
         }
         Task::none()
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
-        Subscription::none()
+        iced::time::every(Duration::from_millis(10)).map(|_| Message::Noop)
     }
 
     pub fn view(&self) -> Element<'_, Message> {
@@ -261,6 +264,8 @@ impl Ui {
                     .with_offset(x, y),
                 space().width(100.0).height(100.0).with_offset(0.0, 0.0),
             ]
+            .width(window_size.width)
+            .height(window_size.height)
             .extend((0..10).map(|_| self.random_space(window_size)))
             .glass_style(|theme| self.glass_style(theme))
             .tint(self.tint)
@@ -276,8 +281,8 @@ impl Ui {
     fn random_space(&self, window_size: Size) -> InnerContent<'static, Message> {
         let size = 100.0 * (1.0 + fastrand::f32());
         let t = self.start_time.elapsed().as_secs_f32();
-        let x = (window_size.width - size) * fastrand::f32() + 50.0 * t.sin();
-        let y = (window_size.height - size) * fastrand::f32() + 50.0 * t.cos();
+        let x = 50.0 + (window_size.width - size - 100.0) * fastrand::f32() + 50.0 * t.sin();
+        let y = 50.0 + (window_size.height - size - 100.0) * fastrand::f32() + 50.0 * t.cos();
 
         space().width(size).height(size).with_offset(x, y)
     }
