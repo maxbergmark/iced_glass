@@ -1,4 +1,4 @@
-use std::ops::RangeInclusive;
+use std::{ops::RangeInclusive, time::Instant};
 
 use iced::{
     Alignment, Background, Border, Color, Element, Length, Padding, Point, Shadow, Size,
@@ -34,6 +34,7 @@ pub struct Ui {
     bw_handle: image::Handle,
     nat_handle: image::Handle,
     flower_handle: image::Handle,
+    start_time: Instant,
 }
 
 #[allow(unused)]
@@ -101,6 +102,7 @@ impl Default for Ui {
             bw_handle: image_handle(BW),
             nat_handle: image_handle(NAT),
             flower_handle: image_handle(FLW),
+            start_time: Instant::now(),
         }
     }
 }
@@ -259,7 +261,7 @@ impl Ui {
                     .with_offset(x, y),
                 space().width(100.0).height(100.0).with_offset(0.0, 0.0),
             ]
-            .extend((0..10).map(|_| Self::random_space(window_size)))
+            .extend((0..10).map(|_| self.random_space(window_size)))
             .glass_style(|theme| self.glass_style(theme))
             .tint(self.tint)
             .corner_radius(self.corner_radius)
@@ -271,10 +273,11 @@ impl Ui {
         .into()
     }
 
-    fn random_space(window_size: Size) -> InnerContent<'static, Message> {
+    fn random_space(&self, window_size: Size) -> InnerContent<'static, Message> {
         let size = 100.0 * (1.0 + fastrand::f32());
-        let x = (window_size.width - size) * fastrand::f32();
-        let y = (window_size.height - size) * fastrand::f32();
+        let t = self.start_time.elapsed().as_secs_f32();
+        let x = (window_size.width - size) * fastrand::f32() + 50.0 * t.sin();
+        let y = (window_size.height - size) * fastrand::f32() + 50.0 * t.cos();
 
         space().width(size).height(size).with_offset(x, y)
     }
