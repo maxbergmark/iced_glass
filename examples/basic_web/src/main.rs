@@ -281,8 +281,9 @@ impl Ui {
     fn random_space(&self, window_size: Size) -> InnerContent<'static, Message> {
         let size = 100.0 * (1.0 + fastrand::f32());
         let t = self.start_time.elapsed().as_secs_f32();
-        let x = 50.0 + (window_size.width - size - 100.0) * fastrand::f32() + 50.0 * t.sin();
-        let y = 50.0 + (window_size.height - size - 100.0) * fastrand::f32() + 50.0 * t.cos();
+        let f = 1.0 + fastrand::f32();
+        let x = 50.0 + (window_size.width - size - 100.0) * fastrand::f32() + 50.0 * (f * t).sin();
+        let y = 50.0 + (window_size.height - size - 100.0) * fastrand::f32() + 50.0 * (f * t).cos();
 
         space().width(size).height(size).with_offset(x, y)
     }
