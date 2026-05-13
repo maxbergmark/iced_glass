@@ -33,7 +33,7 @@ pub struct Stack<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer> {
 }
 
 /// A container that displays a child element on top of the current [`Stack`].
-pub struct InnerContent<'a, Message, Theme, Renderer> {
+pub struct InnerContent<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer> {
     /// The element to display on top of the [`Stack`].
     pub container: Element<'a, Message, Theme, Renderer>,
     /// The offset of the [`InnerContent`] relative to the [`Stack`].

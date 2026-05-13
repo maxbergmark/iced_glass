@@ -7,7 +7,9 @@ use iced::{
 };
 use iced_glass::{
     glass_stack,
-    widget::{EdgeType, StackOffset, container as glass_container, slider as glass_slider},
+    widget::{
+        EdgeType, InnerContent, StackOffset, container as glass_container, slider as glass_slider,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -245,6 +247,8 @@ impl Ui {
             })
             .unwrap_or(0.0);
 
+        fastrand::seed(123);
+
         container(
             glass_stack![
                 container(self.inner_content())
@@ -255,14 +259,24 @@ impl Ui {
                     .with_offset(x, y),
                 space().width(100.0).height(100.0).with_offset(0.0, 0.0),
             ]
+            .extend((0..10).map(|_| Self::random_space(window_size)))
             .glass_style(|theme| self.glass_style(theme))
             .tint(self.tint)
+            .corner_radius(self.corner_radius)
             .blending_factor(100.0),
         )
         // .center(Length::Fill)
         .align_left(Length::Fill)
         .align_top(Length::Fill)
         .into()
+    }
+
+    fn random_space(window_size: Size) -> InnerContent<'static, Message> {
+        let size = 100.0 * (1.0 + fastrand::f32());
+        let x = (window_size.width - size) * fastrand::f32();
+        let y = (window_size.height - size) * fastrand::f32();
+
+        space().width(size).height(size).with_offset(x, y)
     }
 
     fn inner_content(&self) -> Element<'_, Message> {
