@@ -263,7 +263,7 @@ impl Ui {
                     .style(|theme| self.style(theme))
                     .with_offset(x, y),
             ]
-            .extend((0..40).map(|_| self.random_space(window_size)))
+            .extend((0..20).map(|_| self.random_space(window_size)))
             .width(window_size.width)
             .height(window_size.height)
             .glass_style(|theme| self.glass_style(theme))
