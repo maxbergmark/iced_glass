@@ -262,11 +262,10 @@ impl Ui {
                     .center_y(Length::from(self.height))
                     .style(|theme| self.style(theme))
                     .with_offset(x, y),
-                space().width(100.0).height(100.0).with_offset(0.0, 0.0),
             ]
+            .extend((0..10).map(|_| self.random_space(window_size)))
             .width(window_size.width)
             .height(window_size.height)
-            .extend((0..10).map(|_| self.random_space(window_size)))
             .glass_style(|theme| self.glass_style(theme))
             .tint(self.tint)
             .corner_radius(self.corner_radius)
