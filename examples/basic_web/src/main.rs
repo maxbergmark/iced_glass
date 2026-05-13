@@ -36,6 +36,8 @@ pub struct Ui {
     nat_handle: image::Handle,
     flower_handle: image::Handle,
     start_time: Instant,
+    blending_factor: f32,
+    number_of_boxes: usize,
 }
 
 #[allow(unused)]
@@ -56,6 +58,8 @@ pub enum Message {
     MouseState(bool),
     SetTint(ColorChannel, f32),
     SetOpacity(f32),
+    SetBlendingFactor(f32),
+    SetNumberOfBoxes(usize),
     Noop,
 }
 
@@ -85,7 +89,7 @@ impl Default for Ui {
     fn default() -> Self {
         Self {
             width: 800.0,
-            height: 300.0,
+            height: 400.0,
             blur_radius: 500.0,
             corner_radius: 100.0,
             saturation: 1.1,
@@ -105,6 +109,8 @@ impl Default for Ui {
             nat_handle: image_handle(NAT),
             flower_handle: image_handle(FLW),
             start_time: Instant::now(),
+            blending_factor: 100.0,
+            number_of_boxes: 10,
         }
     }
 }
@@ -179,6 +185,12 @@ impl Ui {
                 ColorChannel::Green => self.tint.g = value,
                 ColorChannel::Blue => self.tint.b = value,
             },
+            Message::SetBlendingFactor(blending_factor) => {
+                self.blending_factor = blending_factor;
+            }
+            Message::SetNumberOfBoxes(number_of_boxes) => {
+                self.number_of_boxes = number_of_boxes;
+            }
             Message::Noop => {}
         }
         Task::none()
@@ -263,13 +275,13 @@ impl Ui {
                     .style(|theme| self.style(theme))
                     .with_offset(x, y),
             ]
-            .extend((0..20).map(|_| self.random_space(window_size)))
+            .extend((0..self.number_of_boxes).map(|_| self.random_space(window_size)))
             .width(window_size.width)
             .height(window_size.height)
             .glass_style(|theme| self.glass_style(theme))
             .tint(self.tint)
             .corner_radius(self.corner_radius)
-            .blending_factor(100.0),
+            .blending_factor(self.blending_factor),
         )
         // .center(Length::Fill)
         .align_left(Length::Fill)
@@ -292,40 +304,20 @@ impl Ui {
             // text("Liquid Glass").size(30.0),
             container(column![
                 row![
-                    self.styled_text(
-                        "Rim Width: ",
-                        self.rim_width,
-                        100.0,
-                        0.0..=5.0,
-                        Message::SetRimWidth
-                    ),
-                    self.styled_text(
-                        "Rim Angle: ",
-                        self.rim_angle,
-                        100.0,
-                        0.0..=std::f32::consts::PI,
-                        Message::SetRimAngle
-                    ),
-                    self.styled_text(
-                        "Blur Radius: ",
-                        self.blur_radius.sqrt(),
-                        100.0,
-                        0.0..=100.0,
-                        |v| Message::SetBlurRadius(v * v)
-                    ),
+                    self.styled_text("Blur Radius: ", self.blur_radius.sqrt(), 0.0..=100.0, |v| {
+                        Message::SetBlurRadius(v * v)
+                    }),
                     self.styled_text(
                         "Corner Radius: ",
                         self.corner_radius,
-                        100.0,
                         0.0..=150.0,
                         Message::SetCornerRadius
                     ),
                     self.styled_text(
-                        "Saturation: ",
-                        self.saturation,
-                        100.0,
-                        0.0..=2.0,
-                        Message::SetSaturation
+                        "Edge Radius: ",
+                        self.edge_radius,
+                        0.0..=100.0,
+                        Message::SetEdgeRadius
                     ),
                     self.color_picker("Tint: ", self.tint),
                 ]
@@ -333,47 +325,61 @@ impl Ui {
                 .padding(10.0),
                 row![
                     self.styled_text(
+                        "Saturation: ",
+                        self.saturation,
+                        0.0..=2.0,
+                        Message::SetSaturation
+                    ),
+                    self.styled_text(
                         "Lightness: ",
                         self.lightness,
-                        100.0,
                         -4.0..=2.0,
                         Message::SetLightness
                     ),
                     self.styled_text(
-                        "Edge Radius: ",
-                        self.edge_radius,
-                        100.0,
-                        0.0..=100.0,
-                        Message::SetEdgeRadius
-                    ),
-                    self.styled_text(
                         "Edge Height: ",
                         self.edge_height,
-                        100.0,
                         0.0..=1000.0,
                         Message::SetEdgeHeight
                     ),
                     self.styled_text(
                         "Refractive Index: ",
                         self.refractive_index,
-                        100.0,
                         1.0..=10.0,
                         Message::SetRefractiveIndex
+                    ),
+                    self.styled_text("Opacity: ", self.opacity, 0.0..=1.0, Message::SetOpacity),
+                ]
+                .spacing(10.0)
+                .padding(10.0),
+                row![
+                    self.styled_text(
+                        "Rim Width: ",
+                        self.rim_width,
+                        0.0..=5.0,
+                        Message::SetRimWidth
+                    ),
+                    self.styled_text(
+                        "Rim Angle: ",
+                        self.rim_angle,
+                        0.0..=std::f32::consts::PI,
+                        Message::SetRimAngle
                     ),
                     self.styled_text(
                         "Aberration: ",
                         self.chromatic_aberration,
-                        100.0,
                         0.0..=1.0,
                         Message::SetChromaticAberration
                     ),
                     self.styled_text(
-                        "Opacity: ",
-                        self.opacity,
-                        100.0,
-                        0.0..=1.0,
-                        Message::SetOpacity
+                        "Blending: ",
+                        self.blending_factor,
+                        0.0..=200.0,
+                        Message::SetBlendingFactor
                     ),
+                    self.styled_text("#Boxes: ", self.number_of_boxes as f32, 1.0..=20.0, |v| {
+                        Message::SetNumberOfBoxes(v.round() as usize)
+                    }),
                 ]
                 .spacing(10.0)
                 .padding(10.0)
@@ -391,7 +397,6 @@ impl Ui {
         &self,
         s: &'static str,
         value: f32,
-        width: f32,
         range: RangeInclusive<f32>,
         message: impl Fn(f32) -> Message + 'static,
     ) -> Element<'_, Message> {
@@ -399,8 +404,8 @@ impl Ui {
         glass_container(
             column![
                 row![
-                    text(s).size(10.0).center(),
-                    text(format!("{value:.2}")).size(10.0).center(),
+                    text(s).size(8.0).center(),
+                    text(format!("{value:.2}")).size(8.0).center(),
                 ],
                 glass_slider(range, value, message)
                     .step(0.01_f32)
@@ -411,7 +416,7 @@ impl Ui {
             .spacing(5.0)
             .padding(Padding::default().horizontal(15.0)),
         )
-        .center_x(Length::from(width))
+        .center_x(Length::from(120.0))
         .center_y(Length::from(60.0))
         .padding(5.0)
         .glass_style(|_theme| iced_glass::Style {
@@ -443,9 +448,9 @@ impl Ui {
         glass_container(
             column![
                 row![
-                    text(s).size(10.0).center(),
+                    text(s).size(8.0).center(),
                     container(space())
-                        .center(Length::from(10.0))
+                        .center(Length::from(8.0))
                         .style(move |_theme| container::Style {
                             background: Some(Background::Color(value)),
                             ..Default::default()
@@ -499,7 +504,7 @@ impl Ui {
             }),
         )
         // .style(|theme| self.style(theme))
-        .center_x(Length::from(100.0))
+        .center_x(Length::from(250.0))
         .center_y(Length::from(60.0))
         .padding(5.0)
         .glass_style(|_theme| iced_glass::Style {
@@ -515,7 +520,7 @@ impl Ui {
                 blur_radius: 40.0 * 0.0,
             },
             border: Border {
-                radius: 20.0.into(),
+                radius: 10.0.into(),
                 ..Default::default()
             },
             ..Default::default()
