@@ -11,7 +11,7 @@ iced = { workspace = true }
 fastrand = "2"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-iced = { workspace = true, features = ["webgl", "fira-sans"] }
+iced = { workspace = true, features = ["fira-sans"] }
 console_error_panic_hook = "0.1"
 console_log = "1.0"
 log = "0.4"
