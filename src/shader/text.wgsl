@@ -1,5 +1,6 @@
 struct Uniforms {
     tint: vec4<f32>,
+    scrim: vec4<f32>,
     blur_direction: vec2<f32>,
     content_scale: vec2<f32>,
     blur_radius: f32,
@@ -19,6 +20,7 @@ struct Uniforms {
     _pad: f32,
     _pad2: f32,
 };
+
 
 @group(1)
 @binding(0)
@@ -143,6 +145,8 @@ fn soft_edge_sampling(input: FragInput) -> vec4<f32> {
     let outside_factor = smoothstep(-aa, aa, sdf);
     var color = textureSample(image, image_sampler, input.screen_uv);
     color = saturate(color);
+    let scrim = vec4<f32>(uniforms.scrim.rgb, 1.0);
+    color = mix(color, scrim, uniforms.scrim.a);
     color *= uniforms.tint;
 
     let edge_factor = smoothstep(-uniforms.edge_radius, 0.0, sdf);
@@ -173,6 +177,8 @@ fn physical_sampling(input: FragInput, refractive_index: f32) -> vec4<f32> {
 
     var color = textureSample(image, image_sampler, sample_uv);
     color = saturate(color);
+    let scrim = vec4<f32>(uniforms.scrim.rgb, 1.0);
+    color = mix(color, scrim, uniforms.scrim.a);
     color *= uniforms.tint;
     color = edge_highlight(color, sdf, gradient);
 

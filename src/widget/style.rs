@@ -35,6 +35,8 @@ pub struct Style {
     pub opacity: f32,
     /// Sets the edge type for the widget
     pub edge_type: EdgeType,
+    /// Sets the tint color for the widget
+    pub tint: iced::Color,
 }
 
 impl Default for Style {
@@ -51,6 +53,7 @@ impl Default for Style {
             rim_angle: 0.0,
             opacity: 1.0,
             edge_type: EdgeType::GlassEdge,
+            tint: iced::Color::WHITE,
         }
     }
 }

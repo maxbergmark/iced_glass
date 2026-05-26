@@ -85,11 +85,13 @@ impl iced::widget::shader::Primitive for TextPrimitive {
 
         let mip_level = self.uniforms.mip_level();
         let num_glyphs = text_instance.num_glyphs;
-        copy_background(encoder, &instance.tex_a, texture, bounds, &copy_size);
-        downsample(encoder, pipeline, instance, mip_level);
-        horizontal_blur(encoder, pipeline, instance, mip_level);
-        vertical_blur(encoder, pipeline, instance, mip_level);
-        upsample(encoder, pipeline, instance, mip_level);
+        if self.uniforms.blur_radius > 0.0 {
+            copy_background(encoder, &instance.tex_a, texture, bounds, &copy_size);
+            downsample(encoder, pipeline, instance, mip_level);
+            horizontal_blur(encoder, pipeline, instance, mip_level);
+            vertical_blur(encoder, pipeline, instance, mip_level);
+            upsample(encoder, pipeline, instance, mip_level);
+        }
         text_pass(encoder, pipeline, text_instance, target, bounds, num_glyphs);
     }
 }

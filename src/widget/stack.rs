@@ -28,7 +28,7 @@ pub struct Stack<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer> {
     base_layer: usize,
     glass_style: crate::StyleFn<'a, Theme>,
     corner_radius: f32,
-    tint: Color,
+    scrim: Color,
     blending_factor: f32,
 }
 
@@ -112,7 +112,7 @@ where
             base_layer: 0,
             glass_style: Box::new(|_| crate::Style::default()),
             corner_radius: 50.0,
-            tint: Color::WHITE,
+            scrim: Color::TRANSPARENT,
             blending_factor: 1.0,
         }
     }
@@ -194,10 +194,10 @@ where
         self
     }
 
-    /// Sets the tint of the [`Stack`].
+    /// Sets the scrim color of the [`Stack`].
     #[must_use]
-    pub const fn tint(mut self, tint: Color) -> Self {
-        self.tint = tint;
+    pub const fn scrim(mut self, scrim: Color) -> Self {
+        self.scrim = scrim;
         self
     }
 
@@ -467,7 +467,8 @@ where
                     rim_width: glass_style.rim_width,
                     rim_angle: glass_style.rim_angle,
                     opacity: glass_style.opacity,
-                    tint: self.tint,
+                    tint: glass_style.tint,
+                    scrim: self.scrim,
                     content_scale: (1.0, 1.0),
                     edge_type: glass_style.edge_type,
                     num_children: children.len() as u32,

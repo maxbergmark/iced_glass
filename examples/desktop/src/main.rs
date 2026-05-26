@@ -182,8 +182,8 @@ impl Ui {
     pub fn view(&self) -> Element<'_, Message> {
         container(stack![
             self.wallpaper(),
+            self.clock(),
             self.desktop_elements(),
-            self.clock()
         ])
         .center(Length::Fill)
         .into()

@@ -458,7 +458,7 @@ where
         let bounds = layout.bounds();
         let style = theme.style(&self.class);
         let glass_style = (self.glass_style)(theme);
-        let tint = style.color.unwrap_or(Color::WHITE);
+        let scrim = style.color.unwrap_or(Color::TRANSPARENT);
 
         let glyphs = Self::parse_text(&state.font_data, &self.fragment, &bounds);
 
@@ -489,7 +489,8 @@ where
                     rim_width: glass_style.rim_width,
                     rim_angle: glass_style.rim_angle,
                     opacity: glass_style.opacity,
-                    tint,
+                    tint: glass_style.tint,
+                    scrim,
                     content_scale: content_scale(bounds.size()),
                     edge_type: glass_style.edge_type,
                     num_children: 0,

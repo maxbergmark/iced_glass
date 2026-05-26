@@ -640,6 +640,7 @@ impl Ui {
             rim_width: self.rim_width,
             rim_angle: 0.0, // TODO: add rim angle slider
             opacity: self.opacity,
+            tint: Color::WHITE,
             edge_type: EdgeType::GlassEdge,
         }
     }

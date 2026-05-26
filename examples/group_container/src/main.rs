@@ -36,6 +36,7 @@ pub struct Ui {
     rim_angle: f32,
     opacity: f32,
     tint: Color,
+    scrim: Color,
     blending_factor: f32,
     start_time: Instant,
 }
@@ -56,6 +57,7 @@ pub enum Message {
     MouseMove(Point),
     MouseState(bool),
     SetTint(ColorChannel, f32),
+    SetScrim(ColorChannel, f32),
     SetOpacity(f32),
     SetBlendingFactor(f32),
     Noop,
@@ -66,12 +68,13 @@ pub enum ColorChannel {
     Red,
     Green,
     Blue,
+    Alpha,
 }
 
 fn main() -> iced::Result {
     tracing_subscriber::fmt()
         .pretty() // multi-line, color-coded output with file:line info
-        .with_env_filter("info,iced=info")
+        .with_env_filter("warn,iced=warn")
         .init();
 
     iced::application(Ui::boot, Ui::update, Ui::view)
@@ -86,7 +89,7 @@ impl Default for Ui {
     fn default() -> Self {
         Self {
             width: 1440.0,
-            height: 400.0,
+            height: 600.0,
             blur_radius: 500.0,
             corner_radius: 100.0,
             saturation: 1.1,
@@ -101,6 +104,7 @@ impl Default for Ui {
             rim_angle: 0.0,
             opacity: 1.0,
             tint: Color::WHITE,
+            scrim: Color::TRANSPARENT,
             blending_factor: 100.0,
             start_time: Instant::now(),
         }
@@ -163,6 +167,13 @@ impl Ui {
                 ColorChannel::Red => self.tint.r = value,
                 ColorChannel::Green => self.tint.g = value,
                 ColorChannel::Blue => self.tint.b = value,
+                ColorChannel::Alpha => self.tint.a = value,
+            },
+            Message::SetScrim(channel, value) => match channel {
+                ColorChannel::Red => self.scrim.r = value,
+                ColorChannel::Green => self.scrim.g = value,
+                ColorChannel::Blue => self.scrim.b = value,
+                ColorChannel::Alpha => self.scrim.a = value,
             },
             Message::SetBlendingFactor(blending_factor) => {
                 self.blending_factor = blending_factor;
@@ -271,7 +282,7 @@ impl Ui {
             .width(2560.0)
             .height(1440.0)
             .corner_radius(self.corner_radius)
-            .tint(self.tint)
+            .scrim(self.scrim)
             .blending_factor(self.blending_factor)
             .glass_style(|theme| self.glass_style(theme)),
         )
@@ -312,6 +323,11 @@ impl Ui {
                         0.0..=150.0,
                         Message::SetCornerRadius
                     ),
+                    self.color_picker("Tint: ", self.tint, Message::SetTint),
+                ]
+                .spacing(20.0)
+                .padding(20.0),
+                row![
                     self.styled_text(
                         "Saturation: ",
                         self.saturation,
@@ -319,57 +335,57 @@ impl Ui {
                         0.0..=2.0,
                         Message::SetSaturation
                     ),
-                    self.color_picker("Tint: ", self.tint),
-                ]
-                .spacing(20.0)
-                .padding(20.0),
-                row![
                     self.styled_text(
                         "Lightness: ",
                         self.lightness,
-                        170.0,
+                        200.0,
                         -4.0..=2.0,
                         Message::SetLightness
                     ),
                     self.styled_text(
                         "Edge Radius: ",
                         self.edge_radius,
-                        170.0,
+                        200.0,
                         0.0..=100.0,
                         Message::SetEdgeRadius
                     ),
                     self.styled_text(
                         "Edge Height: ",
                         self.edge_height,
-                        170.0,
+                        200.0,
                         0.0..=1000.0,
                         Message::SetEdgeHeight
                     ),
+                    self.color_picker("Scrim: ", self.scrim, Message::SetScrim),
+                ]
+                .spacing(20.0)
+                .padding(20.0),
+                row![
                     self.styled_text(
                         "Refractive Index: ",
                         self.refractive_index,
-                        170.0,
+                        270.0,
                         1.0..=10.0,
                         Message::SetRefractiveIndex
                     ),
                     self.styled_text(
                         "Aberration: ",
                         self.chromatic_aberration,
-                        170.0,
+                        270.0,
                         0.0..=1.0,
                         Message::SetChromaticAberration
                     ),
                     self.styled_text(
                         "Opacity: ",
                         self.opacity,
-                        170.0,
+                        270.0,
                         0.0..=1.0,
                         Message::SetOpacity
                     ),
                     self.styled_text(
                         "Blending: ",
                         self.blending_factor,
-                        170.0,
+                        270.0,
                         0.0..=200.0,
                         Message::SetBlendingFactor
                     ),
@@ -433,7 +449,12 @@ impl Ui {
         .into()
     }
 
-    fn color_picker(&self, s: &'static str, value: Color) -> Element<'_, Message> {
+    fn color_picker(
+        &self,
+        s: &'static str,
+        value: Color,
+        message: impl Fn(ColorChannel, f32) -> Message + Copy + 'static,
+    ) -> Element<'_, Message> {
         glass_container(
             column![
                 row![
@@ -447,7 +468,7 @@ impl Ui {
                 ]
                 .align_y(Alignment::Center),
                 row![
-                    iced_glass::widget::slider(0.0..=1.0, value.r, |value| Message::SetTint(
+                    iced_glass::widget::slider(0.0..=1.0, value.r, move |value| message(
                         ColorChannel::Red,
                         value
                     ))
@@ -457,7 +478,7 @@ impl Ui {
                         status,
                         Color::from_rgb(1.0, 0.0, 0.0)
                     )),
-                    iced_glass::widget::slider(0.0..=1.0, value.g, |value| Message::SetTint(
+                    iced_glass::widget::slider(0.0..=1.0, value.g, move |value| message(
                         ColorChannel::Green,
                         value
                     ))
@@ -467,7 +488,7 @@ impl Ui {
                         status,
                         Color::from_rgb(0.0, 1.0, 0.0)
                     )),
-                    iced_glass::widget::slider(0.0..=1.0, value.b, |value| Message::SetTint(
+                    iced_glass::widget::slider(0.0..=1.0, value.b, move |value| message(
                         ColorChannel::Blue,
                         value
                     ))
@@ -476,6 +497,16 @@ impl Ui {
                         theme,
                         status,
                         Color::from_rgb(0.0, 0.0, 1.0)
+                    )),
+                    iced_glass::widget::slider(0.0..=1.0, value.a, move |value| message(
+                        ColorChannel::Alpha,
+                        value
+                    ))
+                    .step(0.01_f32)
+                    .style(|theme, status| self.colored_slider_style(
+                        theme,
+                        status,
+                        Color::from_rgb(1.0, 1.0, 1.0)
                     )),
                 ]
                 .spacing(5.0),
@@ -521,6 +552,7 @@ impl Ui {
             rim_width: self.rim_width,
             rim_angle: self.rim_angle,
             opacity: self.opacity,
+            tint: self.tint,
             edge_type: EdgeType::GlassEdge,
         }
     }
