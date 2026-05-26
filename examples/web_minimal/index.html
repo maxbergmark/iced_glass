@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Liquid Glass In The Browser</title>
+    <!-- <script>
+        // =====================================================================
+        // [O] OFFSCREEN-REDIRECT TEST
+        //
+        // Hypothesis: Safari's "Validation failure." on Queue.submit is caused
+        // by the canvas-backing texture being internally invalidated at
+        // beginRenderPass time (RenderPassEncoder.mm:150 silent path), which
+        // produces no per-call JS-visible error.
+        //
+        // Test: redirect getCurrentTexture() to return an offscreen texture of
+        // the same size/format. After each submit, append a CommandBuffer that
+        // copyTextureToTexture's the offscreen texture into the real canvas
+        // texture, then forward the combined submit to the real queue.
+        //
+        // If Safari's submit succeeds with this redirect, the bug is in the
+        // canvas-backing texture path (wgpu or WebKit). If it still fails,
+        // the bug is in the encoder/pipeline combination itself.
+        //
+        // [M] tracer is kept on top so we still get a per-call validation log.
+        // =====================================================================
+        (async () => {
+            const USAGE_COPY_SRC = 0x01;
+            const USAGE_COPY_DST = 0x02;
+            const USAGE_RENDER_ATTACHMENT = 0x10;
+
+            const adapter = await navigator.gpu.requestAdapter();
+            const adapterProto = Object.getPrototypeOf(adapter);
+
+            // ---------- [P] Visibility upgrade hook ----------
+            // Hypothesis: WebKit treats WGSL module-scope `var<uniform>` as
+            // accessed by all entry points and silently invalidates the encoder
+            // when the BGL's visibility doesn't include FRAGMENT.
+            //
+            // Test: intercept createBindGroupLayout and upgrade any entry with
+            // visibility == VERTEX (0x1) only to VERTEX|FRAGMENT (0x3).
+            const VIS_VERTEX = 0x1;
+            const VIS_FRAGMENT = 0x2;
+            const VIS_COMPUTE = 0x4;
+            const upgradeBGLDesc = (desc) => {
+                if (!desc || !desc.entries) return desc;
+                let touched = false;
+                const newEntries = Array.from(desc.entries).map((e) => {
+                    if (e.visibility === VIS_VERTEX || e.visibility === VIS_FRAGMENT) {
+                        touched = true;
+                        return { ...e, visibility: VIS_VERTEX | VIS_FRAGMENT };
+                    }
+                    return e;
+                });
+                if (!touched) return desc;
+                const out = { ...desc, entries: newEntries };
+                console.log(`[P] upgraded BGL "${desc.label ?? "?"}" visibility ${desc.entries.map(e => "0x" + e.visibility.toString(16))} -> ${newEntries.map(e => "0x" + e.visibility.toString(16))}`);
+                return out;
+            };
+
+            // ---------- Offscreen redirect: patch GPUCanvasContext ----------
+            const ctxStates = new Set();
+            const ctxMeta = new WeakMap();
+            const cctxProto = GPUCanvasContext.prototype;
+
+            const origConfigure = cctxProto.configure;
+            cctxProto.configure = function (desc) {
+                // Force COPY_DST on the canvas so we can copyTextureToTexture into it
+                // from the offscreen render target.
+                const originalUsage = desc.usage ?? USAGE_RENDER_ATTACHMENT;
+                const patchedUsage = originalUsage | USAGE_COPY_DST | USAGE_RENDER_ATTACHMENT;
+                const patchedDesc = { ...desc, usage: patchedUsage };
+                const meta = {
+                    ctx: this,
+                    device: desc.device,
+                    format: desc.format,
+                    configuredUsage: originalUsage,
+                    offscreen: null,
+                    pendingCanvas: null,
+                };
+                ctxMeta.set(this, meta);
+                ctxStates.add(meta);
+                console.log(`[O] configure(format=${desc.format}, usage=0x${originalUsage.toString(16)} -> 0x${patchedUsage.toString(16)})`);
+                return origConfigure.call(this, patchedDesc);
+            };
+
+            const origUnconfigure = cctxProto.unconfigure;
+            if (origUnconfigure) {
+                cctxProto.unconfigure = function () {
+                    const m = ctxMeta.get(this);
+                    if (m) {
+                        if (m.offscreen) try { m.offscreen.destroy(); } catch { }
+                        ctxStates.delete(m);
+                        ctxMeta.delete(this);
+                    }
+                    return origUnconfigure.call(this);
+                };
+            }
+
+            const origGetCurrent = cctxProto.getCurrentTexture;
+            cctxProto.getCurrentTexture = function () {
+                const real = origGetCurrent.call(this);
+                const m = ctxMeta.get(this);
+                if (!m) return real;
+                const w = real.width, h = real.height;
+                if (!m.offscreen || m.offscreen.width !== w || m.offscreen.height !== h) {
+                    if (m.offscreen) try { m.offscreen.destroy(); } catch { }
+                    m.offscreen = m.device.createTexture({
+                        label: "iced-offscreen-target",
+                        size: { width: w, height: h, depthOrArrayLayers: 1 },
+                        format: real.format,
+                        usage: m.configuredUsage | USAGE_COPY_SRC | USAGE_RENDER_ATTACHMENT,
+                    });
+                    console.log(`[O] created offscreen ${w}x${h} ${real.format}`);
+                }
+                m.pendingCanvas = real;
+                return m.offscreen;
+            };
+
+            // ---------- Offscreen blit: patch GPUQueue.submit ----------
+            const origRequestDevice = adapterProto.requestDevice;
+            adapterProto.requestDevice = async function (...args) {
+                const d = await origRequestDevice.apply(this, args);
+
+                const deviceProto = Object.getPrototypeOf(d);
+                if (!deviceProto.__bglUpgradePatched) {
+                    deviceProto.__bglUpgradePatched = true;
+                    const origCreateBGL = deviceProto.createBindGroupLayout;
+                    deviceProto.createBindGroupLayout = function (desc) {
+                        return origCreateBGL.call(this, upgradeBGLDesc(desc));
+                    };
+
+                    // [S] Replace iced's quad shader with a trivial WGSL that
+                    // satisfies the same pipeline layout/BGL/vertex layout.
+                    // If Safari accepts this but rejects iced's, the issue is
+                    // in WebKit's WGSL processing of iced's shader.
+                    const TRIVIAL_QUAD_WGSL = `
+struct Globals { transform: mat4x4<f32>, scale: f32, }
+@group(0) @binding(0) var<uniform> globals: Globals;
+struct VIn {
+  @builtin(vertex_index) vi: u32,
+  @location(0) color: vec4<f32>,
+  @location(1) pos: vec2<f32>,
+  @location(2) scale: vec2<f32>,
+  @location(3) bcolor: vec4<f32>,
+  @location(4) bradius: vec4<f32>,
+  @location(5) bwidth: f32,
+  @location(6) scolor: vec4<f32>,
+  @location(7) soffset: vec2<f32>,
+  @location(8) sblur: f32,
+  @location(9) snap: u32,
+}
+struct VOut { @builtin(position) p: vec4<f32>, @location(0) c: vec4<f32>, }
+@vertex fn solid_vs_main(input: VIn) -> VOut {
+  var o: VOut;
+  // Use globals to ensure binding is referenced.
+  let s = globals.scale;
+  let x = f32(input.vi & 1u) * 2.0 - 1.0;
+  let y = f32((input.vi >> 1u) & 1u) * 2.0 - 1.0;
+  o.p = vec4(x * 0.5, y * 0.5, 0.0, 1.0);
+  o.c = vec4(0.5, 0.5, 0.7, 1.0);
+  return o;
+}
+@fragment fn solid_fs_main(i: VOut) -> @location(0) vec4<f32> {
+  return i.c;
+}
+`;
+                    const origCreateShader = deviceProto.createShaderModule;
+                    deviceProto.createShaderModule = function (desc) {
+                        if (desc?.label === "iced_wgpu.quad.solid.shader") {
+                            console.log("[S] substituting iced_wgpu.quad.solid.shader with trivial WGSL");
+                            return origCreateShader.call(this, { ...desc, code: TRIVIAL_QUAD_WGSL });
+                        }
+                        return origCreateShader.call(this, desc);
+                    };
+                }
+
+                const queueProto = Object.getPrototypeOf(d.queue);
+                if (!queueProto.__offscreenSubmitPatched) {
+                    queueProto.__offscreenSubmitPatched = true;
+                    const origSubmit = queueProto.submit;
+                    queueProto.submit = function (commandBuffers) {
+                        const cbs = Array.from(commandBuffers);
+                        for (const m of ctxStates) {
+                            if (!m.pendingCanvas || !m.offscreen) continue;
+                            try {
+                                const enc = m.device.createCommandEncoder({ label: "iced-offscreen-blit" });
+                                enc.copyTextureToTexture(
+                                    { texture: m.offscreen },
+                                    { texture: m.pendingCanvas },
+                                    { width: m.pendingCanvas.width, height: m.pendingCanvas.height, depthOrArrayLayers: 1 },
+                                );
+                                cbs.push(enc.finish());
+                            } catch (e) {
+                                console.error("[O] blit encode failed:", e);
+                            }
+                            m.pendingCanvas = null;
+                        }
+                        return origSubmit.call(this, cbs);
+                    };
+                }
+
+                // ---------- Snippet M: per-call error scope tracer ----------
+                const DO_NOT_WRAP = new Set([
+                    "pushErrorScope",
+                    "popErrorScope",
+                    "addEventListener",
+                    "removeEventListener",
+                    "dispatchEvent",
+                ]);
+
+                let seq = 0;
+                let firstFail = null;
+                const realPush = d.pushErrorScope.bind(d);
+                const realPop = d.popErrorScope.bind(d);
+
+                d.addEventListener("uncapturederror", (ev) => {
+                    console.error(`[M] uncaptured: ${ev.error?.message ?? ev}`);
+                });
+
+                const describe = (a) => {
+                    if (a == null) return String(a);
+                    if (typeof a === "number") return String(a);
+                    if (typeof a === "string")
+                        return JSON.stringify(a.length > 40 ? a.slice(0, 40) + "..." : a);
+                    if (Array.isArray(a)) return `Array(${a.length})`;
+                    if (a instanceof ArrayBuffer || ArrayBuffer.isView(a))
+                        return `${a.constructor?.name}(${a.byteLength ?? a.length})`;
+                    if (a?.label)
+                        return `<${a.constructor?.name} label=${JSON.stringify(a.label.slice(0, 40))}>`;
+                    const ctor = a.constructor?.name;
+                    if (ctor && ctor.startsWith("GPU")) return `<${ctor}>`;
+                    try { return `{${Object.keys(a).slice(0, 5).join(",")}}`; } catch { return "{...}"; }
+                };
+
+                const trace = [];
+                const wrap = (proto, kind) => {
+                    if (!proto || proto.__icedTraced) return;
+                    proto.__icedTraced = true;
+                    for (const name of Object.getOwnPropertyNames(proto)) {
+                        if (DO_NOT_WRAP.has(name)) continue;
+                        if (name === "constructor") continue;
+                        const desc = Object.getOwnPropertyDescriptor(proto, name);
+                        if (!desc || typeof desc.value !== "function") continue;
+                        const origFn = desc.value;
+                        proto[name] = function (...args) {
+                            const s = ++seq;
+                            const sig = `#${s} ${kind}.${name}(${args.map(describe).join(", ").slice(0, 200)})`;
+                            trace.push(sig);
+                            realPush("validation");
+                            let result, threw;
+                            try { result = origFn.apply(this, args); } catch (e) { threw = e; }
+                            realPop().then((err) => {
+                                if (err && !firstFail) {
+                                    firstFail = sig;
+                                    console.error(`[M] ❌ FIRST FAIL at ${sig}\n     message: ${err.message}`);
+                                    console.log("[M] FULL TRACE (last 80 calls):\n" + trace.slice(-80).join("\n"));
+                                }
+                            });
+                            if (threw) throw threw;
+                            return result;
+                        };
+                    }
+                };
+
+                const buf = d.createBuffer({ size: 16, usage: 0x0080 });
+                const tex = d.createTexture({
+                    size: { width: 1, height: 1, depthOrArrayLayers: 1 },
+                    format: "rgba8unorm",
+                    usage: 0x10,
+                    dimension: "2d",
+                });
+                const view = tex.createView();
+                const sampler = d.createSampler({});
+                const bgl = d.createBindGroupLayout({ entries: [] });
+                const sm = d.createShaderModule({
+                    code: "@vertex fn v()->@builtin(position)vec4f{return vec4f(0);}",
+                });
+                const pl = d.createPipelineLayout({ bindGroupLayouts: [bgl] });
+                const bg = d.createBindGroup({ layout: bgl, entries: [] });
+                const ce = d.createCommandEncoder();
+                const rpe = ce.beginRenderPass({
+                    colorAttachments: [
+                        {
+                            view,
+                            loadOp: "clear",
+                            storeOp: "store",
+                            clearValue: { r: 0, g: 0, b: 0, a: 0 },
+                        },
+                    ],
+                });
+                rpe.end();
+                const cb = ce.finish();
+
+                wrap(Object.getPrototypeOf(d), "Device");
+                wrap(Object.getPrototypeOf(d.queue), "Queue");
+                wrap(Object.getPrototypeOf(buf), "Buffer");
+                wrap(Object.getPrototypeOf(tex), "Texture");
+                wrap(Object.getPrototypeOf(view), "TextureView");
+                wrap(Object.getPrototypeOf(sampler), "Sampler");
+                wrap(Object.getPrototypeOf(bgl), "BindGroupLayout");
+                wrap(Object.getPrototypeOf(pl), "PipelineLayout");
+                wrap(Object.getPrototypeOf(bg), "BindGroup");
+                wrap(Object.getPrototypeOf(sm), "ShaderModule");
+                wrap(Object.getPrototypeOf(ce), "CommandEncoder");
+                wrap(Object.getPrototypeOf(rpe), "RenderPassEncoder");
+                wrap(Object.getPrototypeOf(cb), "CommandBuffer");
+
+                try { buf.destroy(); } catch { }
+                try { tex.destroy(); } catch { }
+
+                console.log("[O+M] offscreen redirect + per-call tracer installed");
+                return d;
+            };
+        })();
+    </script> -->
+    <base data-trunk-public-url />
+    <link data-trunk rel="copy-file" href="pure-js-repro.html" />
+    <link data-trunk rel="copy-file" href="pure-js-no-staging.html" />
+</head>
+
+<body style="height: 100%; margin: 0">
+    <link data-trunk rel="rust" href="Cargo.toml" data-bin="web_minimal" data-wasm-opt="z" />
+</body>
+
+</html>

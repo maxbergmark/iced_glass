@@ -21,7 +21,9 @@ iced = { git = "https://github.com/maxbergmark/iced", features = [
     "advanced",
     "svg",
     "tokio",
-], branch = "test/force_copy_src" }
+], default-features = false, branch = "test/force_copy_src" }
+# default = ["wgpu", "tiny-skia", "crisp", "web-colors", "thread-pool", "linux-theme-detection", "x11", "wayland"]
+
 iced_wgpu = { git = "https://github.com/maxbergmark/iced", branch = "test/force_copy_src" }
 
 wgpu = { version = "27.0.1", features = [] }
@@ -47,7 +49,27 @@ iced = { git = "https://github.com/maxbergmark/iced", features = [
     "advanced",
     "svg",
     "tokio",
-], branch = "test/force_copy_src" }
+], default-features = false, branch = "test/force_copy_src" }
+
+# Local patch: workaround for a WebKit WebGPU bug where the staging-belt
+# `mappedAtCreation` + `copyBufferToBuffer` pattern fails at submit on Safari.
+# Use the local iced fork that uses `queue.write_buffer` on wasm32 instead.
+[patch."https://github.com/maxbergmark/iced"]
+iced = { path = "../iced" }
+iced_wgpu = { path = "../iced/wgpu" }
+iced_winit = { path = "../iced/winit" }
+iced_widget = { path = "../iced/widget" }
+iced_runtime = { path = "../iced/runtime" }
+iced_program = { path = "../iced/program" }
+iced_renderer = { path = "../iced/renderer" }
+iced_graphics = { path = "../iced/graphics" }
+iced_core = { path = "../iced/core" }
+iced_futures = { path = "../iced/futures" }
+iced_debug = { path = "../iced/debug" }
+iced_highlighter = { path = "../iced/highlighter" }
+iced_devtools = { path = "../iced/devtools" }
+iced_tiny_skia = { path = "../iced/tiny_skia" }
+iced_test = { path = "../iced/test" }
 
 [lints.clippy]
 map_err_ignore = "warn"

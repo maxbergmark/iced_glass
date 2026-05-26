@@ -1,0 +1,262 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Pure-JS WebGPU repro (Safari Validation failure)</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #222; color: #ddd; font: 14px system-ui; }
+  canvas { display: block; width: 800px; height: 400px; background: #000; }
+  pre { white-space: pre-wrap; padding: 8px 12px; margin: 0; max-height: 60vh; overflow: auto; }
+</style>
+</head>
+<body>
+<canvas id="cv" width="800" height="400"></canvas>
+<pre id="log"></pre>
+<script type="module">
+"use strict";
+
+const logEl = document.getElementById("log");
+function log(...a) {
+  const s = a.map(x => typeof x === "string" ? x : JSON.stringify(x)).join(" ");
+  logEl.textContent += s + "\n";
+  console.log("[REPRO]", ...a);
+}
+function err(...a) {
+  const s = a.map(x => typeof x === "string" ? x : (x?.message ?? JSON.stringify(x))).join(" ");
+  logEl.textContent += "ERROR: " + s + "\n";
+  console.error("[REPRO]", ...a);
+}
+
+if (!navigator.gpu) {
+  err("navigator.gpu is missing - WebGPU not available");
+  throw new Error("no webgpu");
+}
+
+const adapter = await navigator.gpu.requestAdapter();
+if (!adapter) { err("no adapter"); throw new Error("no adapter"); }
+const device = await adapter.requestDevice();
+log("adapter+device OK");
+
+device.addEventListener("uncapturederror", (ev) => {
+  err("uncapturederror:", ev.error?.message ?? ev);
+});
+
+// Trivial shader matching iced's BGL / vertex layout shape.
+const WGSL = `
+struct Globals { transform: mat4x4<f32>, scale: f32, }
+@group(0) @binding(0) var<uniform> globals: Globals;
+struct VIn {
+  @builtin(vertex_index) vi: u32,
+  @location(0) color: vec4<f32>,
+  @location(1) pos: vec2<f32>,
+  @location(2) scale: vec2<f32>,
+  @location(3) bcolor: vec4<f32>,
+  @location(4) bradius: vec4<f32>,
+  @location(5) bwidth: f32,
+  @location(6) scolor: vec4<f32>,
+  @location(7) soffset: vec2<f32>,
+  @location(8) sblur: f32,
+  @location(9) snap: u32,
+}
+struct VOut { @builtin(position) p: vec4<f32>, @location(0) c: vec4<f32>, }
+@vertex fn vs(input: VIn) -> VOut {
+  var o: VOut;
+  let s = globals.scale;
+  let x = f32(input.vi & 1u) * 2.0 - 1.0;
+  let y = f32((input.vi >> 1u) & 1u) * 2.0 - 1.0;
+  o.p = vec4(x * 0.5 * s, y * 0.5 * s, 0.0, 1.0);
+  o.c = vec4(0.4, 0.8, 0.4, 1.0);
+  return o;
+}
+@fragment fn fs(i: VOut) -> @location(0) vec4<f32> { return i.c; }
+`;
+
+const FMT = "bgra8unorm";
+
+// === BGL exactly mirrors iced's "iced_wgpu::quad uniforms layout" ===
+//   binding 0, visibility VERTEX, uniform, min_binding_size = 80
+const bgl = device.createBindGroupLayout({
+  label: "repro::quad uniforms layout",
+  entries: [{
+    binding: 0,
+    visibility: GPUShaderStage.VERTEX,
+    buffer: { type: "uniform", hasDynamicOffset: false, minBindingSize: 80 },
+  }],
+});
+log("BGL OK");
+
+const pl = device.createPipelineLayout({
+  label: "repro pipeline layout",
+  bindGroupLayouts: [bgl],
+});
+log("PL OK");
+
+const sm = device.createShaderModule({ label: "repro shader", code: WGSL });
+log("ShaderModule OK");
+
+// === Vertex layout: 10 attributes, instance step mode, stride 100 ===
+const vertexLayouts = [{
+  arrayStride: 100,
+  stepMode: "instance",
+  attributes: [
+    { shaderLocation: 0, format: "float32x4", offset:  0 },  // color (16)
+    { shaderLocation: 1, format: "float32x2", offset: 16 },  // pos (8)
+    { shaderLocation: 2, format: "float32x2", offset: 24 },  // scale (8)
+    { shaderLocation: 3, format: "float32x4", offset: 32 },  // border_color (16)
+    { shaderLocation: 4, format: "float32x4", offset: 48 },  // border_radius (16)
+    { shaderLocation: 5, format: "float32",   offset: 64 },  // border_width (4)
+    { shaderLocation: 6, format: "float32x4", offset: 68 },  // shadow_color (16)
+    { shaderLocation: 7, format: "float32x2", offset: 84 },  // shadow_offset (8)
+    { shaderLocation: 8, format: "float32",   offset: 92 },  // shadow_blur (4)
+    { shaderLocation: 9, format: "uint32",    offset: 96 },  // snap (4)
+  ],
+}];
+
+const pipeline = device.createRenderPipeline({
+  label: "repro pipeline",
+  layout: pl,
+  vertex: { module: sm, entryPoint: "vs", buffers: vertexLayouts },
+  fragment: {
+    module: sm,
+    entryPoint: "fs",
+    targets: [{
+      format: FMT,
+      blend: {
+        color: { srcFactor: "src-alpha", dstFactor: "one-minus-src-alpha", operation: "add" },
+        alpha: { srcFactor: "one",       dstFactor: "one-minus-src-alpha", operation: "add" },
+      },
+      writeMask: 0xF,
+    }],
+  },
+  primitive: { topology: "triangle-list", cullMode: "none", frontFace: "ccw" },
+});
+log("Pipeline OK");
+
+// === Buffers exactly mirror iced's pattern ===
+// Uniform buffer: 80 bytes (one Globals)
+const uniformsBuf = device.createBuffer({
+  label: "repro::quad uniforms buffer",
+  size: 80,
+  usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+});
+
+const bg = device.createBindGroup({
+  label: "repro::quad uniforms bind group",
+  layout: bgl,
+  entries: [{ binding: 0, resource: { buffer: uniformsBuf, offset: 0, size: 80 } }],
+});
+
+// Solid vertex buffer: 262144 bytes (matches the trace's setVertexBuffer size)
+const VBUF_SIZE = 262144;
+const solidBuf = device.createBuffer({
+  label: "repro.quad.solid.buffer",
+  size: VBUF_SIZE,
+  usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+});
+
+// "Gradient" buffer also created (iced does this even when unused).
+const gradientBuf = device.createBuffer({
+  label: "repro.quad.gradient.buffer",
+  size: VBUF_SIZE,
+  usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+});
+
+// === Render target: offscreen 1627x825 like the trace ===
+const W = 1627, H = 825;
+const offscreen = device.createTexture({
+  label: "offscreen",
+  size: { width: W, height: H, depthOrArrayLayers: 1 },
+  format: FMT,
+  usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+});
+const offscreenView = offscreen.createView();
+log("Offscreen texture+view OK");
+
+// === No canvas blit - just render to offscreen ===
+// Pure submit test. If submit fails -> WebKit bug confirmed.
+function frame() {
+  const enc = device.createCommandEncoder({ label: "repro encoder" });
+
+  // Staging buffer (mappedAtCreation), MAP_WRITE | COPY_SRC, 102400 bytes
+  const STAGING_SIZE = 102400;
+  const staging = device.createBuffer({
+    label: "repro StagingBelt staging buffer",
+    size: STAGING_SIZE,
+    usage: GPUBufferUsage.MAP_WRITE | GPUBufferUsage.COPY_SRC,
+    mappedAtCreation: true,
+  });
+
+  // EXACT order from iced's trace:
+  // #44 copyBufferToBuffer staging[0..80] -> uniformsBuf[0..80]
+  enc.copyBufferToBuffer(staging, 0, uniformsBuf, 0, 80);
+
+  // #45 getMappedRange(0, 102400)
+  const range = staging.getMappedRange(0, STAGING_SIZE);
+  const f32 = new Float32Array(range);
+  const u32 = new Uint32Array(range);
+
+  // Write uniforms: identity transform + scale 1.0
+  f32[ 0]=1; f32[ 1]=0; f32[ 2]=0; f32[ 3]=0;
+  f32[ 4]=0; f32[ 5]=1; f32[ 6]=0; f32[ 7]=0;
+  f32[ 8]=0; f32[ 9]=0; f32[10]=1; f32[11]=0;
+  f32[12]=0; f32[13]=0; f32[14]=0; f32[15]=1;
+  f32[16] = 1.0;  // scale at f32 index 16 = byte 64
+
+  // Write one solid quad instance at staging[80..180]
+  // f32 indices 20..44 (bytes 80..176), u32 index 44 (byte 176) for snap... wait
+  // bytes 80..180 means f32 index 20 through f32 index 44 (180/4=45)
+  f32[20] = 0.9; f32[21] = 0.2; f32[22] = 0.3; f32[23] = 1.0;   // color
+  f32[24] = 200; f32[25] = 100;   // pos
+  f32[26] = 400; f32[27] = 200;   // scale
+  // border_color (loc 3) -- f32 [28..31]
+  // border_radius (loc 4) -- f32 [32..35]
+  // border_width (loc 5) -- f32 [36]
+  // shadow_color (loc 6) -- f32 [37..40]
+  // shadow_offset (loc 7) -- f32 [41..42]
+  // shadow_blur (loc 8) -- f32 [43]
+  u32[44] = 0;  // snap at byte 176 = f32 index 44
+
+  // #46 copyBufferToBuffer staging[80..180] -> solidBuf[0..100]
+  enc.copyBufferToBuffer(staging, 80, solidBuf, 0, 100);
+
+  // #47-#53 render pass
+  const rpe = enc.beginRenderPass({
+    label: "repro render pass",
+    colorAttachments: [{
+      view: offscreenView,
+      loadOp: "clear",
+      storeOp: "store",
+      clearValue: { r: 0.18, g: 0.18, b: 0.22, a: 1.0 },
+    }],
+  });
+  rpe.setScissorRect(0, 0, W, H);
+  rpe.setPipeline(pipeline);
+  rpe.setBindGroup(0, bg);
+  rpe.setVertexBuffer(0, solidBuf, 0, VBUF_SIZE);
+  rpe.draw(6, 1, 0, 0);
+  rpe.end();
+
+  // #54 unmap, #55 finish, #56 submit
+  staging.unmap();
+  const cb = enc.finish();
+  device.queue.submit([cb]);
+}
+
+// Run frame inside an error scope to catch submit-time validation errors.
+try {
+  device.pushErrorScope("validation");
+  frame();
+  const e = await device.popErrorScope();
+  if (e) {
+    err("❌ CAPTURED validation error:", e.message);
+    err("This is a WebKit WebGPU bug - pure-JS minimal repro fails identically to iced/wgpu.");
+  } else {
+    log("✅ frame() submitted with NO validation error");
+    log("If iced still fails the bug is NOT in this exact API sequence.");
+  }
+} catch (e) {
+  err("frame() threw:", e);
+}
+</script>
+</body>
+</html>

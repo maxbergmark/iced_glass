@@ -10,6 +10,9 @@
 </head>
 
 <body style="height: 100%; margin: 0">
+    <script>
+        Object.defineProperty(window, 'devicePixelRatio', { value: 1, configurable: true });
+    </script>
     <link data-trunk rel="rust" href="Cargo.toml" data-bin="basic_web" data-wasm-opt="z" />
 </body>
 

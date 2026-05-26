@@ -1,0 +1,176 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Pure-JS WebGPU repro - no staging belt</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #222; color: #ddd; font: 14px system-ui; }
+  pre { white-space: pre-wrap; padding: 8px 12px; margin: 0; max-height: 80vh; overflow: auto; }
+</style>
+</head>
+<body>
+<pre id="log"></pre>
+<script type="module">
+"use strict";
+
+const logEl = document.getElementById("log");
+function log(...a) { const s = a.map(x => typeof x === "string" ? x : JSON.stringify(x)).join(" "); logEl.textContent += s + "\n"; console.log(s); }
+function err(...a) { const s = a.map(x => typeof x === "string" ? x : (x?.message ?? JSON.stringify(x))).join(" "); logEl.textContent += "ERROR: " + s + "\n"; console.error(s); }
+
+if (!navigator.gpu) { err("no webgpu"); throw new Error("no webgpu"); }
+const adapter = await navigator.gpu.requestAdapter();
+const device = await adapter.requestDevice();
+log("adapter+device OK");
+device.addEventListener("uncapturederror", (ev) => err("uncapturederror:", ev.error?.message ?? ev));
+
+// IDENTICAL shader, BGL, pipeline layout, render pipeline, BG, offscreen target
+// as pure-js-repro.html. Only the per-frame data upload differs.
+const WGSL = `
+struct Globals { transform: mat4x4<f32>, scale: f32, }
+@group(0) @binding(0) var<uniform> globals: Globals;
+struct VIn {
+  @builtin(vertex_index) vi: u32,
+  @location(0) color: vec4<f32>,
+  @location(1) pos: vec2<f32>,
+  @location(2) scale: vec2<f32>,
+  @location(3) bcolor: vec4<f32>,
+  @location(4) bradius: vec4<f32>,
+  @location(5) bwidth: f32,
+  @location(6) scolor: vec4<f32>,
+  @location(7) soffset: vec2<f32>,
+  @location(8) sblur: f32,
+  @location(9) snap: u32,
+}
+struct VOut { @builtin(position) p: vec4<f32>, @location(0) c: vec4<f32>, }
+@vertex fn vs(input: VIn) -> VOut {
+  var o: VOut;
+  let s = globals.scale;
+  let x = f32(input.vi & 1u) * 2.0 - 1.0;
+  let y = f32((input.vi >> 1u) & 1u) * 2.0 - 1.0;
+  o.p = vec4(x * 0.5 * s, y * 0.5 * s, 0.0, 1.0);
+  o.c = vec4(0.4, 0.8, 0.4, 1.0);
+  return o;
+}
+@fragment fn fs(i: VOut) -> @location(0) vec4<f32> { return i.c; }
+`;
+const FMT = "bgra8unorm";
+
+const bgl = device.createBindGroupLayout({
+  label: "repro::quad uniforms layout",
+  entries: [{
+    binding: 0,
+    visibility: GPUShaderStage.VERTEX,
+    buffer: { type: "uniform", hasDynamicOffset: false, minBindingSize: 80 },
+  }],
+});
+const pl = device.createPipelineLayout({ bindGroupLayouts: [bgl] });
+const sm = device.createShaderModule({ code: WGSL });
+const pipeline = device.createRenderPipeline({
+  layout: pl,
+  vertex: { module: sm, entryPoint: "vs", buffers: [{
+    arrayStride: 100, stepMode: "instance",
+    attributes: [
+      { shaderLocation: 0, format: "float32x4", offset:  0 },
+      { shaderLocation: 1, format: "float32x2", offset: 16 },
+      { shaderLocation: 2, format: "float32x2", offset: 24 },
+      { shaderLocation: 3, format: "float32x4", offset: 32 },
+      { shaderLocation: 4, format: "float32x4", offset: 48 },
+      { shaderLocation: 5, format: "float32",   offset: 64 },
+      { shaderLocation: 6, format: "float32x4", offset: 68 },
+      { shaderLocation: 7, format: "float32x2", offset: 84 },
+      { shaderLocation: 8, format: "float32",   offset: 92 },
+      { shaderLocation: 9, format: "uint32",    offset: 96 },
+    ],
+  }] },
+  fragment: { module: sm, entryPoint: "fs", targets: [{ format: FMT, blend: {
+    color: { srcFactor: "src-alpha", dstFactor: "one-minus-src-alpha", operation: "add" },
+    alpha: { srcFactor: "one",       dstFactor: "one-minus-src-alpha", operation: "add" },
+  }, writeMask: 0xF }] },
+  primitive: { topology: "triangle-list", cullMode: "none", frontFace: "ccw" },
+});
+
+const uniformsBuf = device.createBuffer({
+  label: "repro::quad uniforms buffer",
+  size: 80,
+  usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+});
+const bg = device.createBindGroup({
+  layout: bgl,
+  entries: [{ binding: 0, resource: { buffer: uniformsBuf, offset: 0, size: 80 } }],
+});
+
+const VBUF_SIZE = 262144;
+const solidBuf = device.createBuffer({
+  label: "repro.quad.solid.buffer",
+  size: VBUF_SIZE,
+  usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+});
+
+const W = 1627, H = 825;
+const offscreen = device.createTexture({
+  size: { width: W, height: H, depthOrArrayLayers: 1 },
+  format: FMT,
+  usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+});
+const offscreenView = offscreen.createView();
+log("setup OK");
+
+// ---- Frame with NO STAGING BUFFER, NO copyBufferToBuffer ----
+// Upload data via queue.writeBuffer instead.
+function frame() {
+  // Uniforms: identity + scale 1.0
+  const uniData = new ArrayBuffer(80);
+  const u_f32 = new Float32Array(uniData);
+  u_f32[0]=1; u_f32[5]=1; u_f32[10]=1; u_f32[15]=1;
+  u_f32[16]=1.0;
+  device.queue.writeBuffer(uniformsBuf, 0, uniData);
+
+  // One solid instance: 100 bytes
+  const insData = new ArrayBuffer(100);
+  const i_f32 = new Float32Array(insData);
+  const i_u32 = new Uint32Array(insData);
+  i_f32[0]=0.9; i_f32[1]=0.2; i_f32[2]=0.3; i_f32[3]=1.0;
+  i_f32[4]=200; i_f32[5]=100;
+  i_f32[6]=400; i_f32[7]=200;
+  i_u32[24]=0; // snap at byte 96
+  device.queue.writeBuffer(solidBuf, 0, insData);
+
+  // Same render pass as original.
+  const enc = device.createCommandEncoder({ label: "repro encoder" });
+  const rpe = enc.beginRenderPass({
+    colorAttachments: [{
+      view: offscreenView,
+      loadOp: "clear",
+      storeOp: "store",
+      clearValue: { r: 0.18, g: 0.18, b: 0.22, a: 1.0 },
+    }],
+  });
+  rpe.setScissorRect(0, 0, W, H);
+  rpe.setPipeline(pipeline);
+  rpe.setBindGroup(0, bg);
+  rpe.setVertexBuffer(0, solidBuf, 0, VBUF_SIZE);
+  rpe.draw(6, 1, 0, 0);
+  rpe.end();
+
+  const cb = enc.finish();
+  device.queue.submit([cb]);
+}
+
+try {
+  device.pushErrorScope("validation");
+  frame();
+  const e = await device.popErrorScope();
+  if (e) {
+    err("❌ STILL FAILS: ", e.message);
+    err("Staging belt is NOT the cause - bug is elsewhere.");
+  } else {
+    log("✅ frame() submitted with NO validation error");
+    log("=> The bug is in the staging-buffer + copyBufferToBuffer pattern.");
+    log("=> Workaround: replace wgpu's StagingBelt with direct queue.writeBuffer on Safari/WebGPU.");
+  }
+} catch (e) {
+  err("frame() threw:", e);
+}
+</script>
+</body>
+</html>

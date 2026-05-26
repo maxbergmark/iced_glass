@@ -1,21 +1,18 @@
 [package]
-name = "basic_web"
+name = "web_minimal"
 version = "0.1.0"
 authors = ["Max Bergmark <max.bergmark@gmail.com>"]
 edition = "2024"
 publish = false
 
 [dependencies]
-iced_glass = { path = "../..", default-features = false }
-iced = { git = "https://github.com/maxbergmark/iced", features = [
+iced = { git = "https://github.com/maxbergmark/iced", branch = "test/force_copy_src", features = [
     "wgpu",
-    "image",
-    "advanced",
-    # "svg",
-    "web-colors",
+    # "webgl",
     "tokio",
     "fira-sans",
-], default-features = false, branch = "test/force_copy_src" }
+    "web-colors",
+], default-features = false }
 fastrand = "2"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
