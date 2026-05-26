@@ -25,6 +25,7 @@ pub struct Ui {
     rim_angle: f32,
     opacity: f32,
     tint: Color,
+    scrim: Color,
 }
 
 #[allow(unused)]
@@ -44,6 +45,7 @@ pub enum Message {
     MouseMove(Point),
     MouseState(bool),
     SetTint(ColorChannel, f32),
+    SetScrim(ColorChannel, f32),
     SetOpacity(f32),
 }
 
@@ -87,6 +89,7 @@ impl Default for Ui {
             rim_angle: 0.0,
             opacity: 1.0,
             tint: Color::WHITE,
+            scrim: Color::TRANSPARENT,
         }
     }
 }
@@ -147,6 +150,11 @@ impl Ui {
                 ColorChannel::Red => self.tint.r = value,
                 ColorChannel::Green => self.tint.g = value,
                 ColorChannel::Blue => self.tint.b = value,
+            },
+            Message::SetScrim(channel, value) => match channel {
+                ColorChannel::Red => self.scrim.r = value,
+                ColorChannel::Green => self.scrim.g = value,
+                ColorChannel::Blue => self.scrim.b = value,
             },
         }
         Task::none()
@@ -484,7 +492,7 @@ impl Ui {
                 radius: self.corner_radius.into(),
                 ..Default::default()
             },
-            background: Some(Background::Color(self.tint)),
+            background: Some(Background::Color(self.scrim)),
             ..Default::default()
         }
     }
@@ -501,6 +509,7 @@ impl Ui {
             rim_width: self.rim_width,
             rim_angle: self.rim_angle,
             opacity: self.opacity,
+            tint: self.tint,
             edge_type: EdgeType::GlassEdge,
         }
     }

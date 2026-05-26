@@ -51,10 +51,11 @@
 //!         rim_width: 2.0,
 //!         rim_angle: 0.0,
 //!         opacity: 1.0,
+//!         tint: iced::Color::WHITE,
 //!         edge_type: EdgeType::GlassEdge,
 //!     })
 //!     .style(|_theme| iced::widget::container::Style {
-//!         // set colored glass tint
+//!         // set colored glass scrim
 //!         background: Some(iced::Background::Color(iced::Color::from_rgb(0.8, 0.9, 1.0))),
 //!         border: iced::Border {
 //!             // set rounded corners, does not support individual corner radii yet

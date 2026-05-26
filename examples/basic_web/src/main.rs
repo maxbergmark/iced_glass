@@ -31,6 +31,7 @@ pub struct Ui {
     rim_angle: f32,
     opacity: f32,
     tint: Color,
+    scrim: Color,
     ship_handle: image::Handle,
     bw_handle: image::Handle,
     nat_handle: image::Handle,
@@ -104,6 +105,7 @@ impl Default for Ui {
             rim_angle: 0.0,
             opacity: 1.0,
             tint: Color::WHITE,
+            scrim: Color::TRANSPARENT,
             ship_handle: image_handle(SHIP),
             bw_handle: image_handle(BW),
             nat_handle: image_handle(NAT),
@@ -279,7 +281,7 @@ impl Ui {
             .width(window_size.width)
             .height(window_size.height)
             .glass_style(|theme| self.glass_style(theme))
-            .tint(self.tint)
+            .scrim(self.scrim)
             .corner_radius(self.corner_radius)
             .blending_factor(self.blending_factor),
         )
@@ -555,6 +557,7 @@ impl Ui {
             rim_width: self.rim_width,
             rim_angle: self.rim_angle,
             opacity: self.opacity,
+            tint: self.tint,
             edge_type: EdgeType::GlassEdge,
         }
     }

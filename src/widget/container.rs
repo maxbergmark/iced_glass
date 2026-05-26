@@ -330,11 +330,11 @@ where
         let bounds = layout.bounds();
         let style = theme.style(&self.class);
         let glass_style = (self.glass_style)(theme);
-        let tint = style.background.map_or_else(
-            || Color::WHITE,
+        let scrim = style.background.map_or_else(
+            || Color::TRANSPARENT,
             |background| match background {
                 Background::Color(color) => color,
-                Background::Gradient(_) => Color::WHITE,
+                Background::Gradient(_) => Color::TRANSPARENT,
             },
         );
 
@@ -355,7 +355,8 @@ where
                     rim_width: glass_style.rim_width,
                     rim_angle: glass_style.rim_angle,
                     opacity: glass_style.opacity,
-                    tint,
+                    tint: glass_style.tint,
+                    scrim,
                     content_scale: (1.0, 1.0),
                     edge_type: glass_style.edge_type,
                     num_children: 0,

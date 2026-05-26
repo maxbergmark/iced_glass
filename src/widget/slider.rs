@@ -463,7 +463,7 @@ where
         //     Background::Color(color) => color,
         //     _ => Color::WHITE,
         // };
-        let tint = Color::WHITE;
+        let scrim = Color::TRANSPARENT;
 
         let state = tree.state.downcast_ref::<State>();
         if state.is_dragging {
@@ -489,7 +489,8 @@ where
                         rim_width: glass_style.rim_width,
                         rim_angle: glass_style.rim_angle,
                         opacity: glass_style.opacity,
-                        tint,
+                        tint: glass_style.tint,
+                        scrim,
                         content_scale: (1.0, 1.0),
                         edge_type: glass_style.edge_type,
                         num_children: 0,

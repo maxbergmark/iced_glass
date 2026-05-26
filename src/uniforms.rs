@@ -14,6 +14,7 @@ pub struct Uniforms {
     pub rim_angle: f32,
     pub opacity: f32,
     pub tint: iced::Color,
+    pub scrim: iced::Color,
     pub content_scale: (f32, f32),
     pub edge_type: EdgeType,
     pub num_children: u32,
@@ -37,6 +38,7 @@ impl Uniforms {
             rim_angle: self.rim_angle,
             opacity: self.opacity,
             tint: [self.tint.r, self.tint.g, self.tint.b, self.tint.a],
+            scrim: [self.scrim.r, self.scrim.g, self.scrim.b, self.scrim.a],
             edge_type: match self.edge_type {
                 EdgeType::GlassEdge => 0,
                 EdgeType::SoftEdge => 1,
@@ -70,6 +72,7 @@ impl Uniforms {
 #[repr(C)]
 pub struct Raw {
     pub tint: [f32; 4],
+    pub scrim: [f32; 4],
     pub direction: [f32; 2],
     pub content_scale: [f32; 2],
 

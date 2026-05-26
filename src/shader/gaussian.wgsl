@@ -1,5 +1,6 @@
 struct Uniforms {
     tint: vec4<f32>,
+    scrim: vec4<f32>,
     blur_direction: vec2<f32>,
     content_scale: vec2<f32>,
     blur_radius: f32,
@@ -19,6 +20,7 @@ struct Uniforms {
     _pad: f32,
     _pad2: f32,
 };
+
 
 @group(1)
 @binding(0)
