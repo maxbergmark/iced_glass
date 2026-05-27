@@ -50,6 +50,12 @@ etagere = { version = "0.3.0", optional = true }
 cosmic-text = { version = "0.19.0", optional = true }
 itertools = { version = "0.14.0", optional = true }
 
+# `msdfgen-sys` only ships prebuilt FFI bindings for Linux and macOS, so on
+# Windows we enable its `bindgen` feature to generate them at build time.
+# This adds a build-time requirement on libclang.
+[target.'cfg(target_os = "windows")'.dependencies]
+msdfgen = { version = "0.2.1", features = ["bindgen"], optional = true }
+
 [workspace]
 members = [".", "examples/*"]
 

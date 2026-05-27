@@ -25,6 +25,9 @@ jobs:
         packages: pkg-config libfreetype-dev
     - if: runner.os == 'macOS'
       run: brew install pkg-config freetype
+    - if: runner.os == 'Windows'
+      shell: pwsh
+      run: echo "LIBCLANG_PATH=$env:ProgramFiles\LLVM\bin" >> $env:GITHUB_ENV
     - uses: Swatinem/rust-cache@v2
       with:
         shared-key: workspace-${{ matrix.os }}
@@ -45,6 +48,9 @@ jobs:
         packages: pkg-config libfreetype-dev
     - if: runner.os == 'macOS'
       run: brew install pkg-config freetype
+    - if: runner.os == 'Windows'
+      shell: pwsh
+      run: echo "LIBCLANG_PATH=$env:ProgramFiles\LLVM\bin" >> $env:GITHUB_ENV
     - uses: Swatinem/rust-cache@v2
       with:
         shared-key: workspace-${{ matrix.os }}
@@ -65,6 +71,9 @@ jobs:
         packages: pkg-config libfreetype-dev
     - if: runner.os == 'macOS'
       run: brew install pkg-config freetype
+    - if: runner.os == 'Windows'
+      shell: pwsh
+      run: echo "LIBCLANG_PATH=$env:ProgramFiles\LLVM\bin" >> $env:GITHUB_ENV
     - uses: Swatinem/rust-cache@v2
       with:
         shared-key: workspace-${{ matrix.os }}
@@ -85,6 +94,9 @@ jobs:
         packages: pkg-config libfreetype-dev
     - if: runner.os == 'macOS'
       run: brew install pkg-config freetype
+    - if: runner.os == 'Windows'
+      shell: pwsh
+      run: echo "LIBCLANG_PATH=$env:ProgramFiles\LLVM\bin" >> $env:GITHUB_ENV
     - uses: Swatinem/rust-cache@v2
       with:
         shared-key: workspace-${{ matrix.os }}
