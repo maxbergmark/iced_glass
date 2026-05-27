@@ -75,4 +75,4 @@ pub(crate) mod uniforms;
 /// Public widgets
 pub mod widget;
 
-pub use widget::{Style, StyleFn};
+pub use widget::{EdgeType, Style, StyleFn};

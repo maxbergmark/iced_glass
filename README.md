@@ -19,26 +19,26 @@ A Rust library and demo app that implements Apple-style **liquid / frosted glass
 
 <br>
 
-<img width="720" src="docs/iced_glass_example.png" alt="Configurable liquid glass effects" />
+<img width="720" src="https://raw.githubusercontent.com/maxbergmark/iced_glass/main/docs/iced_glass_example.png" alt="Configurable liquid glass effects" />
 
 **Configurable liquid glass effects**
 
 <br>
 
-<img width="720" src="docs/scroll_view.webp" alt="Real-time rendering" />
+<img width="720" src="https://raw.githubusercontent.com/maxbergmark/iced_glass/main/docs/scroll_view.webp" alt="Real-time rendering" />
 
 **Renders in real time**
 
 <br>
 
-<img width="600" src="docs/desktop_dock.webp" alt="Animated glass effects" />
+<img width="600" src="https://raw.githubusercontent.com/maxbergmark/iced_glass/main/docs/desktop_dock.webp" alt="Animated glass effects" />
 
 **Animated with iced's built-in animation system**
 
 <br>
 
 
-<img width="600" src="docs/glass_stack.webp" alt="Blend containers" />
+<img width="600" src="https://raw.githubusercontent.com/maxbergmark/iced_glass/main/docs/glass_stack.webp" alt="Blend containers" />
 
 **Blend multiple containers using `glass_stack`**
 
@@ -48,7 +48,7 @@ A Rust library and demo app that implements Apple-style **liquid / frosted glass
 
 ## Text
 
-![iced_glass example](docs/text_rendering.png)
+![iced_glass example](https://raw.githubusercontent.com/maxbergmark/iced_glass/main/docs/text_rendering.png)
 
 With the rewrite of the refraction math using signed distance functions, it is now possible to render text with refraction. This is rendered using `cosmic-text`, `freetype-rs` and `msdfgen-rs`. Each glyph is rasterized into an MSDF atlas on first use and cached for subsequent frames. The SDF is then used in the fragment shader both for inside/outside testing and to drive the refraction and rim-light effects, giving text the same glass appearance as `iced_glass::widget::container`.
 
@@ -111,7 +111,7 @@ All rendering happens on the GPU via WGSL shaders (`fragment.wgsl` / `text.wgsl`
 
 ## Widgets
 
-The library exposes two custom Iced widgets:
+The library exposes four custom Iced widgets:
 
 | Widget | Description |
 |--------|-------------|
@@ -144,7 +144,7 @@ The main bottleneck in terms of performance for these widgets is the amount of r
 
 ### Benchmark
 
-Here is a benchmark from the scene defined in `scenes/basic.rs`, running on an M1 Macbook Pro:
+Here is a benchmark from the scene defined in `examples/basic/src/main.rs`, running on an M1 Macbook Pro:
 
 ```
 downsample: 485.19µs
@@ -156,16 +156,6 @@ total: 2185.27µs
 fps: 457.61
 ```
 
-## Demo scenes
-
-The binary crate includes three demo scenes, selectable at runtime:
-
-- **Basic** — A 2×2 photo wallpaper grid with a draggable glass panel. Sliders inside the panel control every glass parameter in real time.
-- **ScrollView** — A mock music browser with a scrollable album grid (loaded from `albums.json`), a frosted-glass search bar, and a playback bar with a glass slider for scrubbing.
-- **LargeSlider** — A stress-test scene with an oversized glass slider on a gradient background, plus standard sliders to tune the refraction parameters.
-- **StressTest** - A proper stress-testing scene which adds a lot of liquid glass containers to check performance.
-- **Text** - A test scene for all text-related styling options, along with a dynamic text input which renders to a liquid glass text widget
-
 ## Dependencies
 
 | Crate | Purpose |
@@ -175,15 +165,13 @@ The binary crate includes three demo scenes, selectable at runtime:
 | `wgpu` | GPU abstraction layer |
 | `bytemuck` | Safe transmutes for uniform buffers |
 | `num-traits` | Numeric trait bounds for the slider |
-| `serde` / `serde_json` | Album metadata deserialization |
 | `itertools` | Chunked iteration for album grid layout |
 
-Note: `serde` and `itertools` are only used for the demo, not in the library code.
 
 ## Building and running
 
 ```bash
-cargo run
+cargo run -p basic
 ```
 
 Requires a GPU that supports WGPU. The app opens at 2560x1440 by default.

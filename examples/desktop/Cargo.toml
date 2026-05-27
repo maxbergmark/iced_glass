@@ -6,5 +6,5 @@ edition = "2024"
 publish = false
 
 [dependencies]
-iced_glass.workspace = true
+iced_glass = { workspace = true, features = ["text"] }
 iced.workspace = true

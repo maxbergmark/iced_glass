@@ -1569,7 +1569,7 @@ checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
 [[package]]
 name = "iced"
 version = "0.14.0"
-source = "git+https://github.com/maxbergmark/iced?branch=test%2Fforce_copy_src#af6d172c75debd3a8a8e57a881b078264b5fdb44"
+source = "git+https://github.com/maxbergmark/iced?branch=latest#7cc0f6866a1eb6291143b9e0e86da660de82038b"
 dependencies = [
  "iced_core",
  "iced_debug",
@@ -1585,7 +1585,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.14.0"
-source = "git+https://github.com/maxbergmark/iced?branch=test%2Fforce_copy_src#af6d172c75debd3a8a8e57a881b078264b5fdb44"
+source = "git+https://github.com/maxbergmark/iced?branch=latest#7cc0f6866a1eb6291143b9e0e86da660de82038b"
 dependencies = [
  "bitflags 2.11.1",
  "bytes",
@@ -1602,7 +1602,7 @@ dependencies = [
 [[package]]
 name = "iced_debug"
 version = "0.14.0"
-source = "git+https://github.com/maxbergmark/iced?branch=test%2Fforce_copy_src#af6d172c75debd3a8a8e57a881b078264b5fdb44"
+source = "git+https://github.com/maxbergmark/iced?branch=latest#7cc0f6866a1eb6291143b9e0e86da660de82038b"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -1612,7 +1612,7 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.14.0"
-source = "git+https://github.com/maxbergmark/iced?branch=test%2Fforce_copy_src#af6d172c75debd3a8a8e57a881b078264b5fdb44"
+source = "git+https://github.com/maxbergmark/iced?branch=latest#7cc0f6866a1eb6291143b9e0e86da660de82038b"
 dependencies = [
  "futures",
  "iced_core",
@@ -1644,7 +1644,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.14.0"
-source = "git+https://github.com/maxbergmark/iced?branch=test%2Fforce_copy_src#af6d172c75debd3a8a8e57a881b078264b5fdb44"
+source = "git+https://github.com/maxbergmark/iced?branch=latest#7cc0f6866a1eb6291143b9e0e86da660de82038b"
 dependencies = [
  "bitflags 2.11.1",
  "bytemuck",
@@ -1664,7 +1664,7 @@ dependencies = [
 [[package]]
 name = "iced_program"
 version = "0.14.0"
-source = "git+https://github.com/maxbergmark/iced?branch=test%2Fforce_copy_src#af6d172c75debd3a8a8e57a881b078264b5fdb44"
+source = "git+https://github.com/maxbergmark/iced?branch=latest#7cc0f6866a1eb6291143b9e0e86da660de82038b"
 dependencies = [
  "iced_graphics",
  "iced_runtime",
@@ -1673,7 +1673,7 @@ dependencies = [
 [[package]]
 name = "iced_renderer"
 version = "0.14.0"
-source = "git+https://github.com/maxbergmark/iced?branch=test%2Fforce_copy_src#af6d172c75debd3a8a8e57a881b078264b5fdb44"
+source = "git+https://github.com/maxbergmark/iced?branch=latest#7cc0f6866a1eb6291143b9e0e86da660de82038b"
 dependencies = [
  "iced_graphics",
  "iced_tiny_skia",
@@ -1685,7 +1685,7 @@ dependencies = [
 [[package]]
 name = "iced_runtime"
 version = "0.14.0"
-source = "git+https://github.com/maxbergmark/iced?branch=test%2Fforce_copy_src#af6d172c75debd3a8a8e57a881b078264b5fdb44"
+source = "git+https://github.com/maxbergmark/iced?branch=latest#7cc0f6866a1eb6291143b9e0e86da660de82038b"
 dependencies = [
  "bytes",
  "iced_core",
@@ -1697,7 +1697,7 @@ dependencies = [
 [[package]]
 name = "iced_tiny_skia"
 version = "0.14.0"
-source = "git+https://github.com/maxbergmark/iced?branch=test%2Fforce_copy_src#af6d172c75debd3a8a8e57a881b078264b5fdb44"
+source = "git+https://github.com/maxbergmark/iced?branch=latest#7cc0f6866a1eb6291143b9e0e86da660de82038b"
 dependencies = [
  "bytemuck",
  "cosmic-text 0.15.0",
@@ -1714,7 +1714,7 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.14.0"
-source = "git+https://github.com/maxbergmark/iced?branch=test%2Fforce_copy_src#af6d172c75debd3a8a8e57a881b078264b5fdb44"
+source = "git+https://github.com/maxbergmark/iced?branch=latest#7cc0f6866a1eb6291143b9e0e86da660de82038b"
 dependencies = [
  "bitflags 2.11.1",
  "bytemuck",
@@ -1734,7 +1734,7 @@ dependencies = [
 [[package]]
 name = "iced_widget"
 version = "0.14.0"
-source = "git+https://github.com/maxbergmark/iced?branch=test%2Fforce_copy_src#af6d172c75debd3a8a8e57a881b078264b5fdb44"
+source = "git+https://github.com/maxbergmark/iced?branch=latest#7cc0f6866a1eb6291143b9e0e86da660de82038b"
 dependencies = [
  "iced_renderer",
  "log",
@@ -1747,7 +1747,7 @@ dependencies = [
 [[package]]
 name = "iced_winit"
 version = "0.14.0"
-source = "git+https://github.com/maxbergmark/iced?branch=test%2Fforce_copy_src#af6d172c75debd3a8a8e57a881b078264b5fdb44"
+source = "git+https://github.com/maxbergmark/iced?branch=latest#7cc0f6866a1eb6291143b9e0e86da660de82038b"
 dependencies = [
  "iced_debug",
  "iced_program",

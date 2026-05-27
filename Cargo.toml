@@ -2,9 +2,23 @@
 name = "iced_glass"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
+description = "Apple-style liquid/frosted glass widgets for iced, rendered via custom wgpu shader pipelines."
+license = "MIT"
+repository = "https://github.com/maxbergmark/iced_glass"
+homepage = "https://github.com/maxbergmark/iced_glass"
+documentation = "https://docs.rs/iced_glass"
+readme = "README.md"
+keywords = ["iced", "gui", "wgpu", "glass", "shader"]
+categories = ["gui", "graphics", "rendering"]
+exclude = ["docs/*.webp", "docs/*.png"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
-default = ["text"]
+default = []
 text = [
     "dep:msdfgen",
     "dep:notosans",
@@ -21,8 +35,8 @@ iced = { git = "https://github.com/maxbergmark/iced", features = [
     "advanced",
     "svg",
     "tokio",
-], branch = "test/force_copy_src" }
-iced_wgpu = { git = "https://github.com/maxbergmark/iced", branch = "test/force_copy_src" }
+], branch = "latest" }
+iced_wgpu = { git = "https://github.com/maxbergmark/iced", branch = "latest" }
 
 wgpu = { version = "27.0.1", features = [] }
 bytemuck = "1.25.0"
@@ -47,7 +61,7 @@ iced = { git = "https://github.com/maxbergmark/iced", features = [
     "advanced",
     "svg",
     "tokio",
-], branch = "test/force_copy_src" }
+], branch = "latest" }
 
 [lints.clippy]
 map_err_ignore = "warn"
