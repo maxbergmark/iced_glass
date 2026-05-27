@@ -69,9 +69,12 @@ jobs:
         shared-key: workspace-${{ matrix.os }}
     # `msdfgen-sys` doesn't ship prebuilt FFI bindings for Windows and
     # `bindgen 0.63` (pinned by `msdfgen-sys 0.2.1`) panics on modern libclang's
-    # `_Complex _Float16` builtin, so we skip the `text` examples on Windows.
-    # The core glass widgets still build on every platform.
+    # `_Complex _Float16` builtin, so on Windows we exclude every workspace
+    # member that enables the `text` feature. Cargo's resolver unifies features
+    # across all non-excluded members, so this list must include EVERY example
+    # whose `Cargo.toml` has `iced_glass = { ..., features = ["text"] }`,
+    # otherwise `msdfgen` gets pulled into the resolved graph anyway.
     - if: runner.os != 'Windows'
       run: cargo build --workspace
     - if: runner.os == 'Windows'
-      run: cargo build --workspace --exclude text --exclude desktop
+      run: cargo build --workspace --exclude text --exclude desktop --exclude group_container
