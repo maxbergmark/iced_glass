@@ -165,8 +165,13 @@ fps: 457.61
 | `wgpu` | GPU abstraction layer |
 | `bytemuck` | Safe transmutes for uniform buffers |
 | `num-traits` | Numeric trait bounds for the slider |
-| `itertools` | Chunked iteration for album grid layout |
-
+| `itertools` | Used to simplify text rendering pipeline |
+| `tracing` | Tracing support enabled on native and WASM |
+| `msdfgen`| Used for font rendering |
+| `notosans` | Packaged font that works well with MSDF |
+| `freetype-rs` | Provides glyph positioning during rendering |
+| `etagere` | Packages glyph textures into a texture atlas |
+| `cosmic-text` | Provides text layout |
 
 ## Building and running
 
@@ -174,6 +179,17 @@ fps: 457.61
 cargo run -p basic
 ```
 
-Requires a GPU that supports WGPU. The app opens at 2560x1440 by default.
+## Platform support
 
-> **Note:** This project depends on a [custom iced fork](https://github.com/maxbergmark/iced) (`latest` branch) for the shader primitive API. Currently, it is not possible to read from the background texture during rendering, which is needed for an effect like this. I'm aiming to get the changes merged into iced in the future.
+| Platform | Core glass widgets (`container`, `slider`, `stack`) | `text` feature |
+|----------|:--:|:--:|
+| Linux    | ✅ | ✅ |
+| macOS    | ✅ | ✅ |
+| Windows  | ✅ | ❌ |
+| WASM     | ❌ | ❌ |
+
+The `text` feature pulls in `msdfgen-sys`, which doesn't ship prebuilt FFI bindings for Windows and whose pinned `bindgen 0.63` panics on modern libclang's `_Complex _Float16` builtin. Until `msdfgen-sys` upgrades, the `text` feature is unsupported on Windows. The core glass widgets work everywhere.
+
+WASM support is planned for a future release.
+
+> **Note:** This project depends on a [custom iced fork](https://github.com/maxbergmark/iced) (`latest` branch) for the shader primitive API. Currently, it is not possible to read from the background texture during rendering, which is needed for an effect like this. I'm aiming to get the changes merged into iced in the future ([iced-rs/iced#3316](https://github.com/iced-rs/iced/pull/3316)).
