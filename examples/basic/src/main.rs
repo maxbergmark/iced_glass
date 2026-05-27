@@ -5,7 +5,7 @@ use iced::{
     Subscription, Task, Theme, Vector,
     widget::{column, container, image, mouse_area, responsive, row, slider, space, stack, text},
 };
-use iced_glass::widget::{EdgeType, container as glass_container, text as glass_text};
+use iced_glass::widget::{EdgeType, container as glass_container};
 
 #[derive(Debug, Clone)]
 pub struct Ui {
@@ -196,21 +196,9 @@ impl Ui {
     fn mouse_area(&self) -> Element<'_, Message> {
         container(
             mouse_area(
-                container(
-                    glass_text("Liquid Glass Demo")
-                        .size(300.0)
-                        .glass_style(|_theme| iced_glass::Style {
-                            blur_radius: 50.0,
-                            lightness: 2.0,
-                            edge_radius: 5.0,
-                            edge_height: 50.0,
-                            rim_width: 1.0,
-                            rim_angle: 1.0,
-                            ..Default::default()
-                        }),
-                )
-                .width(Length::Fill)
-                .center_y(Length::Fill),
+                container(text("Liquid Glass Demo").size(300.0))
+                    .width(Length::Fill)
+                    .center_y(Length::Fill),
             )
             .on_move(Message::MouseMove)
             .on_press(Message::MouseState(true))

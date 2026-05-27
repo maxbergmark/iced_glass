@@ -26,12 +26,12 @@ struct Child {
     half_size: vec2<f32>,
 };
 
-@group(2) @binding(0)
-var<storage, read> children: array<Child>;
-
 @group(1)
 @binding(0)
 var<uniform> uniforms: Uniforms;
+
+@group(1) @binding(1)
+var<storage, read> children: array<Child>;
 
 @group(0)
 @binding(0)

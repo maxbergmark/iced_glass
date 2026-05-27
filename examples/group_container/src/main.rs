@@ -39,6 +39,7 @@ pub struct Ui {
     scrim: Color,
     blending_factor: f32,
     start_time: Instant,
+    position: Point,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -60,7 +61,7 @@ pub enum Message {
     SetScrim(ColorChannel, f32),
     SetOpacity(f32),
     SetBlendingFactor(f32),
-    Noop,
+    Tick,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -107,6 +108,7 @@ impl Default for Ui {
             scrim: Color::TRANSPARENT,
             blending_factor: 100.0,
             start_time: Instant::now(),
+            position: Point::new(2560.0 / 2.0, 1440.0 / 2.0),
         }
     }
 }
@@ -178,13 +180,18 @@ impl Ui {
             Message::SetBlendingFactor(blending_factor) => {
                 self.blending_factor = blending_factor;
             }
-            Message::Noop => {}
+            Message::Tick => {
+                if let Some(position) = self.mouse_position {
+                    self.position.x = 0.8 * self.position.x + 0.2 * position.x;
+                    self.position.y = 0.8 * self.position.y + 0.2 * position.y;
+                }
+            }
         }
         Task::none()
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
-        iced::time::every(std::time::Duration::from_millis(8)).map(|_| Message::Noop)
+        iced::time::every(std::time::Duration::from_millis(8)).map(|_| Message::Tick)
     }
 
     pub fn view(&self) -> Element<'_, Message> {
@@ -246,14 +253,10 @@ impl Ui {
     }
 
     fn glass(&self, window_size: Size) -> Element<'_, Message> {
-        let offset_x = self
-            .mouse_position
-            .map(|point| (point.x - self.width / 2.0).clamp(0.0, window_size.width - self.width))
-            .unwrap_or(0.0);
-        let offset_y = self
-            .mouse_position
-            .map(|point| (point.y - self.height / 2.0).clamp(0.0, window_size.height - self.height))
-            .unwrap_or(0.0);
+        let offset_x =
+            (self.position.x - self.width / 2.0).clamp(0.0, window_size.width - self.width);
+        let offset_y =
+            (self.position.y - self.height / 2.0).clamp(0.0, window_size.height - self.height);
         let t = self.start_time.elapsed().as_secs_f32();
 
         container(

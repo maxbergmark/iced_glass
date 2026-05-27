@@ -289,6 +289,6 @@ fn fragment_pass(
     pass.set_pipeline(&pipeline.fragment);
     pass.set_bind_group(0, &instance.tex_a_bg[0], &[]);
     pass.set_bind_group(1, &instance.uniform_bg_h, &[]);
-    pass.set_bind_group(2, &instance.children_bg, &[]);
+    // pass.set_bind_group(2, &instance.children_bg, &[]);
     pass.draw(0..6, 0..1);
 }
