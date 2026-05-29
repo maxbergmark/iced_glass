@@ -1,0 +1,13 @@
+[package]
+name = "letter_rain"
+version = "0.1.0"
+authors = ["Max Bergmark <max.bergmark@gmail.com>"]
+edition = "2024"
+publish = false
+
+[dependencies]
+iced_glass.workspace = true
+iced.workspace = true
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing = "0.1.44"
+fastrand = "2"
