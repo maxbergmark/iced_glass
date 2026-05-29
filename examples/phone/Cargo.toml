@@ -1,0 +1,11 @@
+[package]
+name = "phone"
+version = "0.1.0"
+authors = ["Max Bergmark <max.bergmark@gmail.com>"]
+edition = "2024"
+publish = false
+
+[dependencies]
+iced_glass = { workspace = true, features = [] }
+iced = { workspace = true, features = ["fira-sans"] }
+once_cell = "1.21.4"

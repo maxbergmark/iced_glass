@@ -37,14 +37,27 @@ jobs:
         with:
           version: "latest"
 
-      - name: Build with Trunk
+      - name: Build basic_web
         working-directory: examples/basic_web
         run: trunk build --release --public-url "/iced_glass/"
 
+      - name: Build phone
+        working-directory: examples/phone
+        run: trunk build --release --public-url "/iced_glass/phone/"
+
+      - name: Assemble site
+        run: |
+          mkdir -p site
+
+          cp -r examples/basic_web/dist/* site/
+
+          mkdir -p site/phone
+          cp -r examples/phone/dist/* site/phone/
+                  
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: examples/basic_web/dist
+          path: site
 
   deploy:
     needs: build
