@@ -259,8 +259,9 @@ impl Ui {
             .into()
         }))
         .glass_style(|_theme| iced_glass::Style {
-            blur_radius: 50.0,
+            blur_radius: 200.0,
             edge_radius: 0.0,
+            lightness: -0.25,
             opacity: self.get_opacity(),
             edge_type: EdgeType::SoftEdge,
             ..Default::default()
@@ -375,9 +376,9 @@ impl Ui {
         {
             self.lightness
                 .animation
-                .interpolate(-0.5, -0.25, Instant::now())
+                .interpolate(-0.25, 0.0, Instant::now())
         } else {
-            -0.5
+            -0.25
         }
     }
 
@@ -421,6 +422,7 @@ impl Ui {
             edge_radius: self.get_edge_radius(),
             edge_height: self.get_edge_height(index),
             rim_width: 2.0,
+            rim_angle: 0.5,
             opacity: self.get_opacity(),
             ..Default::default()
         }
