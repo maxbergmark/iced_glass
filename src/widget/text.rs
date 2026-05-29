@@ -540,6 +540,9 @@ where
             align_y: format.align_y,
             shaping: format.shaping,
             wrapping: format.wrapping,
+            // TODO: implement ellipsis and hint factor
+            ellipsis: text::Ellipsis::None,
+            hint_factor: None,
         });
 
         paragraph.min_bounds()

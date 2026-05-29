@@ -3,7 +3,7 @@ use std::ops::RangeInclusive;
 use iced::{
     Border, Color, Element, Event, Length, Pixels, Point, Rectangle, Size,
     advanced::{
-        Clipboard, Layout, Shell, Widget, layout, mouse, renderer,
+        Layout, Shell, Widget, layout, mouse, renderer,
         widget::{
             Tree,
             tree::{self},
@@ -219,7 +219,6 @@ where
         layout: Layout<'_>,
         cursor: mouse::Cursor,
         _renderer: &Renderer,
-        _clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
         _viewport: &Rectangle,
     ) {

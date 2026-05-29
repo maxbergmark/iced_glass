@@ -14,10 +14,10 @@ impl FragmentShader {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fragment.create_pipeline.layout"),
             bind_group_layouts: &[
-                &Self::create_bind_group_layout(device),
-                &uniforms_bind_group_layout(device),
+                Some(&Self::create_bind_group_layout(device)),
+                Some(&uniforms_bind_group_layout(device)),
             ],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         let module = &device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -49,7 +49,7 @@ impl FragmentShader {
                 })],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             }),
-            multiview: None,
+            multiview_mask: None,
             cache: None,
         })
     }

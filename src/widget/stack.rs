@@ -2,7 +2,7 @@
 use iced::{
     Color, Element, Event, Length, Rectangle, Size, Vector,
     advanced::{
-        Clipboard, Layout, Shell, layout, mouse, overlay, renderer,
+        Layout, Shell, layout, mouse, overlay, renderer,
         widget::{Operation, Tree, tree},
     },
 };
@@ -352,7 +352,6 @@ where
         layout: Layout<'_>,
         mut cursor: mouse::Cursor,
         renderer: &Renderer,
-        clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
@@ -371,9 +370,10 @@ where
             .zip(layout.children().rev())
             .enumerate()
         {
-            child.container.as_widget_mut().update(
-                tree, event, layout, cursor, renderer, clipboard, shell, viewport,
-            );
+            child
+                .container
+                .as_widget_mut()
+                .update(tree, event, layout, cursor, renderer, shell, viewport);
 
             if shell.is_event_captured() {
                 return;

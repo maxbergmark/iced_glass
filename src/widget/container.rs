@@ -1,7 +1,7 @@
 use iced::{
     Alignment, Background, Color, Element, Event, Length, Padding, Pixels, Rectangle, Size, Vector,
     advanced::{
-        Clipboard, Layout, Shell, layout, mouse, overlay, renderer,
+        Layout, Shell, layout, mouse, overlay, renderer,
         widget::{Operation, Tree, tree},
     },
     alignment,
@@ -281,7 +281,6 @@ where
         layout: Layout<'_>,
         cursor: mouse::Cursor,
         renderer: &Renderer,
-        clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
@@ -292,7 +291,6 @@ where
             layout.children().next().expect("No child found"),
             cursor,
             renderer,
-            clipboard,
             shell,
             viewport,
         );

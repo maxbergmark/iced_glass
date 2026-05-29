@@ -214,6 +214,7 @@ fn horizontal_blur(
         depth_stencil_attachment: None,
         timestamp_writes: None,
         occlusion_query_set: None,
+        multiview_mask: None,
     });
 
     horizontal_pass.set_pipeline(&pipeline.blur);
@@ -246,6 +247,7 @@ fn vertical_blur(
         depth_stencil_attachment: None,
         timestamp_writes: None,
         occlusion_query_set: None,
+        multiview_mask: None,
     });
 
     vertical_pass.set_pipeline(&pipeline.blur);
@@ -275,6 +277,7 @@ fn fragment_pass(
         depth_stencil_attachment: None,
         timestamp_writes: None,
         occlusion_query_set: None,
+        multiview_mask: None,
     });
     pass.set_scissor_rect(bounds.x, bounds.y, bounds.width, bounds.height);
     pass.set_viewport(

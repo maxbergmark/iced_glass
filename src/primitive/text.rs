@@ -118,6 +118,7 @@ fn text_pass(
         depth_stencil_attachment: None,
         timestamp_writes: None,
         occlusion_query_set: None,
+        multiview_mask: None,
     });
     pass.set_scissor_rect(bounds.x, bounds.y, bounds.width, bounds.height);
     pass.set_viewport(

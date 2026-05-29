@@ -11,8 +11,8 @@ impl DownsampleShader {
     ) -> wgpu::RenderPipeline {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("downsample.create_pipeline.layout"),
-            bind_group_layouts: &[&Self::create_bind_group_layout(device)],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&Self::create_bind_group_layout(device))],
+            immediate_size: 0,
         });
 
         let module = &device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -44,7 +44,7 @@ impl DownsampleShader {
                 })],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             }),
-            multiview: None,
+            multiview_mask: None,
             cache: None,
         })
     }
