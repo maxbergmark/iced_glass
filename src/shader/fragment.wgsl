@@ -130,13 +130,14 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
     let n_b = max(uniforms.refractive_index + uniforms.chromatic_aberration, 1.0);
     let r_edge = clamp_radius(uniforms.edge_radius, dimensions);
 
+    var color: vec4<f32>;
     if uniforms.chromatic_aberration > 0.0 {
-    var red = sample_color_channel(p, sdf, gradient, r_edge, n_r, h, dimensions, input.uv.x);
+        let red = sample_color_channel(p, sdf, gradient, r_edge, n_r, h, dimensions, input.uv.x);
         var green = sample_color_channel(p, sdf, gradient, r_edge, n_g, h, dimensions, input.uv.x);
         var blue = sample_color_channel(p, sdf, gradient, r_edge, n_b, h, dimensions, input.uv.x);
-        var color = vec4<f32>(red.r, green.g, blue.b, green.a);
+        color = vec4<f32>(red.r, green.g, blue.b, green.a);
     } else {
-        var color = sample_color_channel(p, sdf, gradient, r_edge, n_r, h, dimensions, input.uv.x);
+        color = sample_color_channel(p, sdf, gradient, r_edge, n_r, h, dimensions, input.uv.x);
     }
 
     return color;
