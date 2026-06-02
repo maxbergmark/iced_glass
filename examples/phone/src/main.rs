@@ -13,7 +13,10 @@ use iced::{
     },
 };
 
-use iced_glass::widget::{EdgeType, container as glass_container, slider as glass_slider};
+use iced_glass::{
+    SliderType,
+    widget::{EdgeType, container as glass_container, slider as glass_slider},
+};
 
 mod icons;
 
@@ -234,24 +237,8 @@ impl Ui {
                     self.small_icon_with_one_line(8, size, "moon", "Focus"),
                 ]
                 .spacing(Self::spacing(size)),
-                self.slider(
-                    9,
-                    size,
-                    "Display",
-                    "moon",
-                    "sunny",
-                    self.brightness,
-                    Message::Brightness
-                ),
-                self.slider(
-                    10,
-                    size,
-                    "Sound",
-                    "volume-off",
-                    "volume-high",
-                    self.volume,
-                    Message::Volume
-                ),
+                self.slider(9, size, "sunny", self.brightness, Message::Brightness),
+                self.slider(10, size, "volume-high", self.volume, Message::Volume),
             ]
             .width(Length::Fill)
             .align_x(Alignment::Center)
@@ -497,50 +484,35 @@ impl Ui {
         .into()
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn slider(
         &self,
         index: usize,
         size: iced::Size,
-        label: &'static str,
-        left_icon: &'static str,
-        right_icon: &'static str,
+        icon: &'static str,
         value: f32,
         message: impl Fn(f32) -> Message + 'static,
     ) -> Element<'_, Message> {
-        let height = Self::n_rows(size, 1) * 1.1;
+        let height = Self::n_rows(size, 1);
         let w = size.width;
-        mouse_area(
-            glass_container(
-                column![
-                    text(label)
-                        .size(0.035 * w)
-                        .style(self.text_white())
-                        .font(FONT_BOLD),
-                    row![
-                        svg(icons::svg_handle(left_icon))
-                            .style(self.svg_white())
-                            .opacity(self.get_opacity()),
-                        glass_slider(0.0..=1.0, value, message)
-                            .step(0.01_f32)
-                            .width(0.7 * w)
-                            .style(self.slider_style()),
-                        svg(icons::svg_handle(right_icon))
-                            .style(self.svg_white())
-                            .opacity(self.get_opacity())
-                    ]
-                    .align_y(Alignment::Center)
-                    .width(Length::Fill)
-                    .height(0.05 * w)
-                ]
-                .spacing(0.036 * w),
+        mouse_area(stack![
+            glass_slider(0.0..=1.0, value, message)
+                .slider_type(SliderType::Filled)
+                .step(0.001_f32)
+                .width(w)
+                .height(height)
+                .style(self.slider_style())
+                .glass_style(move |theme| self.settings_glass_style(theme, index)),
+            container(
+                svg(icons::svg_handle(icon))
+                    .style(self.svg_blue())
+                    .opacity(self.get_opacity())
+                    .width(0.08 * w)
+                    .height(0.08 * w)
             )
-            .padding(0.04 * w)
-            .height(height)
-            .width(Self::n_cols(size, 4))
-            .glass_style(move |theme| self.settings_glass_style(theme, index))
-            .style(border_radius(Self::n_rows(size, 1) * 0.5)),
-        )
+            .center_y(height)
+            .align_left(w)
+            .padding(0.05 * w),
+        ])
         .on_enter(Message::Hovered(index))
         .on_exit(Message::ClearHover)
         .into()
@@ -587,7 +559,8 @@ impl Ui {
 
     fn slider_style(&self) -> impl Fn(&Theme, slider::Status) -> slider::Style {
         let color = color_opacity(Color::WHITE, self.get_opacity());
-        let background_color = color_opacity(Color::from_rgb(0.3, 0.3, 0.3), self.get_opacity());
+        // let background_color = color_opacity(Color::from_rgb(0.3, 0.3, 0.3), self.get_opacity());
+        let background_color = Color::TRANSPARENT;
         move |_, status| {
             let handle_color = match status {
                 slider::Status::Active => color_opacity(color, 0.0),
@@ -603,7 +576,7 @@ impl Ui {
                     border: Border {
                         color,
                         width: 0.0,
-                        radius: 15.0.into(),
+                        radius: 150.0.into(),
                     },
                 },
                 handle: Handle {

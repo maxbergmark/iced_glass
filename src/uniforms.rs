@@ -19,6 +19,8 @@ pub struct Uniforms {
     pub edge_type: EdgeType,
     pub num_children: u32,
     pub blending_factor: f32,
+    pub fill_level: f32,
+    pub fill_color: iced::Color,
 }
 
 impl Uniforms {
@@ -37,8 +39,8 @@ impl Uniforms {
             rim_width: self.rim_width * scale,
             rim_angle: self.rim_angle,
             opacity: self.opacity,
-            tint: [self.tint.r, self.tint.g, self.tint.b, self.tint.a],
-            scrim: [self.scrim.r, self.scrim.g, self.scrim.b, self.scrim.a],
+            tint: to_array(self.tint),
+            scrim: to_array(self.scrim),
             edge_type: match self.edge_type {
                 EdgeType::GlassEdge => 0,
                 EdgeType::SoftEdge => 1,
@@ -46,7 +48,8 @@ impl Uniforms {
             content_scale: [self.content_scale.0, self.content_scale.1],
             num_children: self.num_children,
             blending_factor: self.blending_factor,
-            _pad: 0.0,
+            fill_level: self.fill_level,
+            fill_color: to_array(self.fill_color),
             _pad2: 0.0,
         }
     }
@@ -68,11 +71,16 @@ impl Uniforms {
     }
 }
 
+const fn to_array(color: iced::Color) -> [f32; 4] {
+    [color.r, color.g, color.b, color.a]
+}
+
 #[derive(Debug, Default, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 #[repr(C)]
 pub struct Raw {
     pub tint: [f32; 4],
     pub scrim: [f32; 4],
+    pub fill_color: [f32; 4],
     pub direction: [f32; 2],
     pub content_scale: [f32; 2],
 
@@ -93,7 +101,7 @@ pub struct Raw {
 
     pub num_children: u32,
     pub blending_factor: f32,
-    pub _pad: f32,
+    pub fill_level: f32,
     pub _pad2: f32,
 }
 

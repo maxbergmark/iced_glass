@@ -473,6 +473,8 @@ where
                     edge_type: glass_style.edge_type,
                     num_children: children.len() as u32,
                     blending_factor: self.blending_factor,
+                    fill_level: 0.0,
+                    fill_color: Color::TRANSPARENT,
                 },
                 children,
             },
