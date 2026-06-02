@@ -495,6 +495,8 @@ where
                     edge_type: glass_style.edge_type,
                     num_children: 0,
                     blending_factor: 1.0,
+                    fill_level: 0.0,
+                    fill_color: Color::TRANSPARENT,
                 },
             },
         );

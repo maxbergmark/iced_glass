@@ -16,5 +16,6 @@ pub use helpers::glass_container as container;
 pub use helpers::glass_slider as slider;
 #[cfg(feature = "text")]
 pub use helpers::glass_text as text;
+pub use slider::SliderType;
 pub use stack::{InnerContent, Stack};
 pub use style::{EdgeType, Style, StyleFn};

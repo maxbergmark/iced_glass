@@ -1,7 +1,7 @@
 use std::ops::RangeInclusive;
 
 use iced::{
-    Border, Color, Element, Event, Length, Pixels, Point, Rectangle, Size,
+    Background, Border, Color, Element, Event, Length, Pixels, Point, Rectangle, Size,
     advanced::{
         Clipboard, Layout, Shell, Widget, layout, mouse, renderer,
         widget::{
@@ -33,6 +33,17 @@ where
     class: Theme::Class<'a>,
     status: Option<Status>,
     glass_style: crate::StyleFn<'a, Theme>,
+    #[allow(clippy::struct_field_names)]
+    slider_type: SliderType,
+}
+
+/// The type of the [`Slider`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SliderType {
+    /// A normal slider.
+    Normal,
+    /// A filled slider.
+    Filled,
 }
 
 impl<T, Message, Theme> std::fmt::Debug for Slider<'_, T, Message, Theme>
@@ -104,6 +115,7 @@ where
             class: Theme::default(),
             status: None,
             glass_style: Box::new(|_| crate::Style::default()),
+            slider_type: SliderType::Normal,
         }
     }
 
@@ -171,6 +183,12 @@ where
     /// Sets the glass style of the [`Slider`].
     pub fn glass_style(mut self, style: impl Fn(&Theme) -> crate::Style + 'a) -> Self {
         self.glass_style = Box::new(style) as crate::StyleFn<'a, Theme>;
+        self
+    }
+
+    /// Sets the type of the [`Slider`].
+    pub const fn slider_type(mut self, slider_type: SliderType) -> Self {
+        self.slider_type = slider_type;
         self
     }
 }
@@ -397,6 +415,59 @@ where
         _cursor: mouse::Cursor,
         _viewport: &Rectangle,
     ) {
+        match self.slider_type {
+            SliderType::Normal => {
+                self.draw_normal_slider(tree, renderer, theme, layout);
+            }
+            SliderType::Filled => {
+                self.draw_wide_slider(tree, renderer, theme, layout);
+            }
+        }
+    }
+
+    fn mouse_interaction(
+        &self,
+        tree: &Tree,
+        layout: Layout<'_>,
+        cursor: mouse::Cursor,
+        _viewport: &Rectangle,
+        _renderer: &Renderer,
+    ) -> mouse::Interaction {
+        let state = tree.state.downcast_ref::<State>();
+
+        if state.is_dragging {
+            // FIXME: Fall back to `Pointer` on Windows
+            // See https://github.com/rust-windowing/winit/issues/1043
+            if cfg!(target_os = "windows") {
+                mouse::Interaction::Pointer
+            } else {
+                mouse::Interaction::Grabbing
+            }
+        } else if cursor.is_over(layout.bounds()) {
+            if cfg!(target_os = "windows") {
+                mouse::Interaction::Pointer
+            } else {
+                mouse::Interaction::Grab
+            }
+        } else {
+            mouse::Interaction::default()
+        }
+    }
+}
+
+impl<T, Message, Theme: Catalog> Slider<'_, T, Message, Theme>
+where
+    T: Copy + Into<f64> + num_traits::FromPrimitive,
+{
+    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_lines)]
+    fn draw_normal_slider<Renderer: iced::advanced::Renderer + iced_wgpu::primitive::Renderer>(
+        &self,
+        tree: &Tree,
+        renderer: &mut Renderer,
+        theme: &Theme,
+        layout: Layout<'_>,
+    ) {
         let bounds = layout.bounds();
 
         let style = theme.style(&self.class, self.status.unwrap_or(Status::Active));
@@ -495,6 +566,8 @@ where
                         edge_type: glass_style.edge_type,
                         num_children: 0,
                         blending_factor: 1.0,
+                        fill_level: 0.0,
+                        fill_color: Color::TRANSPARENT,
                     },
                     children: vec![],
                 },
@@ -520,33 +593,71 @@ where
         }
     }
 
-    fn mouse_interaction(
+    #[allow(clippy::too_many_arguments)]
+    fn draw_wide_slider<Renderer: iced::advanced::Renderer + iced_wgpu::primitive::Renderer>(
         &self,
         tree: &Tree,
+        renderer: &mut Renderer,
+        theme: &Theme,
         layout: Layout<'_>,
-        cursor: mouse::Cursor,
-        _viewport: &Rectangle,
-        _renderer: &Renderer,
-    ) -> mouse::Interaction {
+    ) {
+        let bounds = layout.bounds();
+
+        let style = theme.style(&self.class, self.status.unwrap_or(Status::Active));
+        let glass_style = (self.glass_style)(theme);
+        // style.handle.background = iced::Background::Color(iced::Color::WHITE);
+
+        let corner_radius = style.rail.border.radius.bottom_left;
+        let fill_color = match style.rail.backgrounds.0 {
+            Background::Color(color) => color,
+            Background::Gradient(_) => Color::TRANSPARENT,
+        };
+        let scrim = match style.rail.backgrounds.1 {
+            Background::Color(color) => color,
+            Background::Gradient(_) => Color::TRANSPARENT,
+        };
+        let value = self.value.into() as f32;
+        let (range_start, range_end) = {
+            let (start, end) = self.range.clone().into_inner();
+
+            (start.into() as f32, end.into() as f32)
+        };
+        let fill_level = if range_start >= range_end {
+            0.0
+        } else {
+            (value - range_start) / (range_end - range_start)
+        };
         let state = tree.state.downcast_ref::<State>();
 
-        if state.is_dragging {
-            // FIXME: Fall back to `Pointer` on Windows
-            // See https://github.com/rust-windowing/winit/issues/1043
-            if cfg!(target_os = "windows") {
-                mouse::Interaction::Pointer
-            } else {
-                mouse::Interaction::Grabbing
-            }
-        } else if cursor.is_over(layout.bounds()) {
-            if cfg!(target_os = "windows") {
-                mouse::Interaction::Pointer
-            } else {
-                mouse::Interaction::Grab
-            }
-        } else {
-            mouse::Interaction::default()
-        }
+        renderer.draw_primitive(
+            bounds,
+            crate::primitive::Primitive {
+                id: state.id,
+                uniforms: crate::uniforms::Uniforms {
+                    blur_radius: glass_style.blur_radius,
+                    // TODO: don't just use the bottom left corner radius
+                    corner_radius,
+                    saturation: glass_style.saturation,
+                    lightness: glass_style.lightness,
+                    edge_radius: glass_style.edge_radius,
+                    height: glass_style.edge_height,
+                    refractive_index: glass_style.refractive_index,
+                    chromatic_aberration: glass_style.chromatic_aberration,
+                    rim_width: glass_style.rim_width,
+                    rim_angle: glass_style.rim_angle,
+                    opacity: glass_style.opacity,
+                    tint: glass_style.tint,
+                    scrim,
+                    content_scale: (1.0, 1.0),
+                    edge_type: glass_style.edge_type,
+                    num_children: 0,
+                    blending_factor: 1.0,
+                    fill_level,
+                    fill_color,
+                },
+                children: vec![],
+            },
+        );
     }
 }
 

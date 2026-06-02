@@ -1,6 +1,7 @@
 struct Uniforms {
     tint: vec4<f32>,
     scrim: vec4<f32>,
+    fill_color: vec4<f32>,
     blur_direction: vec2<f32>,
     content_scale: vec2<f32>,
     blur_radius: f32,
@@ -17,7 +18,7 @@ struct Uniforms {
     rim_angle: f32,
     num_children: u32,
     blending_factor: f32,
-    _pad: f32,
+    fill_level: f32,
     _pad2: f32,
 };
 
@@ -100,6 +101,7 @@ fn soft_edge_sampling(input: FragInput) -> vec4<f32> {
     let aa = fwidth(sdf);
     let outside_factor = smoothstep(-aa, aa, sdf);
     var color = textureSample(image, image_sampler, input.uv);
+    color = blend_fill_color(color, input.uv.x);
     color = saturate(color);
     let scrim = vec4<f32>(uniforms.scrim.rgb, 1.0);
     color = mix(color, scrim, uniforms.scrim.a);
@@ -128,21 +130,27 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
     let n_b = max(uniforms.refractive_index + uniforms.chromatic_aberration, 1.0);
     let r_edge = clamp_radius(uniforms.edge_radius, dimensions);
 
-    var red = sample_color_channel(p, sdf, gradient, r_edge, n_r, h, dimensions);
-    var green = sample_color_channel(p, sdf, gradient, r_edge, n_g, h, dimensions);
-    var blue = sample_color_channel(p, sdf, gradient, r_edge, n_b, h, dimensions);
-    var color = vec4<f32>(red.r, green.g, blue.b, green.a);
+    if uniforms.chromatic_aberration > 0.0 {
+    var red = sample_color_channel(p, sdf, gradient, r_edge, n_r, h, dimensions, input.uv.x);
+        var green = sample_color_channel(p, sdf, gradient, r_edge, n_g, h, dimensions, input.uv.x);
+        var blue = sample_color_channel(p, sdf, gradient, r_edge, n_b, h, dimensions, input.uv.x);
+        var color = vec4<f32>(red.r, green.g, blue.b, green.a);
+    } else {
+        var color = sample_color_channel(p, sdf, gradient, r_edge, n_r, h, dimensions, input.uv.x);
+    }
 
     return color;
 }
 
-fn sample_color_channel(p: vec2<f32>, sdf: f32, gradient: vec2<f32>, r_edge: f32, n: f32, h: f32, dimensions: vec2<f32>) -> vec4<f32> {
+fn sample_color_channel(p: vec2<f32>, sdf: f32, gradient: vec2<f32>, r_edge: f32, n: f32, h: f32, dimensions: vec2<f32>, x: f32) -> vec4<f32> {
     let dx = select(0.0, refract(sdf, r_edge, n, h), sdf > -r_edge);
     let offset = gradient * dx;
 
     let sample_uv = (p + offset) / dimensions + vec2<f32>(0.5);
 
     var color = textureSample(image, image_sampler, sample_uv);
+    color = blend_fill_color(color, x);
+
     color = srgb_to_linear(color);
     color = saturate(color);
     let scrim = vec4<f32>(uniforms.scrim.rgb, 1.0);
@@ -154,6 +162,14 @@ fn sample_color_channel(p: vec2<f32>, sdf: f32, gradient: vec2<f32>, r_edge: f32
     let outside_factor = smoothstep(-aa, aa, sdf);
     color.a *= (1.0 - outside_factor);
     return color;
+}
+
+fn blend_fill_color(color: vec4<f32>, x: f32) -> vec4<f32> {
+    let fill_color = vec4<f32>(uniforms.fill_color.rgb, 1.0);
+    let fill_level = uniforms.fill_level;
+    let aa = fwidth(x);
+    let a = 1.0 - smoothstep(fill_level - aa, fill_level + aa, x);
+    return mix(color, fill_color, uniforms.fill_color.a * a);
 }
 
 fn sdf(p: vec2<f32>, dimensions: vec2<f32>, r: f32) -> vec3<f32> {

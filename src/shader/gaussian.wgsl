@@ -1,6 +1,7 @@
 struct Uniforms {
     tint: vec4<f32>,
     scrim: vec4<f32>,
+    fill_color: vec4<f32>,
     blur_direction: vec2<f32>,
     content_scale: vec2<f32>,
     blur_radius: f32,
@@ -17,7 +18,7 @@ struct Uniforms {
     rim_angle: f32,
     num_children: u32,
     blending_factor: f32,
-    _pad: f32,
+    fill_level: f32,
     _pad2: f32,
 };
 
