@@ -7,7 +7,7 @@ use iced::{
     },
 };
 
-use crate::uniforms::ChildRaw;
+use crate::{Direction, uniforms::ChildRaw};
 
 /// A container that displays children on top of each other.
 ///
@@ -475,6 +475,7 @@ where
                     blending_factor: self.blending_factor,
                     fill_level: 0.0,
                     fill_color: Color::TRANSPARENT,
+                    fill_direction: Direction::Horizontal,
                 },
                 children,
             },

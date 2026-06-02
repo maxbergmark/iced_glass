@@ -43,7 +43,16 @@ pub enum SliderType {
     /// A normal slider.
     Normal,
     /// A filled slider.
-    Filled,
+    Filled(Direction),
+}
+
+/// The direction of the [`Slider`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Direction {
+    /// The slider is horizontal.
+    Horizontal,
+    /// The slider is vertical.
+    Vertical,
 }
 
 impl<T, Message, Theme> std::fmt::Debug for Slider<'_, T, Message, Theme>
@@ -249,27 +258,55 @@ where
             let locate = |cursor_position: Point| -> Option<T> {
                 let bounds = layout.bounds();
 
-                if cursor_position.x <= bounds.x {
-                    Some(*self.range.start())
-                } else if cursor_position.x >= bounds.x + bounds.width {
-                    Some(*self.range.end())
-                } else {
-                    let step = if state.keyboard_modifiers.shift() {
-                        self.shift_step.unwrap_or(self.step)
+                #[allow(clippy::collapsible_else_if)]
+                if self.slider_type == SliderType::Filled(Direction::Vertical) {
+                    if cursor_position.y <= bounds.y {
+                        Some(*self.range.end())
+                    } else if cursor_position.y >= bounds.y + bounds.height {
+                        Some(*self.range.start())
                     } else {
-                        self.step
+                        let step = if state.keyboard_modifiers.shift() {
+                            self.shift_step.unwrap_or(self.step)
+                        } else {
+                            self.step
+                        }
+                        .into();
+
+                        let start = (*self.range.start()).into();
+                        let end = (*self.range.end()).into();
+
+                        let percent = 1.0
+                            - f64::from(cursor_position.y - bounds.y) / f64::from(bounds.height);
+
+                        let steps = (percent * (end - start) / step).round();
+                        let value = steps.mul_add(step, start);
+
+                        T::from_f64(value.min(end))
                     }
-                    .into();
+                } else {
+                    if cursor_position.x <= bounds.x {
+                        Some(*self.range.start())
+                    } else if cursor_position.x >= bounds.x + bounds.width {
+                        Some(*self.range.end())
+                    } else {
+                        let step = if state.keyboard_modifiers.shift() {
+                            self.shift_step.unwrap_or(self.step)
+                        } else {
+                            self.step
+                        }
+                        .into();
 
-                    let start = (*self.range.start()).into();
-                    let end = (*self.range.end()).into();
+                        let start = (*self.range.start()).into();
+                        let end = (*self.range.end()).into();
 
-                    let percent = f64::from(cursor_position.x - bounds.x) / f64::from(bounds.width);
+                        let percent =
+                            f64::from(cursor_position.x - bounds.x) / f64::from(bounds.width);
 
-                    let steps = (percent * (end - start) / step).round();
-                    let value = steps.mul_add(step, start);
+                        let steps = (percent * (end - start) / step).round();
+                        let value = steps.mul_add(step, start);
 
-                    T::from_f64(value.min(end))
+                        T::from_f64(value.min(end))
+                    }
                 }
             };
 
@@ -419,7 +456,7 @@ where
             SliderType::Normal => {
                 self.draw_normal_slider(tree, renderer, theme, layout);
             }
-            SliderType::Filled => {
+            SliderType::Filled(_) => {
                 self.draw_wide_slider(tree, renderer, theme, layout);
             }
         }
@@ -568,6 +605,7 @@ where
                         blending_factor: 1.0,
                         fill_level: 0.0,
                         fill_color: Color::TRANSPARENT,
+                        fill_direction: Direction::Horizontal,
                     },
                     children: vec![],
                 },
@@ -654,6 +692,10 @@ where
                     blending_factor: 1.0,
                     fill_level,
                     fill_color,
+                    fill_direction: match self.slider_type {
+                        SliderType::Normal => Direction::Horizontal,
+                        SliderType::Filled(direction) => direction,
+                    },
                 },
                 children: vec![],
             },

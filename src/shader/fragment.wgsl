@@ -19,7 +19,7 @@ struct Uniforms {
     num_children: u32,
     blending_factor: f32,
     fill_level: f32,
-    _pad2: f32,
+    fill_direction: i32,
 };
 
 struct Child {
@@ -101,7 +101,7 @@ fn soft_edge_sampling(input: FragInput) -> vec4<f32> {
     let aa = fwidth(sdf);
     let outside_factor = smoothstep(-aa, aa, sdf);
     var color = textureSample(image, image_sampler, input.uv);
-    color = blend_fill_color(color, input.uv.x);
+    color = blend_fill_color(color, input.uv);
     color = saturate(color);
     let scrim = vec4<f32>(uniforms.scrim.rgb, 1.0);
     color = mix(color, scrim, uniforms.scrim.a);
@@ -132,25 +132,25 @@ fn physical_sampling(input: FragInput) -> vec4<f32> {
 
     var color: vec4<f32>;
     if uniforms.chromatic_aberration > 0.0 {
-        let red = sample_color_channel(p, sdf, gradient, r_edge, n_r, h, dimensions, input.uv.x);
-        var green = sample_color_channel(p, sdf, gradient, r_edge, n_g, h, dimensions, input.uv.x);
-        var blue = sample_color_channel(p, sdf, gradient, r_edge, n_b, h, dimensions, input.uv.x);
+        let red = sample_color_channel(p, sdf, gradient, r_edge, n_r, h, dimensions, input.uv);
+        var green = sample_color_channel(p, sdf, gradient, r_edge, n_g, h, dimensions, input.uv);
+        var blue = sample_color_channel(p, sdf, gradient, r_edge, n_b, h, dimensions, input.uv);
         color = vec4<f32>(red.r, green.g, blue.b, green.a);
     } else {
-        color = sample_color_channel(p, sdf, gradient, r_edge, n_r, h, dimensions, input.uv.x);
+        color = sample_color_channel(p, sdf, gradient, r_edge, n_r, h, dimensions, input.uv);
     }
 
     return color;
 }
 
-fn sample_color_channel(p: vec2<f32>, sdf: f32, gradient: vec2<f32>, r_edge: f32, n: f32, h: f32, dimensions: vec2<f32>, x: f32) -> vec4<f32> {
+fn sample_color_channel(p: vec2<f32>, sdf: f32, gradient: vec2<f32>, r_edge: f32, n: f32, h: f32, dimensions: vec2<f32>, xy: vec2<f32>) -> vec4<f32> {
     let dx = select(0.0, refract(sdf, r_edge, n, h), sdf > -r_edge);
     let offset = gradient * dx;
 
     let sample_uv = (p + offset) / dimensions + vec2<f32>(0.5);
 
     var color = textureSample(image, image_sampler, sample_uv);
-    color = blend_fill_color(color, x);
+    color = blend_fill_color(color, xy);
 
     color = srgb_to_linear(color);
     color = saturate(color);
@@ -165,7 +165,8 @@ fn sample_color_channel(p: vec2<f32>, sdf: f32, gradient: vec2<f32>, r_edge: f32
     return color;
 }
 
-fn blend_fill_color(color: vec4<f32>, x: f32) -> vec4<f32> {
+fn blend_fill_color(color: vec4<f32>, xy: vec2<f32>) -> vec4<f32> {
+    let x = select(xy.x, 1.0 - xy.y, uniforms.fill_direction == 1);
     let fill_color = vec4<f32>(uniforms.fill_color.rgb, 1.0);
     let fill_level = uniforms.fill_level;
     let aa = fwidth(x);

@@ -14,7 +14,7 @@ use iced::{
 };
 
 use iced_glass::{
-    SliderType,
+    Direction, SliderType,
     widget::{EdgeType, container as glass_container, slider as glass_slider},
 };
 
@@ -226,19 +226,22 @@ impl Ui {
                 ]
                 .spacing(Self::spacing(size)),
                 row![
-                    self.small_icon_with_two_lines(3, size, "airplane", "Airplane", "Off"),
-                    self.circular_icon(4, size, "camera"),
-                    self.circular_icon(5, size, "desktop"),
+                    column![
+                        self.small_icon_with_two_lines(3, size, "airplane", "Airplane", "Off"),
+                        self.small_icon_with_one_line(8, size, "moon", "Focus"),
+                    ]
+                    .spacing(Self::spacing(size)),
+                    self.slider(9, size, "sunny", self.brightness, Message::Brightness),
+                    self.slider(10, size, "volume-high", self.volume, Message::Volume),
                 ]
                 .spacing(Self::spacing(size)),
                 row![
+                    self.circular_icon(4, size, "camera"),
+                    self.circular_icon(5, size, "desktop"),
                     self.circular_icon(6, size, "finger-print"),
                     self.circular_icon(7, size, "at"),
-                    self.small_icon_with_one_line(8, size, "moon", "Focus"),
                 ]
                 .spacing(Self::spacing(size)),
-                self.slider(9, size, "sunny", self.brightness, Message::Brightness),
-                self.slider(10, size, "volume-high", self.volume, Message::Volume),
             ]
             .width(Length::Fill)
             .align_x(Alignment::Center)
@@ -492,13 +495,13 @@ impl Ui {
         value: f32,
         message: impl Fn(f32) -> Message + 'static,
     ) -> Element<'_, Message> {
-        let height = Self::n_rows(size, 1);
-        let w = size.width;
+        let height = Self::n_rows(size, 2);
+        let width = Self::n_cols(size, 1);
         mouse_area(stack![
             glass_slider(0.0..=1.0, value, message)
-                .slider_type(SliderType::Filled)
+                .slider_type(SliderType::Filled(Direction::Vertical))
                 .step(0.001_f32)
-                .width(w)
+                .width(width)
                 .height(height)
                 .style(self.slider_style())
                 .glass_style(move |theme| self.settings_glass_style(theme, index)),
@@ -506,12 +509,12 @@ impl Ui {
                 svg(icons::svg_handle(icon))
                     .style(self.svg_blue())
                     .opacity(self.get_opacity())
-                    .width(0.08 * w)
-                    .height(0.08 * w)
+                    .width(0.5 * width)
+                    .height(0.5 * width)
             )
-            .center_y(height)
-            .align_left(w)
-            .padding(0.05 * w),
+            .align_bottom(height)
+            .center_x(width)
+            .padding(0.25 * width),
         ])
         .on_enter(Message::Hovered(index))
         .on_exit(Message::ClearHover)

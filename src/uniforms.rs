@@ -1,4 +1,4 @@
-use crate::{shader::MIP_LEVEL_COUNT, widget::EdgeType};
+use crate::{Direction, shader::MIP_LEVEL_COUNT, widget::EdgeType};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Uniforms {
@@ -21,6 +21,7 @@ pub struct Uniforms {
     pub blending_factor: f32,
     pub fill_level: f32,
     pub fill_color: iced::Color,
+    pub fill_direction: Direction,
 }
 
 impl Uniforms {
@@ -50,7 +51,10 @@ impl Uniforms {
             blending_factor: self.blending_factor,
             fill_level: self.fill_level,
             fill_color: to_array(self.fill_color),
-            _pad2: 0.0,
+            fill_direction: match self.fill_direction {
+                Direction::Horizontal => 0,
+                Direction::Vertical => 1,
+            },
         }
     }
 
@@ -102,7 +106,7 @@ pub struct Raw {
     pub num_children: u32,
     pub blending_factor: f32,
     pub fill_level: f32,
-    pub _pad2: f32,
+    pub fill_direction: i32,
 }
 
 #[derive(Debug, Default, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]

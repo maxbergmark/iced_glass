@@ -19,7 +19,7 @@ struct Uniforms {
     num_children: u32,
     blending_factor: f32,
     fill_level: f32,
-    _pad2: f32,
+    fill_direction: i32,
 };
 
 

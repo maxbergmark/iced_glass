@@ -15,7 +15,10 @@ use iced::{
 use itertools::Itertools;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
-use crate::pipeline::{text::content_scale, text_atlas::GlyphId};
+use crate::{
+    Direction,
+    pipeline::{text::content_scale, text_atlas::GlyphId},
+};
 
 /// A widget that renders text with a glass effect.
 #[must_use]
@@ -497,6 +500,7 @@ where
                     blending_factor: 1.0,
                     fill_level: 0.0,
                     fill_color: Color::TRANSPARENT,
+                    fill_direction: Direction::Horizontal,
                 },
             },
         );

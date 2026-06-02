@@ -11,6 +11,8 @@ use iced::{
     },
 };
 
+use crate::Direction;
+
 /// A container widget with a glass effect.
 #[must_use]
 pub struct Container<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
@@ -363,6 +365,7 @@ where
                     blending_factor: 1.0,
                     fill_level: 0.0,
                     fill_color: Color::TRANSPARENT,
+                    fill_direction: Direction::Horizontal,
                 },
                 children: vec![],
             },
