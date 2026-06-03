@@ -1,52 +1,41 @@
-use iced::time::Instant;
-use std::time::Duration;
+use iced::{time::Instant, widget::image};
+use once_cell::sync::Lazy;
+use std::{collections::HashSet, time::Duration};
 
 use iced::{
-    Alignment, Animation, Background, Border, Color, ContentFit, Element, Font, Length, Padding,
-    Shadow, Size, Subscription, Task, Theme,
+    Alignment, Animation, Border, Color, ContentFit, Element, Length, Padding, Shadow, Size,
+    Subscription, Task, Theme,
     animation::Easing,
-    font::{self, Family, Stretch, Weight},
-    widget::{
-        button, column, container, image, mouse_area, responsive, row,
-        slider::{self, Handle, Rail},
-        space, stack, svg, text,
-    },
+    widget::{button, column, container, responsive, row, stack, svg},
 };
 
-use iced_glass::{
-    Direction, SliderType,
-    widget::{EdgeType, container as glass_container, slider as glass_slider},
+use iced_glass::widget::{EdgeType, container as glass_container};
+
+use crate::{
+    music_view::MusicView, skin::Skin, slider_with_icon::SliderWithIcon,
+    toggle_button::ToggleButton, toggle_with_text::ToggleWithText,
 };
 
 mod icons;
-
-const FONT_BOLD: Font = Font {
-    family: Family::Name("Fira Sans"),
-    weight: Weight::Bold,
-    stretch: Stretch::Normal,
-    style: font::Style::Normal,
-};
-
-const FONT_NORMAL: Font = Font {
-    family: Family::Name("Fira Sans"),
-    weight: Weight::Normal,
-    stretch: Stretch::Normal,
-    style: font::Style::Normal,
-};
+mod music_view;
+mod skin;
+mod slider_with_icon;
+mod spacing;
+mod toggle_button;
+mod toggle_with_text;
 
 const BACKGROUND: &[u8] = include_bytes!("../assets/stars.jpg");
-const ALBUM: &[u8] = include_bytes!("../assets/album_cover.jpg");
+static BACKGROUND_HANDLE: Lazy<image::Handle> = Lazy::new(|| image::Handle::from_bytes(BACKGROUND));
 
 #[derive(Debug, Clone)]
 pub struct Ui {
     hovered: Option<usize>,
+    toggled: HashSet<usize>,
     lightness: HoverInfo,
     opacity: Animation<bool>,
     edge_radius: Animation<bool>,
     brightness: f32,
     volume: f32,
-    background: image::Handle,
-    album_cover: image::Handle,
 }
 
 #[derive(Debug, Clone)]
@@ -59,6 +48,7 @@ pub struct HoverInfo {
 #[derive(Debug, Clone)]
 pub enum Message {
     Hovered(usize),
+    Toggle(usize),
     ClearHover,
     KeyPress(iced::keyboard::Key),
     ToggleMenu,
@@ -66,7 +56,7 @@ pub enum Message {
     Volume(f32),
     Noop,
 }
-// TODO: fix mouse area bounds
+
 fn main() -> iced::Result {
     iced::application(Ui::boot, Ui::update, Ui::view)
         .subscription(Ui::subscription)
@@ -80,20 +70,19 @@ impl Default for Ui {
     fn default() -> Self {
         Self {
             hovered: None,
+            toggled: [8].into(), // focus toggle
             lightness: HoverInfo {
                 index: 0,
-                is_hovered: false,
-                animation: Animation::new(false).duration(Duration::from_millis(150)),
+                is_hovered: true,
+                animation: Animation::new(true).duration(Duration::from_millis(150)),
             },
-            opacity: Animation::new(false).slow(),
-            edge_radius: Animation::new(false)
+            opacity: Animation::new(true).slow(),
+            edge_radius: Animation::new(true)
                 .slow()
                 .delay(Duration::from_millis(100))
                 .easing(Easing::EaseIn),
             brightness: 0.6,
             volume: 0.3,
-            background: image::Handle::from_bytes(BACKGROUND),
-            album_cover: image::Handle::from_bytes(ALBUM),
         }
     }
 }
@@ -114,6 +103,14 @@ impl Ui {
                         Animation::new(false).duration(Duration::from_millis(150));
                 }
                 self.lightness.animation.go_mut(true, now);
+                Task::none()
+            }
+            Message::Toggle(index) => {
+                if self.toggled.contains(&index) {
+                    self.toggled.remove(&index);
+                } else {
+                    self.toggled.insert(index);
+                }
                 Task::none()
             }
             Message::ClearHover => {
@@ -164,18 +161,24 @@ impl Ui {
         Subscription::batch(vec![animation, keyboard])
     }
 
+    fn skin(&self) -> Skin {
+        let now = Instant::now();
+        Skin {
+            opacity: self.opacity.interpolate(0.0, 1.0, now),
+            hovered: self.hovered,
+            hover_t: self.lightness.animation.interpolate(0.0, 1.0, now),
+            edge_radius: self.edge_radius.interpolate(0.0, 24.0, now),
+        }
+    }
+
     pub fn view(&self) -> Element<'_, Message> {
-        container(stack![
-            self.wallpaper(),
-            // self.clock(),
-            self.desktop_elements(),
-        ])
-        .center(Length::Fill)
-        .into()
+        container(stack![self.wallpaper(), self.desktop_elements(),])
+            .center(Length::Fill)
+            .into()
     }
 
     fn wallpaper(&self) -> Element<'_, Message> {
-        image(&self.background)
+        image(BACKGROUND_HANDLE.clone())
             .width(Length::Fill)
             .height(Length::Fill)
             .content_fit(ContentFit::Cover)
@@ -184,425 +187,218 @@ impl Ui {
 
     fn desktop_elements(&self) -> Element<'_, Message> {
         stack![
-            if self.get_opacity() > 0.0 {
-                self.settings()
-            } else {
-                space().width(Length::Fill).into()
-            },
-            container(
-                button(svg(icons::svg_handle("gear")).style(self.svg_white()))
-                    .style(|_theme, _status| {
-                        button::Style {
-                            background: None,
-                            text_color: Color::TRANSPARENT,
-                            border: Border::default(),
-                            shadow: Shadow::default(),
-                            snap: false,
-                        }
-                    })
-                    .width(100.0)
-                    .height(100.0)
-                    .on_press(Message::ToggleMenu)
-            )
-            .center_x(Length::Fill)
-            .align_bottom(Length::Fill)
-            .padding(20.0)
+            self.is_visible().then_some(self.settings()),
+            self.settings_button_overlay(),
         ]
         .width(Length::Fill)
         .height(Length::Fill)
         .into()
     }
 
-    fn settings(&self) -> Element<'_, Message> {
-        glass_container(responsive(|size| {
-            column![
-                row![
-                    column![
-                        self.small_icon_with_two_lines(0, size, "wifi", "Wi-Fi", "Connected"),
-                        self.small_icon_with_two_lines(1, size, "bluetooth", "Bluetooth", "On")
-                    ]
-                    .spacing(Self::spacing(size)),
-                    self.large_box(2, size),
-                ]
-                .spacing(Self::spacing(size)),
-                row![
-                    column![
-                        self.small_icon_with_two_lines(3, size, "airplane", "Airplane", "Off"),
-                        self.small_icon_with_one_line(8, size, "moon", "Focus"),
-                    ]
-                    .spacing(Self::spacing(size)),
-                    self.slider(9, size, "sunny", self.brightness, Message::Brightness),
-                    self.slider(10, size, "volume-high", self.volume, Message::Volume),
-                ]
-                .spacing(Self::spacing(size)),
-                row![
-                    self.circular_icon(4, size, "camera"),
-                    self.circular_icon(5, size, "desktop"),
-                    self.circular_icon(6, size, "finger-print"),
-                    self.circular_icon(7, size, "at"),
-                ]
-                .spacing(Self::spacing(size)),
-            ]
-            .width(Length::Fill)
-            .align_x(Alignment::Center)
-            .spacing(Self::spacing(size))
+    fn settings_button_overlay(&self) -> Element<'_, Message> {
+        responsive(|size| {
+            let overlay = container(self.settings_button());
+            if size.width < size.height {
+                overlay.center_x(Length::Fill).align_bottom(Length::Fill)
+            } else {
+                overlay.center_y(Length::Fill).align_right(Length::Fill)
+            }
+            .padding(20.0)
             .into()
-        }))
-        .glass_style(|_theme| iced_glass::Style {
-            blur_radius: 200.0,
-            edge_radius: 0.0,
-            lightness: -0.25,
-            opacity: self.get_opacity(),
-            edge_type: EdgeType::SoftEdge,
-            ..Default::default()
         })
-        .center(Length::Fill)
-        .padding(Padding::default().horizontal(40.0).top(100.0))
+        .width(Length::Fill)
+        .height(Length::Fill)
         .into()
     }
 
-    fn small_icon_with_one_line(
-        &self,
-        index: usize,
-        size: iced::Size,
-        icon: &'static str,
-        top_text: &'static str,
-    ) -> Element<'_, Message> {
-        let w = size.width;
-        mouse_area(
-            glass_container(
-                row![
-                    container(
-                        svg(icons::svg_handle(icon))
-                            .style(self.svg_white())
-                            .opacity(self.get_opacity())
-                    )
-                    .center(0.1 * w)
-                    .padding(0.02 * w)
-                    .style(self.border_radius_blue(w)),
-                    text(top_text)
-                        .size(0.033 * w)
-                        .wrapping(text::Wrapping::None)
-                        .style(self.text_white())
-                        .font(FONT_BOLD),
+    fn settings_button(&self) -> Element<'_, Message> {
+        button(svg(icons::svg_handle("gear")).style(self.svg_white()))
+            .style(|_theme, _status| button::Style {
+                background: None,
+                text_color: Color::TRANSPARENT,
+                border: Border::default(),
+                shadow: Shadow::default(),
+                snap: false,
+            })
+            .width(80.0)
+            .height(80.0)
+            .on_press(Message::ToggleMenu)
+            .into()
+    }
+
+    fn settings(&self) -> Element<'_, Message> {
+        self.blurred_background(move |size| {
+            if size.width < size.height {
+                self.portrait_settings(size)
+            } else {
+                self.landscape_settings(size)
+            }
+        })
+    }
+
+    fn blurred_background<'a, F>(&'a self, content: F) -> Element<'a, Message>
+    where
+        F: Fn(iced::Size) -> Element<'a, Message> + 'a,
+    {
+        glass_container(responsive(content))
+            .glass_style(|_theme| iced_glass::Style {
+                blur_radius: 200.0,
+                edge_radius: 0.0,
+                lightness: -0.25,
+                opacity: self.get_opacity(),
+                edge_type: EdgeType::SoftEdge,
+                ..Default::default()
+            })
+            .center(Length::Fill)
+            .padding(Padding::default().horizontal(40.0).top(100.0).bottom(100.0))
+            .into()
+    }
+
+    fn portrait_settings(&self, size: iced::Size) -> Element<'_, Message> {
+        let skin = self.skin();
+
+        column![
+            row![
+                column![
+                    self.wifi_toggle(size).view(skin),
+                    self.bluetooth_toggle(size).view(skin),
                 ]
-                .align_y(Alignment::Center)
-                .spacing(0.028 * w),
-            )
-            .padding(0.04 * w)
-            .glass_style(move |theme| self.settings_glass_style(theme, index))
-            .center_y(Self::n_rows(size, 1))
-            .width(Self::n_cols(size, 2))
-            .style(border_radius(w)),
-        )
-        .on_enter(Message::Hovered(index))
-        .on_exit(Message::ClearHover)
-        .into()
-    }
-
-    fn small_icon_with_two_lines(
-        &self,
-        index: usize,
-        size: iced::Size,
-        icon: &'static str,
-        top_text: &'static str,
-        bottom_text: &'static str,
-    ) -> Element<'_, Message> {
-        let w = size.width;
-        mouse_area(
-            glass_container(
-                row![
-                    container(
-                        svg(icons::svg_handle(icon))
-                            .style(self.svg_blue())
-                            .opacity(self.get_opacity())
-                    )
-                    .center(0.1 * w)
-                    .padding(0.02 * w)
-                    .style(self.border_radius_white(w)),
-                    column![
-                        text(top_text)
-                            .size(0.033 * w)
-                            .wrapping(text::Wrapping::None)
-                            .style(self.text_white())
-                            .font(FONT_BOLD),
-                        text(bottom_text)
-                            .size(0.03 * w)
-                            .style(self.text_white())
-                            .font(FONT_NORMAL)
-                    ]
+                .spacing(spacing::spacing(size)),
+                self.music_view(size).view(skin),
+            ]
+            .spacing(spacing::spacing(size)),
+            row![
+                column![
+                    self.airplane_toggle(size).view(skin),
+                    self.focus_toggle(size).view(skin),
                 ]
-                .align_y(Alignment::Center)
-                .spacing(0.03 * w),
+                .spacing(spacing::spacing(size)),
+                self.brightness_slider(size).view(skin),
+                self.volume_slider(size).view(skin),
+            ]
+            .spacing(spacing::spacing(size)),
+            (size.height > 1.2633333 * size.width).then_some(
+                row![
+                    self.camera_toggle(size).view(skin),
+                    self.desktop_toggle(size).view(skin),
+                    self.fingerprint_toggle(size).view(skin),
+                    self.at_toggle(size).view(skin),
+                ]
+                .spacing(spacing::spacing(size)),
             )
-            .padding(0.04 * w)
-            .glass_style(move |theme| self.settings_glass_style(theme, index))
-            .center_y(Self::n_rows(size, 1))
-            .width(Self::n_cols(size, 2))
-            .style(border_radius(w)),
-        )
-        .on_enter(Message::Hovered(index))
-        .on_exit(Message::ClearHover)
+        ]
+        .width(Length::Fill)
+        .align_x(Alignment::Center)
+        .spacing(spacing::spacing(size))
         .into()
     }
 
-    fn n_cols(size: iced::Size, n: usize) -> f32 {
-        let n = n as f32;
-        0.2 * size.width * n + Self::spacing(size) * (n - 1.0)
+    fn landscape_settings(&self, size: iced::Size) -> Element<'_, Message> {
+        let skin = self.skin();
+        row![
+            column![
+                self.wifi_toggle(size).view(skin),
+                self.bluetooth_toggle(size).view(skin),
+                self.airplane_toggle(size).view(skin),
+                self.focus_toggle(size).view(skin),
+            ]
+            .spacing(spacing::spacing(size)),
+            column![
+                self.music_view(size).view(skin),
+                self.brightness_slider(size).view(skin),
+                self.volume_slider(size).view(skin),
+            ]
+            .spacing(spacing::spacing(size)),
+            (size.width > 1.2633333 * size.height).then_some(
+                column![
+                    self.camera_toggle(size).view(skin),
+                    self.desktop_toggle(size).view(skin),
+                    self.fingerprint_toggle(size).view(skin),
+                    self.at_toggle(size).view(skin),
+                ]
+                .spacing(spacing::spacing(size)),
+            )
+        ]
+        .height(Length::Fill)
+        .align_y(Alignment::Center)
+        .spacing(spacing::spacing(size))
+        .into()
     }
 
-    fn n_rows(size: iced::Size, n: usize) -> f32 {
-        let n = n as f32;
-        0.2 * size.width * n + Self::spacing(size) * (n - 1.0)
+    fn wifi_toggle(&self, size: iced::Size) -> ToggleWithText {
+        ToggleWithText::new(
+            0,
+            "wifi",
+            "Wi-Fi",
+            "Disconnected",
+            "Connected",
+            size,
+            &self.toggled,
+        )
     }
 
-    fn spacing(size: iced::Size) -> f32 {
-        0.05 * size.width
+    fn bluetooth_toggle(&self, size: iced::Size) -> ToggleWithText {
+        ToggleWithText::new(
+            1,
+            "bluetooth",
+            "Bluetooth",
+            "Off",
+            "On",
+            size,
+            &self.toggled,
+        )
     }
 
-    fn get_lightness(&self, index: usize) -> f32 {
-        if let Some(idx) = self.hovered
-            && idx == index
-        {
-            self.lightness
-                .animation
-                .interpolate(-0.25, 0.0, Instant::now())
-        } else {
-            -0.25
-        }
+    fn focus_toggle(&self, size: iced::Size) -> ToggleWithText {
+        ToggleWithText::new(2, "moon", "Focus", "Off", "On", size, &self.toggled)
     }
 
-    fn get_blur_radius(&self, index: usize) -> f32 {
-        if let Some(idx) = self.hovered
-            && idx == index
-        {
-            self.lightness
-                .animation
-                .interpolate(50.0, 100.0, Instant::now())
-        } else {
-            50.0
-        }
+    fn airplane_toggle(&self, size: iced::Size) -> ToggleWithText {
+        ToggleWithText::new(3, "airplane", "Airplane", "Off", "On", size, &self.toggled)
     }
 
-    fn get_edge_height(&self, index: usize) -> f32 {
-        if let Some(idx) = self.hovered
-            && idx == index
-        {
-            self.lightness
-                .animation
-                .interpolate(200.0, 300.0, Instant::now())
-        } else {
-            200.0
-        }
+    fn camera_toggle(&self, size: iced::Size) -> ToggleButton {
+        ToggleButton::new(4, "camera", size, &self.toggled)
+    }
+
+    fn desktop_toggle(&self, size: iced::Size) -> ToggleButton {
+        ToggleButton::new(5, "desktop", size, &self.toggled)
+    }
+
+    fn fingerprint_toggle(&self, size: iced::Size) -> ToggleButton {
+        ToggleButton::new(6, "finger-print", size, &self.toggled)
+    }
+
+    fn at_toggle(&self, size: iced::Size) -> ToggleButton {
+        ToggleButton::new(7, "at", size, &self.toggled)
+    }
+
+    fn volume_slider(&self, size: iced::Size) -> SliderWithIcon {
+        SliderWithIcon::new(8, "volume-high", size, self.volume, Message::Volume)
+    }
+
+    fn brightness_slider(&self, size: iced::Size) -> SliderWithIcon {
+        SliderWithIcon::new(9, "sunny", size, self.brightness, Message::Brightness)
+    }
+
+    fn music_view(&self, size: iced::Size) -> MusicView {
+        MusicView::new(10, size)
     }
 
     fn get_opacity(&self) -> f32 {
         self.opacity.interpolate(0.0, 1.0, Instant::now())
     }
 
-    fn get_edge_radius(&self) -> f32 {
-        self.edge_radius.interpolate(0.0, 24.0, Instant::now())
-    }
-
-    fn settings_glass_style(&self, _theme: &Theme, index: usize) -> iced_glass::Style {
-        iced_glass::Style {
-            blur_radius: self.get_blur_radius(index),
-            saturation: 1.1,
-            lightness: self.get_lightness(index),
-            edge_radius: self.get_edge_radius(),
-            edge_height: self.get_edge_height(index),
-            rim_width: 2.0,
-            rim_angle: 0.5,
-            opacity: self.get_opacity(),
-            ..Default::default()
-        }
-    }
-
-    fn large_box(&self, index: usize, size: iced::Size) -> Element<'_, Message> {
-        let w = size.width;
-        mouse_area(
-            glass_container(
-                column![
-                    image(&self.album_cover)
-                        .border_radius(0.04 * w)
-                        .opacity(self.get_opacity())
-                        .width(0.17 * w),
-                    column![
-                        text("Deep Meridian")
-                            .width(Length::Fill)
-                            .size(0.033 * w)
-                            .style(self.text_white())
-                            .font(FONT_BOLD),
-                        text("Terra Pulse - 2021")
-                            .size(0.028 * w)
-                            .width(Length::Fill)
-                            .style(self.text_white())
-                            .font(FONT_NORMAL)
-                    ],
-                    row![
-                        svg(icons::svg_handle("play-back"))
-                            .style(self.svg_white())
-                            .opacity(self.get_opacity()),
-                        svg(icons::svg_handle("play"))
-                            .style(self.svg_white())
-                            .opacity(self.get_opacity()),
-                        svg(icons::svg_handle("play-forward"))
-                            .style(self.svg_white())
-                            .opacity(self.get_opacity())
-                    ]
-                ]
-                .align_x(Alignment::Center)
-                .spacing(0.028 * w),
-            )
-            .padding(0.04 * w)
-            .center_y(Self::n_rows(size, 2))
-            .width(Self::n_cols(size, 2))
-            .glass_style(move |theme| self.settings_glass_style(theme, index))
-            .style(border_radius(Self::n_rows(size, 1) * 0.5)),
-        )
-        .on_enter(Message::Hovered(index))
-        .on_exit(Message::ClearHover)
-        .into()
-    }
-
-    fn circular_icon(
-        &self,
-        index: usize,
-        size: iced::Size,
-        icon: &'static str,
-    ) -> Element<'_, Message> {
-        mouse_area(
-            glass_container(
-                svg(icons::svg_handle(icon))
-                    .style(self.svg_white())
-                    .opacity(self.get_opacity()),
-            )
-            .padding(0.05 * size.width)
-            .center(0.2 * size.width)
-            .glass_style(move |theme| self.settings_glass_style(theme, index))
-            .style(border_radius(0.1 * size.width)),
-        )
-        .on_enter(Message::Hovered(index))
-        .on_exit(Message::ClearHover)
-        .into()
-    }
-
-    fn slider(
-        &self,
-        index: usize,
-        size: iced::Size,
-        icon: &'static str,
-        value: f32,
-        message: impl Fn(f32) -> Message + 'static,
-    ) -> Element<'_, Message> {
-        let height = Self::n_rows(size, 2);
-        let width = Self::n_cols(size, 1);
-        mouse_area(stack![
-            glass_slider(0.0..=1.0, value, message)
-                .slider_type(SliderType::Filled(Direction::Vertical))
-                .step(0.001_f32)
-                .width(width)
-                .height(height)
-                .style(self.slider_style())
-                .glass_style(move |theme| self.settings_glass_style(theme, index)),
-            container(
-                svg(icons::svg_handle(icon))
-                    .style(self.svg_blue())
-                    .opacity(self.get_opacity())
-                    .width(0.5 * width)
-                    .height(0.5 * width)
-            )
-            .align_bottom(height)
-            .center_x(width)
-            .padding(0.25 * width),
-        ])
-        .on_enter(Message::Hovered(index))
-        .on_exit(Message::ClearHover)
-        .into()
-    }
-
-    fn border_radius_white(&self, radius: f32) -> impl Fn(&Theme) -> container::Style {
-        let color = color_opacity(Color::WHITE, self.get_opacity());
-        move |_theme| container::Style {
-            border: Border {
-                radius: radius.into(),
-                ..Default::default()
-            },
-            background: Some(Background::Color(color)),
-            ..Default::default()
-        }
-    }
-
-    fn border_radius_blue(&self, radius: f32) -> impl Fn(&Theme) -> container::Style {
-        let color = color_opacity(Color::from_rgb(0.3, 0.3, 1.0), self.get_opacity());
-        move |_theme| container::Style {
-            border: Border {
-                radius: radius.into(),
-                ..Default::default()
-            },
-            background: Some(Background::Color(color)),
-            ..Default::default()
-        }
+    fn is_visible(&self) -> bool {
+        self.get_opacity() > 0.0
     }
 
     fn svg_white(&self) -> impl Fn(&Theme, svg::Status) -> svg::Style {
         let color = color_opacity(Color::WHITE, self.get_opacity());
         move |_, _| svg::Style { color: Some(color) }
     }
-
-    fn svg_blue(&self) -> impl Fn(&Theme, svg::Status) -> svg::Style {
-        let color = color_opacity(Color::from_rgb(0.3, 0.3, 1.0), self.get_opacity());
-        move |_, _| svg::Style { color: Some(color) }
-    }
-
-    fn text_white(&self) -> impl Fn(&Theme) -> text::Style {
-        let color = color_opacity(Color::WHITE, self.get_opacity());
-        move |_| text::Style { color: Some(color) }
-    }
-
-    fn slider_style(&self) -> impl Fn(&Theme, slider::Status) -> slider::Style {
-        let color = color_opacity(Color::WHITE, self.get_opacity());
-        // let background_color = color_opacity(Color::from_rgb(0.3, 0.3, 0.3), self.get_opacity());
-        let background_color = Color::TRANSPARENT;
-        move |_, status| {
-            let handle_color = match status {
-                slider::Status::Active => color_opacity(color, 0.0),
-                _ => color,
-            };
-            slider::Style {
-                rail: Rail {
-                    backgrounds: (
-                        Background::Color(color),
-                        Background::Color(background_color),
-                    ),
-                    width: 10.0,
-                    border: Border {
-                        color,
-                        width: 0.0,
-                        radius: 150.0.into(),
-                    },
-                },
-                handle: Handle {
-                    shape: slider::HandleShape::Circle { radius: 15.0 },
-                    background: Background::Color(handle_color),
-                    border_width: 0.0,
-                    border_color: Color::WHITE,
-                },
-            }
-        }
-    }
 }
 
 fn color_opacity(base: Color, opacity: f32) -> Color {
     Color::from_rgba(base.r, base.g, base.b, opacity)
-}
-
-fn border_radius(radius: f32) -> impl Fn(&Theme) -> container::Style {
-    move |_theme| container::Style {
-        border: Border {
-            radius: radius.into(),
-            ..Default::default()
-        },
-        ..Default::default()
-    }
 }

@@ -101,6 +101,7 @@ fn soft_edge_sampling(input: FragInput) -> vec4<f32> {
     let aa = fwidth(sdf);
     let outside_factor = smoothstep(-aa, aa, sdf);
     var color = textureSample(image, image_sampler, input.uv);
+    color = srgb_to_linear(color);
     color = blend_fill_color(color, input.uv);
     color = saturate(color);
     let scrim = vec4<f32>(uniforms.scrim.rgb, 1.0);
@@ -108,7 +109,6 @@ fn soft_edge_sampling(input: FragInput) -> vec4<f32> {
     color *= uniforms.tint;
 
     let edge_factor = smoothstep(-uniforms.edge_radius, 0.0, sdf);
-    color = srgb_to_linear(color);
     color.a *= (1.0 - edge_factor) * (1.0 - outside_factor);
     return color;
 }
@@ -150,11 +150,11 @@ fn sample_color_channel(p: vec2<f32>, sdf: f32, gradient: vec2<f32>, r_edge: f32
     let sample_uv = (p + offset) / dimensions + vec2<f32>(0.5);
 
     var color = textureSample(image, image_sampler, sample_uv);
+    color = srgb_to_linear(color);
     color = blend_fill_color(color, xy);
 
-    color = srgb_to_linear(color);
     color = saturate(color);
-    let scrim = vec4<f32>(uniforms.scrim.rgb, 1.0);
+    let scrim = srgb_to_linear(vec4<f32>(uniforms.scrim.rgb, 1.0));
     color = mix(color, scrim, uniforms.scrim.a);
     color *= uniforms.tint;
     color = edge_highlight(color, sdf, gradient);
@@ -167,7 +167,7 @@ fn sample_color_channel(p: vec2<f32>, sdf: f32, gradient: vec2<f32>, r_edge: f32
 
 fn blend_fill_color(color: vec4<f32>, xy: vec2<f32>) -> vec4<f32> {
     let x = select(xy.x, 1.0 - xy.y, uniforms.fill_direction == 1);
-    let fill_color = vec4<f32>(uniforms.fill_color.rgb, 1.0);
+    let fill_color = srgb_to_linear(vec4<f32>(uniforms.fill_color.rgb, 1.0));
     let fill_level = uniforms.fill_level;
     let aa = fwidth(x);
     let a = 1.0 - smoothstep(fill_level - aa, fill_level + aa, x);
