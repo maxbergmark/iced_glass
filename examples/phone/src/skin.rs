@@ -19,7 +19,7 @@ impl Skin {
             0.0
         };
         iced_glass::Style {
-            blur_radius: 50.0 + 50.0 * t,
+            blur_radius: 0.0,
             saturation: 1.1,
             lightness: -0.25 + 0.25 * t,
             edge_radius: self.edge_radius,
