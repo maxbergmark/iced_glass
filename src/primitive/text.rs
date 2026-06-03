@@ -83,7 +83,7 @@ impl iced::widget::shader::Primitive for TextPrimitive {
             depth_or_array_layers: 1,
         };
 
-        let mip_level = self.uniforms.mip_level();
+        let mip_level = self.uniforms.mip_level(pipeline.scale);
         let num_glyphs = text_instance.num_glyphs;
         if self.uniforms.blur_radius > 0.0 {
             copy_background(encoder, &instance.tex_a, texture, bounds, &copy_size);

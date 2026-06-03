@@ -28,7 +28,7 @@ impl Uniforms {
     #[must_use]
     pub fn to_raw(self, direction: [f32; 2], scale: f32) -> Raw {
         Raw {
-            blur_radius: self.blur_radius * scale / self.mip_factor(),
+            blur_radius: self.blur_radius * scale / self.mip_factor(scale),
             corner_radius: self.corner_radius * scale,
             saturation: self.saturation,
             lightness: self.lightness,
@@ -59,19 +59,20 @@ impl Uniforms {
     }
 
     #[must_use]
-    pub fn mip_level(self) -> u32 {
-        match self.blur_radius {
+    pub fn mip_level(&self, scale: f32) -> u32 {
+        match self.blur_radius * scale {
             r if r < 10.0 => 0,
             r if r < 50.0 => 1,
             r if r < 100.0 => 2,
             r if r < 200.0 => 3,
-            // r if r < 800.0 => 4,
-            _ => MIP_LEVEL_COUNT - 1, // 4 is the highest mip level for now
+            r if r < 800.0 => 4,
+            r if r < 1600.0 => 5,
+            _ => MIP_LEVEL_COUNT - 1, // 6 is the highest mip level for now
         }
     }
 
-    fn mip_factor(self) -> f32 {
-        4.0_f32.powi(self.mip_level() as i32)
+    fn mip_factor(&self, scale: f32) -> f32 {
+        4.0_f32.powi(self.mip_level(scale) as i32)
     }
 }
 

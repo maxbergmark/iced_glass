@@ -28,6 +28,7 @@ impl iced::widget::shader::Primitive for Primitive {
         viewport: &iced::widget::shader::Viewport,
     ) {
         let scale = viewport.scale_factor();
+        pipeline.scale = scale;
         let width = (bounds.width * scale) as u32;
         let height = (bounds.height * scale) as u32;
         let size = iced::Size::new(width, height);
@@ -58,7 +59,7 @@ impl iced::widget::shader::Primitive for Primitive {
             return;
         };
 
-        let mip_level = self.uniforms.mip_level();
+        let mip_level = self.uniforms.mip_level(pipeline.scale);
         copy_background(encoder, &instance.tex_a, texture, bounds, &copy_size);
         if self.uniforms.blur_radius > 0.0 {
             downsample(encoder, pipeline, instance, mip_level);

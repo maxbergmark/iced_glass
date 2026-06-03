@@ -4,7 +4,7 @@ pub mod gaussian;
 #[cfg(feature = "text")]
 pub mod text;
 
-pub const MIP_LEVEL_COUNT: u32 = 4;
+pub const MIP_LEVEL_COUNT: u32 = 6;
 
 #[must_use]
 pub fn uniforms_bind_group(

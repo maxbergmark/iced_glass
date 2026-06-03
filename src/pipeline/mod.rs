@@ -24,6 +24,7 @@ use crate::{
 };
 
 pub struct Pipeline {
+    pub scale: f32,
     pub shared_bind_group_data: SharedBindGroupData,
     pub downsample: wgpu::RenderPipeline,
     pub blur: wgpu::RenderPipeline,
@@ -73,6 +74,7 @@ impl iced::widget::shader::Pipeline for Pipeline {
         });
 
         Self {
+            scale: 1.0,
             shared_bind_group_data: SharedBindGroupData {
                 device_format: format,
                 sampler: create_sampler(device),
@@ -132,14 +134,19 @@ pub fn create_textures(
     format: wgpu::TextureFormat,
     size: iced::Size<u32>,
 ) -> (wgpu::Texture, wgpu::Texture) {
+    let width = size.width.max(1);
+    let height = size.height.max(1);
+    let min_dimension = width.min(height);
+    let upper_limit = min_dimension.next_power_of_two();
+    let mip_level_count = MIP_LEVEL_COUNT.min(upper_limit.trailing_zeros());
     let tex_a = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("glass.copy"),
         size: wgpu::Extent3d {
-            width: size.width.max(1),
-            height: size.height.max(1),
+            width,
+            height,
             depth_or_array_layers: 1,
         },
-        mip_level_count: MIP_LEVEL_COUNT,
+        mip_level_count,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format,
@@ -152,11 +159,11 @@ pub fn create_textures(
     let tex_b = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("glass.gaussian"),
         size: wgpu::Extent3d {
-            width: size.width.max(1),
-            height: size.height.max(1),
+            width,
+            height,
             depth_or_array_layers: 1,
         },
-        mip_level_count: MIP_LEVEL_COUNT,
+        mip_level_count,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format,
