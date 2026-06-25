@@ -18,7 +18,7 @@ use crate::{
     pipeline::instance::Instance,
     shader::{
         MIP_LEVEL_COUNT, create_sampler, downsample::DownsampleShader, fragment::FragmentShader,
-        gaussian::GaussianShader, uniforms_bind_group_layout,
+        gaussian::GaussianShader, mip_level_count, uniforms_bind_group_layout,
     },
     uniforms::Uniforms,
 };
@@ -136,9 +136,7 @@ pub fn create_textures(
 ) -> (wgpu::Texture, wgpu::Texture) {
     let width = size.width.max(1);
     let height = size.height.max(1);
-    let min_dimension = width.min(height);
-    let upper_limit = min_dimension.next_power_of_two();
-    let mip_level_count = MIP_LEVEL_COUNT.min(upper_limit.trailing_zeros());
+    let mip_level_count = mip_level_count(size);
     let tex_a = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("glass.copy"),
         size: wgpu::Extent3d {

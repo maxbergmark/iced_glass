@@ -6,6 +6,14 @@ pub mod text;
 
 pub const MIP_LEVEL_COUNT: u32 = 6;
 
+pub fn mip_level_count(size: iced::Size<u32>) -> u32 {
+    let width = size.width.max(1);
+    let height = size.height.max(1);
+    let min_dimension = width.min(height);
+    let upper_limit = min_dimension.next_power_of_two();
+    MIP_LEVEL_COUNT.min(upper_limit.trailing_zeros())
+}
+
 #[must_use]
 pub fn uniforms_bind_group(
     device: &wgpu::Device,
@@ -79,7 +87,11 @@ pub fn texture_bind_groups(
     texture: &wgpu::Texture,
     sampler: &wgpu::Sampler,
 ) -> Vec<wgpu::BindGroup> {
-    (0..MIP_LEVEL_COUNT)
+    let size = texture.size();
+    let size = iced::Size::new(size.width, size.height);
+    let mip_level_count = mip_level_count(size);
+
+    (0..mip_level_count)
         .map(|level| {
             let src_view = texture.create_view(&wgpu::TextureViewDescriptor {
                 base_mip_level: level,
