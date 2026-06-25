@@ -390,11 +390,11 @@ where
         })
     }
 
-    fn children(&self) -> Vec<Tree> {
-        vec![]
-    }
+    // fn children(&self) -> Vec<Tree> {
+    //     vec![]
+    // }
 
-    fn diff(&self, tree: &mut Tree) {
+    fn diff(&mut self, tree: &mut Tree) {
         let state = tree.state.downcast_mut::<State<Renderer::Paragraph>>();
         let fs = self.format.size.unwrap_or_else(|| 16.0.into());
         let lh = match self.format.line_height {

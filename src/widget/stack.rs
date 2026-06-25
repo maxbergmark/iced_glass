@@ -58,8 +58,8 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("InnerContent")
-            .field("width", &self.container.as_widget().size_hint().width)
-            .field("height", &self.container.as_widget().size_hint().height)
+            .field("width", &self.container.as_widget().size().width)
+            .field("height", &self.container.as_widget().size().height)
             .field("offset", &self.offset)
             .finish_non_exhaustive()
     }
@@ -135,7 +135,7 @@ where
     #[must_use]
     pub fn push(mut self, child: impl Into<InnerContent<'a, Message, Theme, Renderer>>) -> Self {
         let child = child.into();
-        let child_size = child.container.as_widget().size_hint();
+        let child_size = child.container.as_widget().size();
 
         if !child_size.is_void() {
             if self.children.is_empty() {
@@ -235,17 +235,17 @@ where
         })
     }
 
-    fn children(&self) -> Vec<Tree> {
-        self.children
-            .iter()
-            .map(|c| Tree::new(&c.container))
-            .collect()
-    }
+    // fn children(&self) -> Vec<Tree> {
+    //     self.children
+    //         .iter()
+    //         .map(|c| Tree::new(&c.container))
+    //         .collect()
+    // }
 
-    fn diff(&self, tree: &mut Tree) {
+    fn diff(&mut self, tree: &mut Tree) {
         tree.diff_children_custom(
-            &self.children,
-            |tree, c| tree.diff(&c.container),
+            &mut self.children,
+            |tree, c| tree.diff(&mut c.container),
             |c| Tree::new(&c.container),
         );
     }

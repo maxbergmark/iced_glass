@@ -53,7 +53,7 @@ where
     /// Creates a [`Container`] with the given content.
     pub fn new(content: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
         let content = content.into();
-        let size = content.as_widget().size_hint();
+        let size = content.as_widget().size();
 
         Container {
             id: None,
@@ -214,14 +214,14 @@ where
         })
     }
 
-    fn children(&self) -> Vec<Tree> {
-        // self.content.as_widget().children()
-        vec![Tree::new(&self.content)]
-    }
+    // fn children(&self) -> Vec<Tree> {
+    //     // self.content.as_widget().children()
+    //     vec![Tree::new(&self.content)]
+    // }
 
-    fn diff(&self, tree: &mut Tree) {
+    fn diff(&mut self, tree: &mut Tree) {
         // self.content.as_widget().diff(tree);
-        tree.diff_children(std::slice::from_ref(&self.content));
+        tree.diff_children(std::slice::from_mut(&mut self.content));
     }
 
     fn size(&self) -> Size<Length> {
@@ -404,9 +404,9 @@ where
         )
     }
 
-    fn size_hint(&self) -> Size<Length> {
-        self.size()
-    }
+    // fn size_hint(&self) -> Size<Length> {
+    //     self.size()
+    // }
 }
 
 impl<'a, Message, Theme, Renderer> From<Container<'a, Message, Theme, Renderer>>
