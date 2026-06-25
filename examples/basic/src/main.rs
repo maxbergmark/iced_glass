@@ -165,8 +165,7 @@ impl Ui {
     }
 
     pub fn view(&self) -> Element<'_, Message> {
-        responsive(move |size| stack![self.image(), self.mouse_area(), self.glass(size),].into())
-            .into()
+        responsive(move |size| stack![self.image(), self.mouse_area(), self.glass(size),]).into()
     }
 
     fn image(&self) -> Element<'_, Message> {
