@@ -35,8 +35,8 @@ iced = { git = "https://github.com/maxbergmark/iced", features = [
     "advanced",
     "svg",
     "tokio",
-], branch = "master" }
-iced_wgpu = { git = "https://github.com/maxbergmark/iced", branch = "master" }
+], branch = "fix/force_copy_src_0.15" }
+iced_wgpu = { git = "https://github.com/maxbergmark/iced", branch = "fix/force_copy_src_0.15" }
 
 wgpu = { version = "29", features = [] }
 bytemuck = "1.25.0"
@@ -65,7 +65,7 @@ iced = { git = "https://github.com/maxbergmark/iced", features = [
     "advanced",
     "svg",
     "tokio",
-], branch = "master" }
+], branch = "fix/force_copy_src_0.15" }
 
 [lints.clippy]
 map_err_ignore = "warn"
